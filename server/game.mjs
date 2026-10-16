@@ -14,6 +14,7 @@ export const REGIONS = {
   '54': ['Новосибирская обл.', 'sib'], '154': ['Новосибирская обл.', 'sib'], '24': ['Красноярский край', 'sib'], '124': ['Красноярский край', 'sib'], '38': ['Иркутская обл.', 'sib'], '42': ['Кемеровская обл.', 'sib'], '25': ['Приморский край', 'sib'],
   '39': ['Калининградская обл.', 'west'],
 };
+export const BY_REGIONS_EN = { '1': 'Brest region', '2': 'Vitebsk region', '3': 'Gomel region', '4': 'Grodno region', '5': 'Minsk region', '6': 'Mogilev region', '7': 'Minsk' };
 export const BY_REGIONS = { '1': 'Брестская обл.', '2': 'Витебская обл.', '3': 'Гомельская обл.', '4': 'Гродненская обл.', '5': 'Минская обл.', '6': 'Могилёвская обл.', '7': 'Минск' };
 export const ALLREG = Object.keys(REGIONS);
 export const ALLBY = Object.keys(BY_REGIONS);
@@ -425,7 +426,7 @@ const times = (n, s) => Array.from({ length: n }, () => s);
 const and = (...of) => ({ k: 'and', of });
 export const SETS = [
   { id: 'moscow-elite', ru: 'Легенда Москвы', en: 'Moscow legend', badge: '77', color: '#FF3D57', reward: 25000, slots: ['77', '97', '99', '177', '777', '797'].map(r => S1(`${r} · элитный+`, `${r} · elite+`, and({ k: 'reg', v: [r] }, { k: 'tierMin', v: 'elite' }))) },
-  { id: 'belarus-rare', ru: 'Беларусь в редких', en: 'Rare Belarus', badge: 'BY', color: '#5CF2A8', reward: 8000, slots: Object.entries(BY_REGIONS).map(([k, nm]) => S1(`${nm} · редкий+`, `${nm} · rare+`, and({ k: 'byreg', v: k }, { k: 'tierMin', v: 'rare' }))) },
+  { id: 'belarus-rare', ru: 'Беларусь в редких', en: 'Rare Belarus', badge: 'BY', color: '#5CF2A8', reward: 8000, slots: Object.entries(BY_REGIONS).map(([k, nm]) => S1(`${nm} · редкий+`, `${BY_REGIONS_EN[k]} · rare+`, and({ k: 'byreg', v: k }, { k: 'tierMin', v: 'rare' }))) },
   { id: 'grails', ru: 'Три Грааля', en: 'Three Grails', badge: 'G3', color: '#FFD700', reward: 30000, slots: times(3, S1('Грааль', 'Grail', { k: 'tier', v: 'grail' })) },
   { id: 'sevens', ru: 'Три топора', en: 'Triple sevens', badge: '777', color: '#2DD4BF', reward: 15000, slots: times(3, S1('Все семёрки', 'All sevens', { k: 'trait', v: 'allSeven' })) },
   { id: 'first', ru: 'Номер один', en: 'Number one', badge: '001', color: '#EEF2F7', reward: 12000, slots: times(2, S1('Номер 001', 'Number 001', { k: 'trait', v: 'first' })) },

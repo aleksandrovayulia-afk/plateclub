@@ -7,6 +7,7 @@ import {
   SIGNUP_BONUS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
+import { tr, trExtra } from './i18n.mjs';
 
 const scrypt = promisify(_scrypt);
 const TERMS_VERSION = '2026-10-15';
@@ -1412,9 +1413,10 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       if (out && out.body !== undefined && (out.headers || out.status)) return json(out.body, out.status || 200, out.headers || {});
       return json(out);
     } catch (e) {
-      if (e instanceof HttpError) return json({ error: e.message, ...(e.extra || {}) }, e.status);
+      const lang = req.headers.get('x-lang') === 'en' ? 'en' : 'ru';
+      if (e instanceof HttpError) return json({ error: tr(e.message, lang), ...(trExtra(e.extra, lang) || {}) }, e.status);
       console.error(e);
-      return json({ error: 'Что-то пошло не так на нашей стороне. Деньги не списаны, попробуйте ещё раз.' }, 500);
+      return json({ error: tr('Что-то пошло не так на нашей стороне. Деньги не списаны, попробуйте ещё раз.', lang) }, 500);
     }
   };
 }

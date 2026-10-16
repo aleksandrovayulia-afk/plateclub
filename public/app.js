@@ -68,9 +68,14 @@ const MSG_RX = [
   [/^Скупщику сегодня такие номера не нужны\.$/, () => 'The dealer does not need plates like this today.'],
   [/^Аккаунт заблокирован администратором(.*)$/, m => `The account is blocked by the admin${m[1].replace(/^: /, ': ')}`], [/^Подарок Plate Club$/, () => 'Gift from Plate Club'],
   [/^Этот кейс временно недоступен\.$/, () => 'This case is temporarily unavailable.'],
+  [/^Покупка (.+) · (\S+)$/, m => `Bought ${m[1]} · ${m[2]}`], [/^Продажа (.+) · (\S+) \(комиссия (\d+) PLT\)$/, m => `Sold ${m[1]} · ${m[2]} (fee ${m[3]} PLT)`],
+  [/^Комиссия рынка ([\d.]+)% · (.+)$/, m => `Market fee ${m[1]}% · ${m[2]}`], [/^Пополнение (\d+) PLT · (.+)$/, m => `Top-up ${m[1]} PLT · ${m[2]}`], [/^Продан банку: (.+)$/, m => `Sold to the bank: ${m[1]}`],
+  [/^Ставка на аукционе дня$/, () => 'Bid in the auction of the day'], [/^Аукцион дня: ставка повышена$/, () => 'Auction of the day: bid raised'], [/^Аукцион дня: ставку перебили, PLT возвращены$/, () => 'Auction of the day: outbid, PLT returned'],
+  [/^Баттл (\S+) · (\d+) × (.+)$/, m => `Battle ${m[1]} · ${m[2]} × ${enCase('', m[3])}`], [/^Возврат за баттл (\S+)$/, m => `Battle refund ${m[1]}`], [/^Доплата за обмен (\S+)$/, m => `Swap top-up ${m[1]}`],
+  [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
   [/^Кейс (\d+) · (.+)$/, m => `Case ${m[1]} · ${enCase(m[1], m[2])}`], [/^Апгрейд из (.+)$/, m => `Upgrade from ${m[1]}`],
 ];
-const enCase = (id, n) => { const c = CFG && CFG.cases.find(x => x.id === id); return c ? c.name : n; };
+const enCase = (id, n) => { const all = CFG ? [...CFG.cases, ...(CFG.battleCases || [])] : []; const c = all.find(x => x.id === id || x.ru === n); return c ? c.name : n; };
 const srv = m => { if (LANG !== 'en' || !m) return m; if (MSG_EN[m]) return MSG_EN[m]; for (const [rx, f] of MSG_RX) { const x = String(m).match(rx); if (x) return f(x); } return m; };
 
 /* ---------- icons ---------- */
@@ -115,7 +120,7 @@ const VB = () => { const t = L('Подлинность подтверждена'
 /* ---------- API ---------- */
 async function api(method, path, body, { key } = {}) {
   let r;
-  try { r = await fetch(path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', ...(key ? { 'idempotency-key': key } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }); }
+  try { r = await fetch(path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-lang': LANG, ...(key ? { 'idempotency-key': key } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }); }
   catch { const e = new Error(srv('Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.')); e.status = 0; throw e; }
   let data = {}; try { data = await r.json(); } catch {}
   if (!r.ok) { const e = new Error(srv(data.error) || L(`Ошибка запроса (${r.status}).`, `Request failed (${r.status}).`)); e.status = r.status; e.data = data; throw e; }
@@ -157,7 +162,7 @@ const PREF = { vol: store.get('vol', 0.6), motion: store.get('motion', 'system')
 const savePref = () => { store.set('vol', PREF.vol); store.set('motion', PREF.motion); applyPrefs(); };
 const reduced = () => PREF.motion === 'reduced' || (PREF.motion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const finePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
-function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; }
+function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; const sk = document.querySelector('.skip'); if (sk) sk.textContent = L('К содержимому', 'Skip to content'); const lg = document.querySelector('.hdr .logo'); if (lg) lg.setAttribute('aria-label', L('Plate Club — главная', 'Plate Club — home')); const tn = document.getElementById('topnav'); if (tn) tn.setAttribute('aria-label', L('Главное меню', 'Main menu')); const bn = document.getElementById('botnav'); if (bn) bn.setAttribute('aria-label', L('Меню', 'Menu')); }
 
 /* ---------- sound (always on; volume in settings) ---------- */
 let AC = null, lastTick = 0;
@@ -1291,7 +1296,7 @@ VIEWS.sets = async () => {
 function SetCard(s) {
   const pct = Math.round(s.have / s.need * 100); const many = s.need > 12;
   const slots = many ? '' : `<div class="sslots">${s.slots.map((sl, i) => { const f = s.filled && s.filled[i]; return f ? `<a class="sslot on t-${f.tier}" href="#/plate/${f.id}" title="${esc(L(sl.ru, sl.en))}"><span class="mono">${esc(miniPlateTxt(f))}</span></a>` : `<span class="sslot">${esc(L(sl.ru, sl.en))}</span>`; }).join('')}</div>`;
-  return `<article class="scard rv${s.claimed ? ' claimed' : s.done ? ' ready' : ''}" style="--sc:${s.color}"><div class="scard-h"><span class="sbadge">${esc(s.badge)}</span><div><span class="sdiff" title="${L('Сложность', 'Difficulty')}">${'◆'.repeat(s.reward >= 25000 ? 5 : s.reward >= 15000 ? 4 : s.reward >= 10000 ? 3 : 2)}<i>${'◆'.repeat(5 - (s.reward >= 25000 ? 5 : s.reward >= 15000 ? 4 : s.reward >= 10000 ? 3 : 2))}</i></span><h3>${esc(L(s.ru, s.en))}</h3><span class="small">${s.need} ${RU_PLURAL(s.need, ['номер', 'номера', 'номеров'])} · +${fmt(s.reward)} PLT</span></div></div>
+  return `<article class="scard rv${s.claimed ? ' claimed' : s.done ? ' ready' : ''}" style="--sc:${s.color}"><div class="scard-h"><span class="sbadge">${esc(s.badge)}</span><div><span class="sdiff" title="${L('Сложность', 'Difficulty')}">${'◆'.repeat(s.reward >= 25000 ? 5 : s.reward >= 15000 ? 4 : s.reward >= 10000 ? 3 : 2)}<i>${'◆'.repeat(5 - (s.reward >= 25000 ? 5 : s.reward >= 15000 ? 4 : s.reward >= 10000 ? 3 : 2))}</i></span><h3>${esc(L(s.ru, s.en))}</h3><span class="small">${s.need} ${pl(s.need, ['номер', 'номера', 'номеров'], ['plate', 'plates'])} · +${fmt(s.reward)} PLT</span></div></div>
     <div class="sprog"><span style="width:${pct}%"></span></div><div class="row" style="justify-content:space-between"><span class="mono small">${s.have} / ${s.need}</span>${s.claimed ? `<span class="tag s-SOLD">${L('Собрано', 'Completed')} ✓</span>` : s.done ? (ME ? `<button class="btn btn-sm btn-chrome" data-act="sclaim" data-id="${s.id}">${L('Забрать', 'Claim')} +${fmt(s.reward)}</button>` : '') : `<span class="small">${pct}%</span>`}</div>${slots}</article>`;
 }
 GA.sff = btn => { SF.f = btn.dataset.k; render(false); };
@@ -1371,7 +1376,7 @@ VIEWS.auction = async () => {
   return `<div class="wrap"><section class="auc t-${p.tier}">
       <div class="auc-show"><p class="eyebrow">${L('Аукцион дня', 'Auction of the day')} · ${Rarity(p.tier)}</p><div class="auc-plate" id="aucPlate">${Plate(p, { holo: true })}</div>
         <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}</div><p class="small" style="text-align:center;margin:0">${esc(regionLabel(p))} · ${L('оценка', 'value')} ${fmt(p.value)} PLT · <a href="#/plate/${p.id}">${p.id}</a></p></div>
-      <div class="auc-bid panel"><div class="row" style="justify-content:space-between"><span class="eyebrow">${a.topBid ? L('Текущая ставка', 'Current bid') : L('Стартовая цена', 'Starting price')}</span><span class="small">${a.bids} ${RU_PLURAL(a.bids, ['ставка', 'ставки', 'ставок'])}</span></div>
+      <div class="auc-bid panel"><div class="row" style="justify-content:space-between"><span class="eyebrow">${a.topBid ? L('Текущая ставка', 'Current bid') : L('Стартовая цена', 'Starting price')}</span><span class="small">${a.bids} ${pl(a.bids, ['ставка', 'ставки', 'ставок'], ['bid', 'bids'])}</span></div>
         <p class="auc-price chrome-t">${fmt(a.topBid || a.start)}<small>PLT</small></p>
         <p class="small" style="margin:0">${a.topUser ? (a.mine ? `<b class="up">${L('Вы лидируете', 'You are leading')}</b>` : L('Лидер', 'Leader') + `: <a href="#/u/${esc(a.topUser)}">${esc(a.topUser)}</a>`) : L('Ставок ещё нет — будьте первым.', 'No bids yet — be the first.')}</p>
         <div class="auc-timer"><span class="small">${L('До конца', 'Ends in')}</span>${timerHtml('aucTimer', a.ends)}</div>

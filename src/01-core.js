@@ -68,9 +68,14 @@ const MSG_RX = [
   [/^Скупщику сегодня такие номера не нужны\.$/, () => 'The dealer does not need plates like this today.'],
   [/^Аккаунт заблокирован администратором(.*)$/, m => `The account is blocked by the admin${m[1].replace(/^: /, ': ')}`], [/^Подарок Plate Club$/, () => 'Gift from Plate Club'],
   [/^Этот кейс временно недоступен\.$/, () => 'This case is temporarily unavailable.'],
+  [/^Покупка (.+) · (\S+)$/, m => `Bought ${m[1]} · ${m[2]}`], [/^Продажа (.+) · (\S+) \(комиссия (\d+) PLT\)$/, m => `Sold ${m[1]} · ${m[2]} (fee ${m[3]} PLT)`],
+  [/^Комиссия рынка ([\d.]+)% · (.+)$/, m => `Market fee ${m[1]}% · ${m[2]}`], [/^Пополнение (\d+) PLT · (.+)$/, m => `Top-up ${m[1]} PLT · ${m[2]}`], [/^Продан банку: (.+)$/, m => `Sold to the bank: ${m[1]}`],
+  [/^Ставка на аукционе дня$/, () => 'Bid in the auction of the day'], [/^Аукцион дня: ставка повышена$/, () => 'Auction of the day: bid raised'], [/^Аукцион дня: ставку перебили, PLT возвращены$/, () => 'Auction of the day: outbid, PLT returned'],
+  [/^Баттл (\S+) · (\d+) × (.+)$/, m => `Battle ${m[1]} · ${m[2]} × ${enCase('', m[3])}`], [/^Возврат за баттл (\S+)$/, m => `Battle refund ${m[1]}`], [/^Доплата за обмен (\S+)$/, m => `Swap top-up ${m[1]}`],
+  [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
   [/^Кейс (\d+) · (.+)$/, m => `Case ${m[1]} · ${enCase(m[1], m[2])}`], [/^Апгрейд из (.+)$/, m => `Upgrade from ${m[1]}`],
 ];
-const enCase = (id, n) => { const c = CFG && CFG.cases.find(x => x.id === id); return c ? c.name : n; };
+const enCase = (id, n) => { const all = CFG ? [...CFG.cases, ...(CFG.battleCases || [])] : []; const c = all.find(x => x.id === id || x.ru === n); return c ? c.name : n; };
 const srv = m => { if (LANG !== 'en' || !m) return m; if (MSG_EN[m]) return MSG_EN[m]; for (const [rx, f] of MSG_RX) { const x = String(m).match(rx); if (x) return f(x); } return m; };
 
 /* ---------- icons ---------- */
@@ -115,7 +120,7 @@ const VB = () => { const t = L('Подлинность подтверждена'
 /* ---------- API ---------- */
 async function api(method, path, body, { key } = {}) {
   let r;
-  try { r = await fetch(path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', ...(key ? { 'idempotency-key': key } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }); }
+  try { r = await fetch(path, { method, credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-lang': LANG, ...(key ? { 'idempotency-key': key } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }); }
   catch { const e = new Error(srv('Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.')); e.status = 0; throw e; }
   let data = {}; try { data = await r.json(); } catch {}
   if (!r.ok) { const e = new Error(srv(data.error) || L(`Ошибка запроса (${r.status}).`, `Request failed (${r.status}).`)); e.status = r.status; e.data = data; throw e; }
@@ -157,7 +162,7 @@ const PREF = { vol: store.get('vol', 0.6), motion: store.get('motion', 'system')
 const savePref = () => { store.set('vol', PREF.vol); store.set('motion', PREF.motion); applyPrefs(); };
 const reduced = () => PREF.motion === 'reduced' || (PREF.motion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const finePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
-function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; }
+function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; const sk = document.querySelector('.skip'); if (sk) sk.textContent = L('К содержимому', 'Skip to content'); const lg = document.querySelector('.hdr .logo'); if (lg) lg.setAttribute('aria-label', L('Plate Club — главная', 'Plate Club — home')); const tn = document.getElementById('topnav'); if (tn) tn.setAttribute('aria-label', L('Главное меню', 'Main menu')); const bn = document.getElementById('botnav'); if (bn) bn.setAttribute('aria-label', L('Меню', 'Menu')); }
 
 /* ---------- sound (always on; volume in settings) ---------- */
 let AC = null, lastTick = 0;
