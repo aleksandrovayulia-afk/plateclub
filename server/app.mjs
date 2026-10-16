@@ -187,13 +187,13 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return { body: { ok: true, bonus: ST.signupBonus, verificationSent: mailed }, status: 201, headers: { 'set-cookie': cookie } };
   });
 
-  R('POST', '/api/auth/login', async ({ body }) => {
+  R('POST', '/api/auth/login', async ({ body, ip }) => {
     const email = String(body.email || '').trim().toLowerCase(), password = String(body.password || '');
     if (!email || !password) throw bad('Введите email и пароль.');
-    await throttle('login:' + email, 8, 15);
+    await throttle('login:' + email, 8, 15); await throttle('loginip:' + ip, 40, 15);
     const [u] = await q('SELECT id,pass_hash,blocked_at,blocked_reason FROM users WHERE email_norm=$1', [email]);
     const ok = u ? await checkPassword(password, u.pass_hash) : (await hashPassword(password), false);
-    if (!ok) { await attempt('login:' + email); throw new HttpError(401, 'Неверный email или пароль.'); }
+    if (!ok) { await attempt('login:' + email); await attempt('loginip:' + ip); throw new HttpError(401, 'Неверный email или пароль.'); }
     if (u.blocked_at) throw new HttpError(403, 'Аккаунт заблокирован администратором' + (u.blocked_reason ? ': ' + u.blocked_reason : '.'));
     return { body: { ok: true }, headers: { 'set-cookie': await newSession(n(u.id)) } };
   });
@@ -223,6 +223,26 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return { ok: await sendVerify(req, user) };
   }, { auth: true });
 
+  // change password with the current one (works without email) — signs out every other device
+  R('POST', '/api/auth/password', async ({ user, body, req }) => {
+    const cur = String(body.current || ''), pw = String(body.password || '');
+    if (pw.length < 8 || pw.length > 128) throw bad('Минимум 8 символов.', { fields: { password: 'Минимум 8 символов.' } });
+    await throttle('pw:' + user.id, 6, 15);
+    const [u] = await q('SELECT pass_hash FROM users WHERE id=$1', [user.id]);
+    if (!(await checkPassword(cur, u.pass_hash))) { await attempt('pw:' + user.id); throw new HttpError(403, 'Текущий пароль неверный.', { fields: { current: 'Неверный пароль.' } }); }
+    await q('UPDATE users SET pass_hash=$1 WHERE id=$2', [await hashPassword(pw), user.id]);
+    await q('DELETE FROM sessions WHERE user_id=$1', [user.id]);
+    return { body: { ok: true }, headers: { 'set-cookie': await newSession(user.id) } };
+  }, { auth: true });
+  R('GET', '/api/auth/sessions', async ({ user }) => {
+    const [r] = await q('SELECT count(*)::int AS c FROM sessions WHERE user_id=$1 AND expires_at>now()', [user.id]);
+    return { active: n(r.c) };
+  }, { auth: true });
+  R('POST', '/api/auth/logout-others', async ({ user, req }) => {
+    const t = parseCookies(req.headers.get('cookie')).pc_session || '';
+    const r = await q('DELETE FROM sessions WHERE user_id=$1 AND token_hash<>$2 RETURNING 1', [user.id, sha256(t)]);
+    return { ok: true, closed: r.length };
+  }, { auth: true });
   R('POST', '/api/auth/forgot', async ({ body, req, ip }) => {
     const email = String(body.email || '').trim().toLowerCase();
     if (!mailOn()) throw new HttpError(503, 'Отправка писем на сайте ещё не настроена, поэтому ссылку для сброса отправить нельзя. Напишите в поддержку.');
@@ -773,6 +793,11 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   R('POST', '/api/admin/claim', async ({ user, body }) => {
     const code = String(env.ADMIN_SETUP_CODE || '');
     if (code.length < 16) throw new HttpError(503, 'Админ-доступ на этом сайте не включён.');
+    if (user.role === 'admin') return { ok: true, role: 'admin', granted: 0 };
+    // The setup code works only until the site has its first admin: after that it is dead, even if it leaks.
+    // More admins are appointed by an existing admin from the panel (or set ADMIN_ALLOW_EXTRA=1).
+    const [has] = await q(`SELECT 1 FROM users WHERE role='admin' LIMIT 1`);
+    if (has && env.ADMIN_ALLOW_EXTRA !== '1') throw new HttpError(403, 'Администратор у сайта уже назначен. Код больше не действует.');
     await throttle('claim:' + user.id, 5, 60); await attempt('claim:' + user.id);
     const given = Buffer.from(String(body.code || '')), want = Buffer.from(code);
     if (given.length !== want.length || !timingSafeEqual(given, want)) throw new HttpError(403, 'Неверный код.');
@@ -967,6 +992,25 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const tk = await q(`SELECT ${T_COLS} FROM tickets t JOIN users u ON u.id=t.user_id WHERE t.user_id=$1 ORDER BY t.updated_at DESC LIMIT 20`, [id]);
     return { user: { id: n(u.id), email: u.email, nickname: u.nickname, balance: n(u.balance), role: u.role, verified: bool(u.verified), joined: n(u.ms), blocked: u.blocked_ms ? n(u.blocked_ms) : null, blockedReason: u.blocked_reason, opens: n(u.opens), spent: n(u.spent), topups: n(u.topups), sold: n(u.sold), bought: n(u.bought), lastActive: u.last_tx ? new Date(u.last_tx).getTime() : null },
       plates: plates.map(plateRow), ledger: led.map(t => ({ id: t.id, kind: t.kind, amount: n(t.amount), balance: n(t.balance_after), label: t.label, at: n(t.ms) })), tickets: tk.map(tRow) };
+  }, { admin: true });
+  // appoint / remove an admin. The acting admin must re-enter their password: a stolen session alone can't create admins.
+  R('POST', '/api/admin/users/:id/role', async ({ user, params, body }) => {
+    const id = Number(params.id); const makeAdmin = !!body.admin;
+    if (!Number.isInteger(id) || id < 1) throw bad('Неверный игрок.');
+    if (id === user.id) throw new HttpError(409, 'Нельзя менять свою роль.');
+    await throttle('role:' + user.id, 6, 15);
+    const [me] = await q('SELECT pass_hash FROM users WHERE id=$1', [user.id]);
+    if (!(await checkPassword(String(body.password || ''), me.pass_hash))) { await attempt('role:' + user.id); throw new HttpError(403, 'Неверный пароль.'); }
+    return tx(async Q => {
+      const [u] = await Q('SELECT id,email,nickname,role,blocked_at FROM users WHERE id=$1 FOR UPDATE', [id]);
+      if (!u) throw new HttpError(404, 'Игрок не найден.');
+      if (u.blocked_at && makeAdmin) throw new HttpError(409, 'Сначала разблокируйте игрока.');
+      if (['market@plateclub.invalid'].includes(u.email)) throw new HttpError(409, 'Это служебный аккаунт.');
+      await Q('UPDATE users SET role=$1 WHERE id=$2', [makeAdmin ? 'admin' : 'user', id]);
+      if (!makeAdmin) await Q('DELETE FROM sessions WHERE user_id=$1', [id]);
+      await adminLog(Q, user.id, makeAdmin ? 'make_admin' : 'remove_admin', u.nickname, null, null);
+      return { ok: true, role: makeAdmin ? 'admin' : 'user' };
+    });
   }, { admin: true });
   R('POST', '/api/admin/users/:id/block', async ({ user, params, body }) => {
     const id = Number(params.id); const block = !!body.block; const reason = cleanText(body.reason, 200);
@@ -1345,11 +1389,18 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const route = routes.find(r => r.method === req.method && r.re.test(url.pathname));
     if (!route) return json({ error: 'Не найдено.' }, 404);
     try {
-      if (!['GET', 'HEAD'].includes(req.method) && !route.raw) {
+      const write = !['GET', 'HEAD'].includes(req.method);
+      if (write && !route.raw) {
         const ct = req.headers.get('content-type') || '';
         if (!ct.includes('application/json')) throw new HttpError(415, 'Send JSON.');
+        // CSRF: a browser always sends Origin on cross-site writes; it must be this site.
+        const origin = req.headers.get('origin');
+        if (origin && origin !== 'null') { let oh = ''; try { oh = new URL(origin).host; } catch {} const hosts = [url.host, req.headers.get('host'), req.headers.get('x-forwarded-host')].filter(Boolean); if (!hosts.includes(oh) && !(env.URL && origin === env.URL.replace(/\/$/, ''))) throw new HttpError(403, 'Запрос с чужого сайта отклонён.'); }
+        else if (origin === 'null') throw new HttpError(403, 'Запрос с чужого сайта отклонён.');
       }
-      const raw = ['GET', 'HEAD'].includes(req.method) ? '' : await req.text();
+      if (Number(req.headers.get('content-length') || 0) > 262144) throw new HttpError(413, 'Слишком большой запрос.');
+      const raw = write ? await req.text() : '';
+      if (raw.length > 262144) throw new HttpError(413, 'Слишком большой запрос.');
       let body = {};
       if (raw && !route.raw) { try { body = JSON.parse(raw); } catch { throw bad('Некорректный запрос.'); } }
       await settings();

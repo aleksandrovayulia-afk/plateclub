@@ -72,6 +72,17 @@ A.editlisting = btn => {
   $('#editForm').addEventListener('submit', async e => { e.preventDefault(); const sb = e.target.querySelector('[type=submit]'); busy(sb, true, '…'); try { await PATCH('/api/market/listings/' + btn.dataset.id, { price: Math.round(+pr.value) }); dlg.close(); toast(L('Цена обновлена.', 'Price updated.')); loadMarket(true); } catch (x) { $('#eerr').hidden = false; $('#eerr').textContent = x.message; busy(sb, false); } });
 };
 A.dlgclose = () => dlg.close();
+A.reload = () => location.reload();
+A.pwdlg = () => { openDialog(`<form class="dlg" id="pwForm"><h2 class="h3" id="dlgTitle">${L('Смена пароля', 'Change password')}</h2>
+  <div class="fld"><label for="pwCur">${L('Текущий пароль', 'Current password')}</label><input class="field" id="pwCur" type="password" autocomplete="current-password" required></div>
+  <div class="fld"><label for="pwNew">${L('Новый пароль', 'New password')}</label><input class="field" id="pwNew" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><p class="hint">${L('Минимум 8 символов.', 'At least 8 characters.')}</p></div>
+  <p class="err" id="pwErr" hidden></p>
+  <div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Сохранить', 'Save')}</button></div></form>`);
+  const f = $('#pwForm'); f.addEventListener('submit', async e => { e.preventDefault(); const b = f.querySelector('[type=submit]'); busy(b, true, '…');
+    try { await POST('/api/auth/password', { current: $('#pwCur').value, password: $('#pwNew').value }); dlg.close(); toast(L('Пароль изменён. Другие устройства вышли из аккаунта.', 'Password changed. Other devices were signed out.')); }
+    catch (x) { $('#pwErr').hidden = false; $('#pwErr').textContent = x.message; busy(b, false); } });
+};
+A.logoutothers = async btn => { busy(btn, true, '…'); try { const r = await POST('/api/auth/logout-others', {}); toast(r.closed ? L(`Завершено сессий: ${r.closed}.`, `Sessions ended: ${r.closed}.`) : L('Других активных сессий нет.', 'No other active sessions.')); } catch (x) { toast(x.message, 'err'); } busy(btn, false); };
 A.rkby = btn => { RK.by = btn.dataset.k; render(false); };
 A.odds = btn => { const c = caseById(btn.dataset.case); if (c) { sfx('click'); oddsDialog(c); } };
 A.daily = async btn => { busy(btn, true, '…'); try { const r = await POST('/api/perks/daily'); coins(btn); sfx('coin'); toast(`+${fmt(r.amount)} PLT`); await refreshMe(); render(false); } catch (e) { toast(e.message, true); busy(btn, false); } };
@@ -196,7 +207,7 @@ async function boot() {
   const bar = $('#spBar'), step = $('#spStep'); const set = (p, s) => { if (bar) bar.style.width = p + '%'; if (step) step.textContent = s; };
   set(15, L('Загружаем каталог', 'Loading catalogue')); const params = new URLSearchParams(location.search);
   try { const [cfg] = await Promise.all([GET('/api/config'), refreshMe().then(() => set(70, L('Проверяем вход', 'Checking session')))]); CFG = cfg; set(85, L('Шрифты', 'Fonts')); await Promise.race([document.fonts ? document.fonts.ready : null, new Promise(r => setTimeout(r, 1500))]); }
-  catch (e) { set(100, L('Нет связи', 'Offline')); $('#view').innerHTML = `<div class="wrap" style="padding-block:60px">${Empty(L('Plate Club недоступен', 'Plate Club is unavailable'), esc(e.message), `<button class="btn btn-chrome" onclick="location.reload()">${L('Обновить', 'Reload')}</button>`)}</div>`; $('#splash').classList.add('gone'); return; }
+  catch (e) { set(100, L('Нет связи', 'Offline')); $('#view').innerHTML = `<div class="wrap" style="padding-block:60px">${Empty(L('Plate Club недоступен', 'Plate Club is unavailable'), esc(e.message), `<button class="btn btn-chrome" data-act="reload">${L('Обновить', 'Reload')}</button>`)}</div>`; $('#splash').classList.add('gone'); return; }
   set(100, L('Готово', 'Ready'));
   if (params.get('verify')) { try { await POST('/api/auth/verify', { token: params.get('verify') }); await refreshMe(); toast(L('Email подтверждён.', 'Email verified.')); } catch (e) { toast(e.message, true); } history.replaceState(null, '', location.pathname + (location.hash || '#/profile')); }
   if (params.get('reset')) history.replaceState(null, '', location.pathname + '#/reset?token=' + encodeURIComponent(params.get('reset')));

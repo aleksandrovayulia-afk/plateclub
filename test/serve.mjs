@@ -19,6 +19,6 @@ http.createServer(async (req, res) => {
       res.writeHead(r.status, h); res.end(Buffer.from(await r.arrayBuffer())); return;
     }
     let p = normalize(decodeURIComponent(req.url.split('?')[0])); if (p === '/') p = '/index.html';
-    const f = await readFile(join(root, p)); res.writeHead(200, { 'content-type': types[extname(p)] || 'application/octet-stream' }); res.end(f);
+    const f = await readFile(join(root, p)); res.writeHead(200, { 'content-type': types[extname(p)] || 'application/octet-stream', ...(process.env.CSP ? { 'content-security-policy': process.env.CSP.replace(' upgrade-insecure-requests', '') } : {}) }); res.end(f);
   } catch (e) { res.writeHead(404); res.end('not found'); }
 }).listen(8788, () => console.log('http://localhost:8788'));

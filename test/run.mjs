@@ -225,6 +225,24 @@ r = await ADM.call('POST', '/api/admin/claim', { code: 'wrong-code-wrong-code' }
 r = await ADM.call('POST', '/api/admin/claim', { code: 'admin-code-for-tests-123' }); ok(r.status === 200 && r.data.granted === 10000000, 'correct code: admin + 10 000 000 PLT');
 me = (await ADM.call('GET', '/api/me')).data.user; ok(me.role === 'admin' && me.balance === 10000050, 'admin role and balance 10 000 050', me.balance);
 r = await ADM.call('POST', '/api/admin/claim', { code: 'admin-code-for-tests-123' }); ok(r.data.granted === 0 && (await ADM.call('GET', '/api/me')).data.user.balance === 10000050, 'claiming again gives no second grant');
+{ const X = client(); await X.call('POST', '/api/auth/register', { email: 'intruder@example.com', nickname: 'Intruder', password: 'intruder-pass', terms: true });
+  r = await X.call('POST', '/api/admin/claim', { code: 'admin-code-for-tests-123' }); ok(r.status === 403 && (await X.call('GET', '/api/me')).data.user.role !== 'admin', 'setup code is dead once the site has an admin (leaked code is useless)');
+  r = await X.call('POST', '/api/auth/logout', {}, { origin: 'https://evil.example' }); ok(r.status === 403, 'cross-site write (foreign Origin) refused');
+  r = await X.call('POST', '/api/auth/logout', {}, { origin: 'https://plateclub.test' }); ok(r.status === 200, 'same-site write accepted'); }
+{ const Y = client(); await Y.call('POST', '/api/auth/register', { email: 'pw@example.com', nickname: 'PwUser', password: 'first-pass-1', terms: true });
+  const Y2 = client(); await Y2.call('POST', '/api/auth/login', { email: 'pw@example.com', password: 'first-pass-1' });
+  r = await Y.call('GET', '/api/auth/sessions'); ok(r.data.active === 2, 'two active sessions', r.data);
+  r = await Y.call('POST', '/api/auth/password', { current: 'wrong', password: 'second-pass-2' }); ok(r.status === 403, 'password change needs the current password');
+  r = await Y.call('POST', '/api/auth/password', { current: 'first-pass-1', password: 'second-pass-2' }); ok(r.status === 200, 'password changed');
+  ok((await Y.call('GET', '/api/me')).data.user && !(await Y2.call('GET', '/api/me')).data.user, 'this device stays signed in, other device signed out');
+  r = await Y.call('POST', '/api/auth/login', { email: 'pw@example.com', password: 'second-pass-2' }); ok(r.status === 200, 'new password works');
+  r = await Y.call('POST', '/api/auth/logout-others', {}); ok(r.data.closed >= 1 && (await Y.call('GET', '/api/me')).data.user, 'sign out other devices'); }
+{ const Z = client(); await Z.call('POST', '/api/auth/register', { email: 'helper@example.com', nickname: 'Helper', password: 'helper-pass-1', terms: true });
+  const zid = (await Z.call('GET', '/api/me')).data.user.id;
+  r = await Z.call('POST', `/api/admin/users/${zid}/role`, { admin: true, password: 'helper-pass-1' }); ok(r.status === 403, 'a player cannot make themselves admin');
+  r = await ADM.call('POST', `/api/admin/users/${zid}/role`, { admin: true, password: 'wrong' }); ok(r.status === 403, 'appointing an admin needs the admin password');
+  r = await ADM.call('POST', `/api/admin/users/${zid}/role`, { admin: true, password: 'owner-pass-1' }); ok(r.status === 200 && (await Z.call('GET', '/api/me')).data.user.role === 'admin', 'admin appoints a helper admin');
+  r = await ADM.call('POST', `/api/admin/users/${zid}/role`, { admin: false, password: 'owner-pass-1' }); ok(r.status === 200 && !(await Z.call('GET', '/api/me')).data.user, 'removed admin is signed out everywhere'); }
 r = await ADM.call('GET', '/api/admin/overview'); ok(r.status === 200 && r.data.overview.users >= 4 && r.data.log.length >= 1, 'overview and audit log');
 r = await ADM.call('GET', '/api/admin/users?q=bor'); ok(r.data.users.length === 1 && r.data.users[0].nickname === 'Boris', 'user search');
 const bBefore = (await B.call('GET', '/api/me')).data.user.balance;
