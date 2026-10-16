@@ -36,7 +36,7 @@
   const R = [];
   const r = (m, path, fn, auth) => R.push({ m, re: new RegExp('^' + path.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn, auth });
 
-  r('GET', '/api/config', () => { const c = G.publicConfig({}, Date.now(), ST()); c.payments.methods = [{ id: 'preview', name: 'Тестовое пополнение', provider: 'Только в превью', fee: 'В превью деньги не списываются.' }]; return c; });
+  r('GET', '/api/config', () => { const c = G.publicConfig({}, Date.now(), ST()); c.payments.methods = []; return c; });
   r('GET', '/api/me', () => { const u = me(); return { user: u ? { id: u.id, email: u.email, nickname: u.nickname, role: u.role || 'user', balance: u.balance, verified: u.verified, created: u.created, stats: stats(u), level: G.levelOf(xpOf(u)), unread: (S.tickets || []).filter(t => t.user === u.id && t.userUnread).length, inbox: u.role === 'admin' ? (S.tickets || []).filter(t => t.adminUnread && t.status !== 'CLOSED').length : 0, swaps: (S.swaps || []).filter(x => x.to === u.id && x.status === 'PENDING').length, medals: medalsOf()[u.id] || [] } : null }; });
   r('GET', '/api/nickname', ({ url }) => { const n = url.searchParams.get('n') || ''; if (!/^[A-Za-z0-9_]{3,20}$/.test(n)) return { available: false, reason: '3–20 латинских букв, цифр или «_».' }; return S.users.some(u => u.nickname.toLowerCase() === n.toLowerCase()) ? { available: false, reason: 'Этот ник занят.' } : { available: true }; });
   r('POST', '/api/auth/register', async ({ b }) => {
@@ -291,12 +291,7 @@
   r('GET', '/api/rankings', ({ url }) => { const by = ['total', 'collection', 'level', 'battles', 'sets', 'best'].includes(url.searchParams.get('by')) ? url.searchParams.get('by') : 'total'; const key = { total: 'total', collection: 'value', level: 'xp', battles: 'wins', sets: 'sets', best: 'bestValue' }[by]; const md = medalsOf(); const rows = rankRows();
     return { by, players: rows.length, rankings: rows.filter(r => r[key] > 0 || by === 'total').sort((a, b) => b[key] - a[key] || b.total - a.total).slice(0, 50).map(({ id, ...r }) => ({ ...r, medals: md[id] || [] })) }; });
   r('GET', '/api/wallet', ({ u, url }) => ({ balance: u.balance, ledger: S.ledger.filter(t => t.user === u.id).slice(0, url.searchParams.get('all') ? 500 : 20), payments: S.payments.filter(x => x.user === u.id).slice(0, 20) }), true);
-  r('POST', '/api/payments/checkout', ({ b, u }) => {
-    const pkg = G.PACKAGES.find(x => x.id === b.packageId); if (!pkg || !G.CURRENCIES.includes(b.currency)) throw new E(400, 'Выберите пакет и валюту.');
-    const pay = { id: newId('PAY'), user: u.id, provider: 'preview', package: pkg.id, currency: b.currency, amount: pkg.price[b.currency], plt: pkg.plt, status: 'PAID', at: Date.now() };
-    ledger(u.id, 'topup', pkg.plt, `Тестовое пополнение ${pkg.plt} PLT · ${pay.id}`, pay.id); S.payments.unshift(pay);
-    return { paymentId: pay.id, url: `#/wallet?payment=${pay.id}` };
-  }, true);
+  r('POST', '/api/payments/checkout', () => { throw new E(503, 'Пополнение скоро появится. Пока PLT можно получить бонусами, промокодами и продажей номеров.'); }, true);
 
 
   // ---- admin (preview) ----
