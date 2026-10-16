@@ -1,0 +1,17 @@
+{
+  "name": "PLATE CLUB",
+  "short_name": "Plate Club",
+  "description": "Коллекционные автономера России и Беларуси: кейсы, баттлы, рынок между игроками.",
+  "lang": "ru",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#040507",
+  "theme_color": "#040507",
+  "icons": [
+    { "src": "/brand/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
