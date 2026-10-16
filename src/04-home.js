@@ -2,7 +2,7 @@
 /* ---------- home ---------- */
 const MiniWheel = (pct = 0.32) => { const r = 80, C = 2 * Math.PI * r; return `<svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="${r}" fill="none" stroke="#2a1820" stroke-width="18"/><circle cx="100" cy="100" r="${r}" fill="none" stroke="url(#mwg)" stroke-width="18" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 100 100)" stroke-linecap="round"/><defs><linearGradient id="mwg" x1="0" x2="1"><stop offset="0" stop-color="#7affc4"/><stop offset="1" stop-color="#3ddc97"/></linearGradient></defs><line x1="100" y1="100" x2="100" y2="30" stroke="#fff" stroke-width="4" stroke-linecap="round" transform="rotate(70 100 100)"/><circle cx="100" cy="100" r="10" fill="#fff"/></svg>`; };
 VIEWS[''] = async () => {
-  const [mk, drops, rk] = await Promise.all([GET('/api/market?sort=val').catch(() => ({ listings: [] })), GET('/api/drops').catch(() => ({ drops: [] })), GET('/api/rankings').catch(() => ({ rankings: [] }))]);
+  const [mk, drops, rk, on] = await Promise.all([GET('/api/market?sort=val').catch(() => ({ listings: [] })), GET('/api/drops').catch(() => ({ drops: [] })), GET('/api/rankings').catch(() => ({ rankings: [] })), GET('/api/online').catch(() => ({ count: 0, players: [] }))]);
   const deals = CFG.deals.map(d => caseById(d.id));
   const popular = ['01', '05', '06', '12', '21', '30', '36', '40', '43', '44'].map(caseById);
   const floor = mk.listings.length ? Math.min(...mk.listings.map(l => l.price)) : 0;
@@ -12,7 +12,7 @@ VIEWS[''] = async () => {
       <img class="hero-logo" src="${BRAND('logo-chrome.png')}" alt="Plate Club" width="1417" height="542">
       <p class="hero-sub">${L('Коллекционные номера России и Беларуси. Открывай кейсы, улучшай номера и торгуй с другими игроками.', 'Collectible plates from Russia and Belarus. Open cases, upgrade plates and trade with other players.')}</p>
       <div class="row"><a class="btn btn-chrome btn-xl" href="#/cases">${L('Открыть кейс', 'Open a case')} <i>→</i></a><a class="btn btn-glass btn-xl" href="#/upgrade">${L('Апгрейд', 'Upgrade')}</a></div>
-      <div class="hero-chips"><span class="hchip glass"><b>${CFG.cases.length}</b>${L('кейса', 'cases')}</span><span class="hchip glass"><b>2</b>${L('страны', 'countries')}</span><span class="hchip glass"><b>+${CFG.daily.base}</b>${L('PLT каждый день', 'PLT every day')}</span><span class="hchip glass"><b>2</b>${L('копии номера — максимум', 'copies per plate, max')}</span></div>
+      <div class="hero-chips">${on.count ? `<a class="hchip glass online-chip" href="#/top" title="${esc(on.players.join(', '))}"><i class="live"></i><b>${on.count}</b>${L('онлайн', 'online')}</a>` : ''}<span class="hchip glass"><b>${CFG.cases.length}</b>${L('кейса', 'cases')}</span><span class="hchip glass"><b>2</b>${L('страны', 'countries')}</span><span class="hchip glass"><b>+${CFG.daily.base}</b>${L('PLT каждый день', 'PLT every day')}</span><span class="hchip glass"><b>2</b>${L('копии номера — максимум', 'copies per plate, max')}</span></div>
     </div><span class="scroll-cue" aria-hidden="true"></span></section>
   <div class="wrap">
     <section class="sec"><div class="deals-head"><div><p class="eyebrow">${L('Только сегодня', 'Today only')}</p><h2 class="h2" style="margin-top:8px">${L('Скидки дня', 'Daily deals')}</h2></div>

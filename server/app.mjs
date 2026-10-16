@@ -82,8 +82,9 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
 
   async function sessionUser(req) {
     const t = parseCookies(req.headers.get('cookie')).pc_session; if (!t) return null;
-    const [u] = await q(`SELECT u.id,u.email,u.nickname,u.balance,u.role,u.email_verified_at IS NOT NULL AS verified,(extract(epoch from u.created_at)*1000)::bigint AS created_ms
+    const [u] = await q(`SELECT u.id,u.email,u.nickname,u.balance,u.role,u.email_verified_at IS NOT NULL AS verified,(extract(epoch from u.created_at)*1000)::bigint AS created_ms,(extract(epoch from u.seen_at)*1000)::bigint AS seen_ms
       FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.blocked_at IS NULL`, [sha256(t)]);
+    if (u && !(u.seen_ms && now() - n(u.seen_ms) < 60000)) await q(`UPDATE users SET seen_at=now() WHERE id=$1`, [u.id]).catch(() => {});
     return u ? { id: n(u.id), email: u.email, nickname: u.nickname, role: u.role, balance: n(u.balance), verified: u.verified === true || u.verified === 't', created: n(u.created_ms) } : null;
   }
   async function newSession(userId) {
@@ -147,6 +148,14 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return { user: { ...user, stats, level: levelOf(stats.xp), unread: n(t.unread), inbox: n(t.inbox), swaps: n(t.swaps), medals: (await medalsMap())[user.id] || [] } };
   });
 
+  // players online in the last 5 minutes (public: count + a few nicknames)
+  let onlineCache = null, onlineAt = 0;
+  R('GET', '/api/online', async () => {
+    if (onlineCache && now() - onlineAt < 15000) return onlineCache;
+    const rows = await q(`SELECT nickname FROM users WHERE seen_at > now() - interval '5 minutes' AND blocked_at IS NULL AND role <> 'bot' ORDER BY seen_at DESC LIMIT 200`);
+    onlineCache = { count: rows.length, players: rows.slice(0, 12).map(r => r.nickname) }; onlineAt = now();
+    return onlineCache;
+  });
   R('GET', '/api/nickname', async ({ url }) => {
     const nick = String(url.searchParams.get('n') || '');
     if (!/^[A-Za-z0-9_]{3,20}$/.test(nick)) return { available: false, reason: '3–20 латинских букв, цифр или подчёркиваний.' };
