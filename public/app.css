@@ -1125,3 +1125,13 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .lstep span{font-size:10px;color:var(--fg3);white-space:nowrap}.lstep b{font-family:var(--f-mono);font-size:13px}
 .lstep.done{background:rgba(198,255,61,.1);border-color:rgba(198,255,61,.35)}.lstep.done b{color:#c6ff3d}
 .lstep.now{border-color:#c6ff3d;box-shadow:0 0 0 1px #c6ff3d inset,0 0 18px rgba(198,255,61,.25)}
+/* activity medals */
+.medal-b.mtr{background:linear-gradient(180deg,#eafff3,#7ff0b4 45%,#20c37a 65%,#d7ffe9)}.medal-b.mtr i{background:linear-gradient(180deg,#10b981,#065f46)}
+.medal-b.msp{background:linear-gradient(180deg,#ffe9f3,#ff9ccc 45%,#e0408c 65%,#ffe0ef)}.medal-b.msp i{background:linear-gradient(180deg,#db2777,#831843)}
+.medal-b.mer{background:linear-gradient(180deg,#fff4e0,#ffcf7a 45%,#f08a24 65%,#fff0d6)}.medal-b.mer i{background:linear-gradient(180deg,#ea580c,#7c2d12)}
+.medal-b.ml50{background:linear-gradient(180deg,#f3ecff,#c9a8ff 45%,#8b5cf6 65%,#efe6ff)}.medal-b.ml50 i{background:linear-gradient(180deg,#7c3aed,#3b0764)}
+.medal-b.ml100{background:linear-gradient(110deg,#fff7d6,#ffd36b 25%,#ff7ad9 50%,#8fd3ff 75%,#fff7d6);background-size:200% 100%;animation:legendShine 4s linear infinite}.medal-b.ml100 i{background:linear-gradient(180deg,#111,#3a2a00);color:#ffd36b}
+@keyframes legendShine{to{background-position:200% 0}}
+.lvl-tag.lt-star{color:#c9a8ff;border-color:rgba(201,168,255,.5)}.lvl-tag.lt-tycoon{color:#ffcf7a;border-color:rgba(255,207,122,.5)}
+.lvl-tag.lt-legend{color:#ffd36b;border-color:#ffd36b;box-shadow:0 0 14px rgba(255,211,107,.35)}
+.medals{display:inline-flex;flex-wrap:wrap;gap:4px}

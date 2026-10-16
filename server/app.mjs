@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -636,6 +636,21 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     if (now() - medalCache.at < 30000) return medalCache.map;
     const rows = (await rankStats()).map(r => ({ id: n(r.id), total: n(r.balance) + n(r.pvalue) })).sort((a, b) => b.total - a.total);
     const map = {}; rows.slice(0, 10).forEach((r, i) => { if (r.total > 0) map[r.id] = i < 3 ? ['top10', 'top3'] : ['top10']; });
+    const act = await q(`SELECT user_id,
+        count(*) FILTER (WHERE kind IN ('market_buy','market_sale'))::int AS deals,
+        coalesce(-sum(amount) FILTER (WHERE amount < 0 AND kind IN ('case_open','market_buy','battle_entry','auction_bid','trade')),0)::bigint AS spent,
+        coalesce(sum(amount) FILTER (WHERE kind IN ('market_sale','bank_sell','dealer_sell')),0)::bigint AS earned,
+        coalesce(-sum(amount) FILTER (WHERE kind='case_open'),0)::bigint AS xp
+      FROM ledger GROUP BY user_id`);
+    const R = MEDAL_RULES;
+    for (const a of act) {
+      const id = n(a.user_id), m = map[id] ? [...map[id]] : [], lv = levelOf(n(a.xp)).level;
+      if (n(a.deals) >= R.trader) m.push('trader');
+      if (n(a.spent) >= R.spender) m.push('spender');
+      if (n(a.earned) >= R.earner) m.push('earner');
+      if (lv >= R.lv100) m.push('lv100'); else if (lv >= R.lv50) m.push('lv50');
+      if (m.length) map[id] = m;
+    }
     medalCache = { at: now(), map }; return map;
   }
   R('GET', '/api/rankings', async ({ url }) => {
@@ -748,7 +763,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const [x] = await q(`SELECT coalesce(-sum(amount),0)::bigint AS xp FROM ledger WHERE user_id=$1 AND kind='case_open'`, [user.id]);
     const lv = levelOf(n(x.xp)); const paid = (await q(`SELECT count(*)::int AS c FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE 'lvl:%'`, [user.id]))[0];
     lv.unclaimed = Math.max(0, lv.level - 1 - n(paid.c)); lv.reward = LEVEL_REWARD;
-    return { daily, level: lv, stats: s, achievements: ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name, text: a.text, reward: a.reward, done: a.ok(s), claimed: got.has('ach:' + a.id) })) };
+    return { daily, level: lv, telegram: got.has('tg-join'), stats: s, achievements: ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name, text: a.text, reward: a.reward, done: a.ok(s), claimed: got.has('ach:' + a.id) })) };
   }, { auth: true });
   R('POST', '/api/perks/daily', async ({ user }) => tx(async Q => {
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
@@ -757,6 +772,14 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const streak = st.streak + 1; const amount = dailyAmount(streak, ST.dailyBonus);
     const led = await ledger(Q, user.id, 'daily_bonus', amount, `Ежедневный бонус · день ${streak}`, dayKey(now()));
     return { ok: true, amount, streak, balance: led.balance };
+  }), { auth: true });
+  // one-time reward for joining the players' Telegram chat (can't be verified — once per account)
+  R('POST', '/api/perks/telegram', async ({ user }) => tx(async Q => {
+    await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
+    const [done] = await Q(`SELECT 1 FROM ledger WHERE user_id=$1 AND ref='tg-join'`, [user.id]);
+    if (done) throw new HttpError(409, 'Награда за Telegram уже получена.');
+    const led = await ledger(Q, user.id, 'reward', TELEGRAM.reward, 'Вступление в Telegram-чат игроков', 'tg-join');
+    return { ok: true, amount: TELEGRAM.reward, balance: led.balance };
   }), { auth: true });
   R('POST', '/api/perks/level/claim', async ({ user }) => tx(async Q => {
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);

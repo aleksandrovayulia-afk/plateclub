@@ -336,7 +336,7 @@ export function casePrice(c, st = SETTINGS_DEFAULT, ts = Date.now()) {
 }
 export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
   const stripe = !!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  return {
+  return { telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
     announcement: st.announcement || '',
     letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS, patNames: PAT_NAME, cats: CATS,
     cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
@@ -353,8 +353,14 @@ export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
 
 // ---- player levels: XP = PLT spent on cases. Level n needs 50·(n−1)·n XP. Every new level: 10 PLT. ----
 export const LEVEL_STEP = 50, LEVEL_REWARD = 10;
-export const xpFor = lvl => LEVEL_STEP * (lvl - 1) * lvl;
-export function levelOf(xp) { let l = 1; while (xpFor(l + 1) <= xp) l++; return { level: l, xp, cur: xpFor(l), next: xpFor(l + 1) }; }
+// slow curve: XP = PLT spent on cases. Level 10 ≈ 31k, 25 ≈ 300k, 50 ≈ 1.5M (wow), 100 ≈ 7.8M (legend).
+export const xpFor = lvl => (lvl <= 1 ? 0 : Math.round(200 * Math.pow(lvl - 1, 2.3)));
+export const LEVEL_TITLES = [[100, 'legend'], [75, 'tycoon'], [50, 'star'], [25, 'expert'], [10, 'collector'], [1, 'rookie']];
+export const levelTitle = l => LEVEL_TITLES.find(([min]) => l >= min)[1];
+// medals for big activity (besides the TOP-10 / TOP-3 ranking medals)
+export const TELEGRAM = { url: 'https://t.me/+pMbT6m8-iuM2YjFk', reward: 50 };
+export const MEDAL_RULES = { trader: 50, spender: 100000, earner: 50000, lv50: 50, lv100: 100 };
+export function levelOf(xp) { let l = 1; while (l < 999 && xpFor(l + 1) <= xp) l++; return { level: l, xp, cur: xpFor(l), next: xpFor(l + 1), title: levelTitle(l) }; }
 
 // ---- upgrade: trade one plate for a chance at a higher tier in the same region ----
 export const UPGRADE_EDGE = 0.9, UPGRADE_MAX = 0.75, UPGRADE_MIN = 0.01;
@@ -364,7 +370,7 @@ export const upgradeChance = (valueIn, valueTarget) => Math.max(UPGRADE_MIN, Mat
 // ---- market ecosystem (v9) ----
 // Market maker: the "Plate Club Market" account keeps the market stocked with fresh everyday plates.
 // Prices scatter around the estimate: some lots are bargains, and unsold lots get cheaper over time (down to a floor).
-export const MARKET_BOT = { nick: 'PlateClubMarket', size: 60, tierOdds: [56, 34, 8, 1.7, 0.3] };
+export const MARKET_BOT = { nick: 'PlateClubMarket', size: 60, tierOdds: [38, 32, 19, 9, 2] };
 export const BOT_DECAY = { minutes: 30, step: 0.94, floor: 0.82 };
 export function botPriceFactor(r1, r2) {
   if (r1 < 0.25) return 0.84 + r2 * 0.1; // bargain: 84–94% of the estimate

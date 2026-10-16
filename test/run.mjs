@@ -248,6 +248,11 @@ r = await client().call('GET', '/api/online'); ok(r.status === 200 && r.data.cou
 { const before = (await ADM.call('GET', '/api/me')).data.user.balance; const ADM2 = createApp({ pool, env: { ...env, ADMIN_INITIAL_GRANT: '50000000' } });
   const c2 = client(ADM2); c2.cookie = ADM.cookie; const m1 = (await c2.call('GET', '/api/me')).data.user.balance; const m2 = (await c2.call('GET', '/api/me')).data.user.balance;
   ok(m1 === before && m2 === before, 'owner grant is not paid twice (already paid at claim)', [before, m1, m2]); }
+{ const T = client(); await T.call('POST', '/api/auth/register', { email: 'tg@example.com', nickname: 'TgUser', password: 'tg-pass-123', terms: true });
+  const b0 = (await T.call('GET', '/api/me')).data.user.balance;
+  r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 200 && r.data.amount === 50 && r.data.balance === b0 + 50, 'Telegram chat reward +50 PLT', r.data);
+  r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 409, 'Telegram reward only once');
+  ok((await T.call('GET', '/api/perks')).data.telegram === true, 'perks remember the Telegram reward'); }
 r = await ADM.call('GET', '/api/admin/overview'); ok(r.status === 200 && r.data.overview.users >= 4 && r.data.log.length >= 1, 'overview and audit log');
 r = await ADM.call('GET', '/api/admin/users?q=bor'); ok(r.data.users.length === 1 && r.data.users[0].nickname === 'Boris', 'user search');
 const bBefore = (await B.call('GET', '/api/me')).data.user.balance;
@@ -327,9 +332,9 @@ console.log('\n15. Levels, upgrade, rankings');
 const U = client(); await U.call('POST', '/api/auth/register', { email: 'up@example.com', nickname: 'upgrader', password: 'upgrade pass', terms: true });
 const [uu] = await q1(`SELECT id FROM users WHERE nick_norm='upgrader'`); await q1('UPDATE users SET balance=50000 WHERE id=$1', [uu.id]);
 for (let i = 0; i < 12; i++) await U.call('POST', '/api/cases/01/open', {});
-let me15 = (await U.call('GET', '/api/me')).data.user; ok(me15.level.level === 5 && me15.level.xp === 1200, 'XP = PLT spent on cases, 1200 XP → level 5', me15.level);
-r = await U.call('GET', '/api/perks'); ok(r.data.level.unclaimed === 4, '4 level rewards waiting', r.data.level);
-r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 200 && r.data.amount === 40, 'level rewards: 10 PLT per level', r.data);
+let me15 = (await U.call('GET', '/api/me')).data.user; ok(me15.level.level === 3 && me15.level.xp === 1200, 'XP = PLT spent on cases, 1200 XP → level 3 (slow curve)', me15.level);
+r = await U.call('GET', '/api/perks'); ok(r.data.level.unclaimed === 2, '2 level rewards waiting', r.data.level);
+r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 200 && r.data.amount === 20, 'level rewards: 10 PLT per level', r.data);
 r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 409, 'level rewards are paid once');
 let up = (await U.call('GET', '/api/collection')).data.plates.filter(p => p.tier === 'common' || p.tier === 'fine');
 r = await U.call('POST', '/api/upgrade', { plateId: up[0].id, target: up[0].tier }); ok(r.status === 400, 'target must be rarer than the plate');

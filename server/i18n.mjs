@@ -115,6 +115,7 @@ const EN = {
   '3–20 латинских букв, цифр или подчёркиваний.': '3–20 Latin letters, digits or underscores.',
   'Примите правила и политику конфиденциальности.': 'Accept the terms and the privacy policy.',
   'Неверный пароль.': 'Wrong password.',
+  'Награда за Telegram уже получена.': 'The Telegram reward is already claimed.',
 };
 const PAT = [
   [/^Не хватает PLT(?: для доплаты)?: (?:нужно|ставка|цена|участие стоит|кейс \S+ стоит) (\d+) PLT, (?:на балансе|доступно) (\d+) PLT\.?$/, (m) => `Not enough PLT: need ${m[1]} PLT, you have ${m[2]} PLT.`],

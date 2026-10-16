@@ -72,7 +72,7 @@ const MSG_RX = [
   [/^Комиссия рынка ([\d.]+)% · (.+)$/, m => `Market fee ${m[1]}% · ${m[2]}`], [/^Пополнение (\d+) PLT · (.+)$/, m => `Top-up ${m[1]} PLT · ${m[2]}`], [/^Продан банку: (.+)$/, m => `Sold to the bank: ${m[1]}`],
   [/^Ставка на аукционе дня$/, () => 'Bid in the auction of the day'], [/^Аукцион дня: ставка повышена$/, () => 'Auction of the day: bid raised'], [/^Аукцион дня: ставку перебили, PLT возвращены$/, () => 'Auction of the day: outbid, PLT returned'],
   [/^Баттл (\S+) · (\d+) × (.+)$/, m => `Battle ${m[1]} · ${m[2]} × ${enCase('', m[3])}`], [/^Возврат за баттл (\S+)$/, m => `Battle refund ${m[1]}`], [/^Доплата за обмен (\S+)$/, m => `Swap top-up ${m[1]}`],
-  [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
+  [/^Вступление в Telegram-чат игроков$/, () => 'Joined the players’ Telegram chat'], [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
   [/^Кейс (\d+) · (.+)$/, m => `Case ${m[1]} · ${enCase(m[1], m[2])}`], [/^Апгрейд из (.+)$/, m => `Upgrade from ${m[1]}`],
 ];
 const enCase = (id, n) => { const all = CFG ? [...CFG.cases, ...(CFG.battleCases || [])] : []; const c = all.find(x => x.id === id || x.ru === n); return c ? c.name : n; };
@@ -143,8 +143,18 @@ const plateStr = p => (p.country === 'BY' ? `${p.digits} ${p.letters}-${p.region
 const regName = r => { const n = (CFG.regions[r] || [''])[0]; return LANG === 'en' ? (REG_EN[n] || translit(n).replace(/ obl\.$/, ' region').replace(/ kray$/i, ' krai')) : n; };
 const regionLabel = p => (p.country === 'BY' ? `${L('Беларусь', 'Belarus')} · ${LANG === 'en' ? BY_EN[p.region] : CFG.byRegions[p.region] || ''}` : `${p.region} · ${regName(p.region)}`);
 const traitName = t => { const x = CFG && CFG.traits && CFG.traits[t]; return x ? L(x.name, x.en) : t; };
-const MEDAL = m => (m === 'top3' ? `<span class="medal-b m3" title="${L('Топ-3 рейтинга', 'Top-3 of the ranking')}"><i>3</i>TOP</span>` : `<span class="medal-b m10" title="${L('Топ-10 рейтинга', 'Top-10 of the ranking')}"><i>10</i>TOP</span>`);
-const Medals = ms => (ms && ms.length ? `<span class="medals">${[...ms].sort((a, b) => (a === 'top3' ? -1 : 1)).map(MEDAL).join('')}</span>` : '');
+const MEDAL_DEF = () => ({
+  top3: ['m3', '3', 'TOP', L('Топ-3 рейтинга', 'Top-3 of the ranking')], top10: ['m10', '10', 'TOP', L('Топ-10 рейтинга', 'Top-10 of the ranking')],
+  trader: ['mtr', '⇄', L('МАСТЕР РЫНКА', 'MARKET MASTER'), L('Мастер рынка: 50+ сделок на рынке', 'Market master: 50+ market deals')],
+  spender: ['msp', '◆', L('ХАЙРОЛЛЕР', 'HIGH ROLLER'), L('Потратил больше 100 000 PLT', 'Spent over 100,000 PLT')],
+  earner: ['mer', '₽', L('МАГНАТ', 'TYCOON'), L('Заработал на продажах больше 50 000 PLT', 'Earned over 50,000 PLT from sales')],
+  lv50: ['ml50', '50', L('ЗВЕЗДА', 'STAR'), L('Достиг 50 уровня', 'Reached level 50')],
+  lv100: ['ml100', '100', L('ЛЕГЕНДА', 'LEGEND'), L('Достиг 100 уровня', 'Reached level 100')],
+});
+const MEDAL_ORDER = ['lv100', 'top3', 'lv50', 'top10', 'earner', 'trader', 'spender'];
+const MEDAL = m => { const d = MEDAL_DEF()[m]; return d ? `<span class="medal-b ${d[0]}" title="${d[3]}"><i>${d[1]}</i>${d[2]}</span>` : ''; };
+const Medals = ms => (ms && ms.length ? `<span class="medals">${[...ms].sort((a, b) => MEDAL_ORDER.indexOf(a) - MEDAL_ORDER.indexOf(b)).map(MEDAL).join('')}</span>` : '');
+const LV_TITLE = t => ({ rookie: L('Новичок', 'Rookie'), collector: L('Коллекционер', 'Collector'), expert: L('Знаток', 'Expert'), star: L('Звезда', 'Star'), tycoon: L('Магнат', 'Tycoon'), legend: L('Легенда', 'Legend') })[t] || '';
 const perkOf = p => { const out = []; if (p.pattern && p.pattern !== 'random') out.push(patName(p.pattern)); if (Array.isArray(p.traits)) p.traits.forEach(t => out.push(traitName(t))); else { if (/^7+$/.test(p.digits)) out.push(L('Счастливые семёрки', 'Lucky sevens')); if (/^0+1$/.test(p.digits)) out.push(L('Номер один', 'Number one')); } return out; };
 const vsValue = (price, value) => Math.round((price / Math.max(1, value) - 1) * 100);
 const rarePlus = c => Math.round((c.odds[2] + c.odds[3] + c.odds[4]) * 100) / 100;
