@@ -1,0 +1,10 @@
+{
+  "name": "plate-club",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PLATE CLUB — collectible Russian and Belarusian plate game",
+  "scripts": { "build": "node tools/build-app.mjs", "test": "node test/run.mjs" },
+  "engines": { "node": ">=20.12" },
+  "dependencies": { "@netlify/database": "latest" }
+}
