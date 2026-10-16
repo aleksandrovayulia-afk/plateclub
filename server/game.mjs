@@ -288,22 +288,25 @@ export const PACKAGES = [
 
 // ---- perks ----
 // Daily bonus: once per UTC day; a streak of consecutive days raises it, up to 7 days.
-export const DAILY = { base: 10, step: 0, maxStreak: 7 }; // fixed 10 PLT every day
-export const dailyAmount = streak => DAILY.base + DAILY.step * (Math.min(Math.max(streak, 1), DAILY.maxStreak) - 1);
+export const DAILY = { base: 10, step: 0, maxStreak: 5 };
+// streak ladder: day 1 → 10, day 2 → 20, day 3 → 50, day 4 → 75, day 5 and on → 100. Missing a day starts over.
+export const DAILY_LADDER = [10, 20, 50, 75, 100];
+export const dailyLadder = (base = 10) => DAILY_LADDER.map(v => Math.round(v * base / 10));
+export const dailyAmount = (streak, base = 10) => dailyLadder(base)[Math.min(Math.max(streak, 1), DAILY_LADDER.length) - 1];
 // Achievements: the server checks the condition from real data before paying the reward (once per account).
 export const ACHIEVEMENTS = [
   { id: 'first', name: 'Первый номер', text: 'Откройте первый кейс.', reward: 10, ok: s => s.opened >= 1 },
-  { id: 'ten', name: 'Десятка', text: 'Соберите 10 номеров.', reward: 10, ok: s => s.plates >= 10 },
-  { id: 'opener', name: 'Азарт', text: 'Откройте 25 кейсов.', reward: 10, ok: s => s.opened >= 25 },
-  { id: 'rare', name: 'Редкая находка', text: 'Получите редкий номер или лучше.', reward: 10, ok: s => s.maxtier >= 2 },
-  { id: 'elite', name: 'Элита', text: 'Получите элитный номер.', reward: 10, ok: s => s.maxtier >= 3 },
-  { id: 'grail', name: 'Грааль', text: 'Получите номер-Грааль.', reward: 10, ok: s => s.maxtier >= 4 },
-  { id: 'regions', name: 'Путешественник', text: 'Номера из 5 регионов.', reward: 10, ok: s => s.regions >= 5 },
-  { id: 'belarus', name: 'Две страны', text: 'Соберите номера России и Беларуси.', reward: 10, ok: s => s.countries >= 2 },
-  { id: 'buyer', name: 'Первая покупка', text: 'Купите номер на рынке.', reward: 10, ok: s => s.bought >= 1 },
-  { id: 'lister', name: 'Продавец', text: 'Выставите номер на рынок.', reward: 10, ok: s => s.listed >= 1 },
-  { id: 'seller', name: 'Первая продажа', text: 'Продайте номер другому игроку.', reward: 10, ok: s => s.sold >= 1 },
-  { id: 'twin', name: 'Близнецы', text: 'Получите номер «2 из 2» — последний экземпляр комбинации.', reward: 10, ok: s => s.twins >= 1 },
+  { id: 'ten', name: 'Десятка', text: 'Соберите 10 номеров.', reward: 40, ok: s => s.plates >= 10 },
+  { id: 'opener', name: 'Азарт', text: 'Откройте 25 кейсов.', reward: 100, ok: s => s.opened >= 25 },
+  { id: 'rare', name: 'Редкая находка', text: 'Получите редкий номер или лучше.', reward: 100, ok: s => s.maxtier >= 2 },
+  { id: 'elite', name: 'Элита', text: 'Получите элитный номер.', reward: 200, ok: s => s.maxtier >= 3 },
+  { id: 'grail', name: 'Грааль', text: 'Получите номер-Грааль.', reward: 250, ok: s => s.maxtier >= 4 },
+  { id: 'regions', name: 'Путешественник', text: 'Номера из 5 регионов.', reward: 75, ok: s => s.regions >= 5 },
+  { id: 'belarus', name: 'Две страны', text: 'Соберите номера России и Беларуси.', reward: 75, ok: s => s.countries >= 2 },
+  { id: 'buyer', name: 'Первая покупка', text: 'Купите номер на рынке.', reward: 20, ok: s => s.bought >= 1 },
+  { id: 'lister', name: 'Продавец', text: 'Выставите номер на рынок.', reward: 20, ok: s => s.listed >= 1 },
+  { id: 'seller', name: 'Первая продажа', text: 'Продайте номер другому игроку.', reward: 50, ok: s => s.sold >= 1 },
+  { id: 'twin', name: 'Близнецы', text: 'Получите номер «2 из 2» — последний экземпляр комбинации.', reward: 150, ok: s => s.twins >= 1 },
 ];
 export const CURRENCIES = ['EUR', 'USD', 'GBP'];
 
@@ -335,7 +338,7 @@ export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
   const stripe = !!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
   return {
     announcement: st.announcement || '',
-    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN }, daily: { ...DAILY, base: st.dailyBonus }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS, patNames: PAT_NAME, cats: CATS,
+    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS, patNames: PAT_NAME, cats: CATS,
     cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
     deals: dealsFor(ts).filter(d => !(st.cases[d.id] && st.cases[d.id].hidden)).map(d => ({ ...d, was: caseBasePrice(caseById(d.id), st), price: casePrice(caseById(d.id), st, ts) })),
     fee: st.marketFee, bankRate: st.bankRate, signupBonus: st.signupBonus,

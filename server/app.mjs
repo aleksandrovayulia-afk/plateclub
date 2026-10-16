@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
+  SIGNUP_BONUS, dailyLadder, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -726,7 +726,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     let streak = 0; let d = claimed ? today : today - 1;
     for (const x of days) { if (x === d) { streak++; d--; } else if (x < d) break; }
     const next = claimed ? streak : streak + 1;
-    return { claimed, streak, amount: ST.dailyBonus, nextAt: (today + 1) * 86400000 };
+    return { claimed, streak, amount: dailyAmount(streak + 1, ST.dailyBonus), ladder: dailyLadder(ST.dailyBonus), nextAt: (today + 1) * 86400000 };
   }
   R('GET', '/api/perks', async ({ user }) => {
     const daily = await dailyState(q, user.id);
@@ -741,7 +741,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
     const st = await dailyState(Q, user.id);
     if (st.claimed) throw new HttpError(409, 'Бонус за сегодня уже получен. Следующий — после 03:00 по Москве.');
-    const streak = st.streak + 1; const amount = ST.dailyBonus;
+    const streak = st.streak + 1; const amount = dailyAmount(streak, ST.dailyBonus);
     const led = await ledger(Q, user.id, 'daily_bonus', amount, `Ежедневный бонус · день ${streak}`, dayKey(now()));
     return { ok: true, amount, streak, balance: led.balance };
   }), { auth: true });

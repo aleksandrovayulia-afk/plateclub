@@ -49,7 +49,7 @@ async function topUp(c, pkg = 'plt3000') {
 
 console.log('\n1. Config');
 const cfg = (await client().call('GET', '/api/config')).data;
-ok(cfg.cases.length === 48, '48 cases'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward <= 10) && new Set(cfg.cases.map(c => c.color)).size === 48, 'every case has its own colour and a rarity');
+ok(cfg.cases.length === 48, '48 cases'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward >= 10 && a.reward <= 250) && Math.max(...cfg.achievements.map(a => a.reward)) === 250 && new Set(cfg.cases.map(c => c.color)).size === 48, 'every case has its own colour and a rarity');
 { const el = cfg.cases.filter(c => c.cat === 'elite'), rest = cfg.cases.filter(c => c.cat !== 'elite'); const maxRest = Math.max(...rest.map(c => c.price)); ok(el.length === 4 && el.every(c => c.odds[0] + c.odds[1] + c.odds[2] === 0) && el.filter(c => c.price >= 2 * maxRest).length >= 3, 'elite cases: only Elite/Grail, 2–3× the price of the rest', el.map(c => c.price)); } ok(cfg.payments.packages.length === 7 && cfg.payments.packages[0].plt === 100 && cfg.payments.packages.at(-1).plt === 20000, 'top-ups from 100 to 20 000 PLT');
 ok(cfg.cases[0].name === 'Starter' && cfg.cases[0].price === 100 && cfg.cases.every(c => c.price >= 100), 'STARTER costs 100 PLT');
 ok(cfg.cases.slice(1).every(c => c.price > 100), 'every other case costs more than STARTER', cfg.cases.map(c => c.price));
@@ -308,15 +308,15 @@ r = await ADM.call('POST', '/api/admin/promos/LUCKY7/toggle', {}); ok(r.status =
 r = await P14.call('POST', '/api/promo/redeem', { code: 'LUCKY7' }); ok(r.status === 404, 'disabled promo is rejected');
 ok((await ADM.call('GET', '/api/admin/promos')).data.promos.length >= 4, 'admin lists promos');
 r = await B.call('POST', '/api/admin/promos', { code: 'HACK', amount: 9 }); ok(r.status === 403, 'non-admin cannot create promos');
-r = await P14.call('GET', '/api/perks'); ok(r.status === 200 && r.data.daily.claimed === false && r.data.daily.amount === 10, 'daily bonus is available (10 PLT)', r.data.daily);
+r = await P14.call('GET', '/api/perks'); ok(r.status === 200 && r.data.daily.claimed === false && r.data.daily.amount === 10 && r.data.daily.ladder.join() === '10,20,50,75,100', 'daily bonus ladder 10→20→50→75→100, today 10', r.data.daily);
 const db1 = await Promise.all([P14.call('POST', '/api/perks/daily', {}), P14.call('POST', '/api/perks/daily', {})]);
 ok(db1.filter(x => x.status === 200).length === 1, 'daily bonus is paid once even with parallel clicks', db1.map(x => x.status));
 const [u14] = await q1(`SELECT id FROM users WHERE nick_norm='promo_user'`);
 await q1(`UPDATE ledger SET ref='D' || (floor(extract(epoch from now())/86400)::int - 1) WHERE user_id=$1 AND kind='daily_bonus'`, [u14.id]);
-r = await P14.call('POST', '/api/perks/daily', {}); ok(r.status === 200 && r.data.streak === 2 && r.data.amount === 10, 'every day gives exactly 10 PLT', r.data);
+r = await P14.call('POST', '/api/perks/daily', {}); ok(r.status === 200 && r.data.streak === 2 && r.data.amount === 20, 'day 2 of the streak gives 20 PLT', r.data);
 r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 409, 'cannot claim an unfinished achievement');
 await P14.call('POST', '/api/cases/01/open', {});
-r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 200 && r.data.amount === 10, 'achievement reward (10 PLT) paid after the condition is met');
+r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 200 && r.data.amount === 10, 'first achievement reward (10 PLT) paid after the condition is met');
 r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 409, 'achievement reward only once');
 const pk = (await P14.call('GET', '/api/perks')).data; ok(pk.achievements.find(a => a.id === 'first').claimed === true, 'perks show the claimed reward');
 
