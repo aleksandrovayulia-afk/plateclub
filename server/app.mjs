@@ -131,6 +131,19 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   R('GET', '/api/config', async () => publicConfig(env, now(), await settings()));
   R('GET', '/api/me', async ({ user }) => {
     if (!user) return { user: null };
+    // the site owner (first admin) gets ADMIN_INITIAL_GRANT once — also when they became admin before the grant existed
+    const initial = Math.max(0, Math.min(100_000_000, parseInt(env.ADMIN_INITIAL_GRANT || '0', 10) || 0));
+    if (initial && user.role === 'admin') {
+      const paid = await tx(async Q => {
+        const [first] = await Q(`SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1`);
+        if (!first || n(first.id) !== user.id) return 0;
+        await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
+        const [done] = await Q(`SELECT 1 FROM ledger WHERE user_id=$1 AND ref='admin-initial'`, [user.id]); if (done) return 0;
+        const led = await ledger(Q, user.id, 'admin_grant', initial, 'Стартовый баланс администратора', 'admin-initial');
+        return led.balance;
+      });
+      if (paid) user.balance = paid;
+    }
     const [s] = await q(`SELECT
       (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='case_open')::int AS opened,
       (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='market_buy')::int AS bought,
