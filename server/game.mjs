@@ -358,7 +358,7 @@ export const xpFor = lvl => (lvl <= 1 ? 0 : Math.round(200 * Math.pow(lvl - 1, 2
 export const LEVEL_TITLES = [[100, 'legend'], [75, 'tycoon'], [50, 'star'], [25, 'expert'], [10, 'collector'], [1, 'rookie']];
 export const levelTitle = l => LEVEL_TITLES.find(([min]) => l >= min)[1];
 // medals for big activity (besides the TOP-10 / TOP-3 ranking medals)
-export const TELEGRAM = { url: 'https://t.me/+pMbT6m8-iuM2YjFk', reward: 50 };
+export const TELEGRAM = { url: 'https://t.me/+pMbT6m8-iuM2YjFk', reward: 500 };
 export const MEDAL_RULES = { trader: 50, spender: 100000, earner: 50000, lv50: 50, lv100: 100 };
 export function levelOf(xp) { let l = 1; while (l < 999 && xpFor(l + 1) <= xp) l++; return { level: l, xp, cur: xpFor(l), next: xpFor(l + 1), title: levelTitle(l) }; }
 

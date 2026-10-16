@@ -250,7 +250,7 @@ r = await client().call('GET', '/api/online'); ok(r.status === 200 && r.data.cou
   ok(m1 === before && m2 === before, 'owner grant is not paid twice (already paid at claim)', [before, m1, m2]); }
 { const T = client(); await T.call('POST', '/api/auth/register', { email: 'tg@example.com', nickname: 'TgUser', password: 'tg-pass-123', terms: true });
   const b0 = (await T.call('GET', '/api/me')).data.user.balance;
-  r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 200 && r.data.amount === 50 && r.data.balance === b0 + 50, 'Telegram chat reward +50 PLT', r.data);
+  r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 200 && r.data.amount === 500 && r.data.balance === b0 + 500, 'Telegram chat reward +500 PLT', r.data);
   r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 409, 'Telegram reward only once');
   ok((await T.call('GET', '/api/perks')).data.telegram === true, 'perks remember the Telegram reward'); }
 r = await ADM.call('GET', '/api/admin/overview'); ok(r.status === 200 && r.data.overview.users >= 4 && r.data.log.length >= 1, 'overview and audit log');
