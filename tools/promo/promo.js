@@ -18,7 +18,7 @@ const TXT = {
   grailTag: ['Грааль · 21 000 PLT', 'Grail · 21,000 PLT'],
   grailNote: ['выпадает раз на тысячу', 'one in a thousand'],
   inviteKicker: ['приведи друга', 'bring a friend'],
-  inviteH: ['Другу <span class="cg">250 PLT</span><br>тебе <span class="cg">500 PLT</span>', 'Friend gets <span class="cg">250 PLT</span><br>you get <span class="cg">500 PLT</span>'],
+  inviteH: ['Друг зарегался —<br>тебе <span class="cg">+1000 PLT</span>', 'Friend signs up —<br>you get <span class="cg">+1000 PLT</span>'],
   inviteSub: ['Своя ссылка у каждого игрока', 'Every player has their own link'],
   caseKicker: ['кейс-рулетка', 'case roulette'],
   grail: ['Грааль', 'Grail'],

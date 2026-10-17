@@ -75,6 +75,30 @@
   @keyframes in{to{opacity:1;transform:none}}
   .glow{position:absolute;left:50%;top:50%;width:900px;height:360px;transform:translate(-50%,-50%);pointer-events:none;
     background:radial-gradient(closest-side,rgba(74,168,238,.3),transparent 70%);filter:blur(10px)}
+
+  /* ---------- PLAY NOW: big loud button ---------- */
+  .play{position:relative;display:grid;justify-items:center;gap:26px}
+  .play .go{position:relative;display:inline-flex;align-items:center;gap:30px;padding:44px 84px 44px 64px;border-radius:999px;overflow:hidden;
+    background:linear-gradient(180deg,#E8FF8A 0%,#C6FF3D 45%,#8EDB00 100%);color:#061200;
+    font-family:var(--fn);font-weight:800;font-size:96px;letter-spacing:-.01em;line-height:1;text-transform:uppercase;
+    box-shadow:0 0 0 8px rgba(198,255,61,.25),0 30px 90px rgba(0,0,0,.6),0 0 120px rgba(198,255,61,.55),inset 0 5px 0 rgba(255,255,255,.7);
+    animation:throb 1s ease-in-out infinite}
+  .play .go .tri{width:0;height:0;border-left:70px solid #061200;border-top:42px solid transparent;border-bottom:42px solid transparent;margin-right:-6px}
+  .play .go .sh{position:absolute;inset:0;background:linear-gradient(104deg,transparent 35%,rgba(255,255,255,.85) 47%,transparent 59%);transform:translateX(-130%);animation:sweep 1.5s ease-in-out infinite}
+  .play .ring{position:absolute;left:50%;top:0;width:100%;height:180px;margin-left:-50%;border-radius:999px;border:6px solid rgba(198,255,61,.8);animation:ring 1.5s ease-out infinite}
+  .play .sub{display:inline-flex;align-items:center;gap:18px;padding:14px 30px;border-radius:999px;background:rgba(5,8,14,.8);border:2px solid rgba(143,211,255,.45)}
+  .play .sub img{height:52px}
+  .play .sub b{font-family:var(--fm);font-size:34px;background:var(--chrome);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .play .arrow{font-size:90px;line-height:1;color:var(--acid);text-shadow:0 0 40px rgba(198,255,61,.8);animation:bob 1s ease-in-out infinite}
+  @keyframes throb{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  @keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.35,1.7);opacity:0}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(18px)}}
+  .bonus{display:grid;justify-items:center;gap:18px;padding:40px 60px;border-radius:44px;background:rgba(5,8,14,.84);border:3px solid rgba(198,255,61,.6);
+    box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 90px rgba(198,255,61,.3)}
+  .bonus .k{font-family:var(--fm);font-weight:700;font-size:34px;letter-spacing:.2em;text-transform:uppercase;color:var(--ice)}
+  .bonus .big{font-family:var(--fn);font-weight:800;font-size:170px;line-height:.95;color:var(--acid);text-shadow:0 0 60px rgba(198,255,61,.6);animation:throb 1s ease-in-out infinite}
+  .bonus .big small{font-size:70px}
+  .bonus .s{font-size:40px;font-weight:800;color:#fff;text-align:center}
 </style></head>
 <body>
 <div class="stage" id="stage"></div>
@@ -88,6 +112,10 @@ const TX = {
   start: ['100 PLT на старт', '100 PLT to start'],
   play: ['Играй бесплатно', 'Play for free'],
   rare: ['Лови редкий номер', 'Catch a rare plate'],
+  playnow: ['Играть', 'Play now'],
+  free: ['бесплатно · 100 PLT на старт', 'free · 100 PLT to start'],
+  inviteK: ['Позови друга', 'Invite a friend'],
+  inviteS: ['сразу за его регистрацию', 'the moment they sign up'],
 };
 const t_ = k => TX[k][LANG === 'en' ? 1 : 0];
 const LOGO = '/brand/logo-chrome-900.png';
@@ -104,6 +132,12 @@ const T = {
   lower: `<div class="slot bottom" style="bottom:360px;justify-items:start"><div class="lt anim"><img src="${LOGO}" alt=""><span class="v"></span><span class="txt"><span class="a">${t_('collect')}</span><span class="b">${HANDLE}</span></span></div></div>`,
   start: `<div class="slot bottom"><div class="anim" style="position:relative"><div class="glow"></div>
       <div class="cta" style="padding:26px 44px"><img src="${LOGO}" alt="" style="height:64px"><span class="txt"><span class="t1">${t_('start')}</span><span class="t2">${HANDLE}</span></span></div></div></div>`,
+  play: `<div class="slot bottom"><div class="anim play"><span class="arrow">▼</span><div style="position:relative"><span class="ring"></span><div class="go"><span class="tri"></span>${t_('playnow')}<span class="sh"></span></div></div>
+      <div class="sub"><img src="${LOGO}" alt=""><b>${HANDLE}</b></div></div></div>`,
+  playtop: `<div class="slot top"><div class="anim play"><div style="position:relative"><span class="ring"></span><div class="go" style="font-size:80px;padding:36px 70px 36px 54px"><span class="tri" style="border-left-width:58px;border-top-width:35px;border-bottom-width:35px"></span>${t_('playnow')}<span class="sh"></span></div></div>
+      <div class="sub"><b style="font-family:var(--f);font-weight:800;color:#C6FF3D;-webkit-text-fill-color:#C6FF3D">${t_('free')}</b></div></div></div>`,
+  invite: `<div class="slot bottom"><div class="anim bonus"><span class="k">${t_('inviteK')}</span><span class="big">+1000<small> PLT</small></span><span class="s">${t_('inviteS')}</span>
+      <div class="play" style="margin-top:6px"><div class="sub"><img src="${LOGO}" alt=""><b>${HANDLE}</b></div></div></div></div>`,
   ticker: `<div class="slot" style="top:300px"><div class="anim tick"><i class="dot"></i><span>${t_('play')}</span><b>${HANDLE}</b></div></div>`,
 };
 document.getElementById('stage').innerHTML = T[V] || T.pill;

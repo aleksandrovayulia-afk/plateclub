@@ -686,9 +686,10 @@ VIEWS.wallet = async ({ query }) => {
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Кошелёк · игровые токены PLT', 'Wallet · PLT game tokens')}</p><p class="bigbal chrome-t">${fmt(w.balance)}<small>PLT</small></p><p class="small" style="margin-top:10px">${L('PLT работают только внутри Plate Club: их нельзя вывести или обменять на деньги.', 'PLT only work inside Plate Club: they cannot be withdrawn or exchanged for money.')}</p></div></section>
     ${pay ? `<div class="notice" style="margin-bottom:22px"><b>${L('Платёж', 'Payment')} ${pay.id}: ${pay.status}</b>${pay.status === 'PAID' ? L(`${fmt(pay.plt)} PLT зачислены.`, `${fmt(pay.plt)} PLT credited.`) : L('Баланс изменится после подтверждения платёжного сервиса.', 'Your balance changes once the payment provider confirms.')}</div>` : ''}
     <section class="split" style="padding-bottom:80px">
-      ${methods.length ? '' : `<div class="panel" style="display:grid;gap:14px;align-content:start">${SH(L('Как получить PLT', 'How to get PLT'), L('оплата пока не подключена', 'payments are not connected yet'))}
+      ${methods.length ? '' : `<div class="panel" style="display:grid;gap:14px;align-content:start">${SH(L('Как получить PLT', 'How to get PLT'), L('пополнение баланса скоро будет', 'balance top-ups are coming soon'))}
+        <div class="soon"><b>${L('Пополнение баланса — скоро!', 'Top-ups — coming soon!')}</b><span>${L('Мы подключаем оплату картой. А пока PLT можно получить бесплатно:', 'We are connecting card payments. Until then you can get PLT for free:')}</span></div>
         <a class="earn" href="#/bonus"><b>${L('Бонус каждый день', 'A bonus every day')}</b><span>${L('до 100 PLT, серия растёт', 'up to 100 PLT, the streak grows')}</span></a>
-        <a class="earn" href="#/bonus"><b>${L('Пригласить друга', 'Invite a friend')}</b><span>${L('500 PLT за каждого, кто начнёт играть', '500 PLT for every friend who starts playing')}</span></a>
+        <a class="earn" href="#/bonus"><b>${L('Пригласить друга', 'Invite a friend')}</b><span>${L('+1 000 PLT сразу за регистрацию друга, +2 000 когда он начнёт играть', '+1,000 PLT the moment a friend signs up, +2,000 once they play')}</span></a>
         <a class="earn" href="#/bonus"><b>${L('Сторис с отметкой сайта', 'A story tagging the site')}</b><span>5 000 PLT</span></a>
         <a class="earn" href="#/bonus"><b>TikTok</b><span>${L('1 PLT за просмотр', '1 PLT per view')}</span></a>
         <a class="earn" href="#/market"><b>${L('Купить дешевле — продать дороже', 'Buy low, sell high')}</b><span>${L('рынок между игроками', 'the player market')}</span></a></div>`}
@@ -746,13 +747,13 @@ async function loadRef() {
     const d = await GET('/api/referral'); REF = d;
     const ms = d.milestones.map(m => `<div class="msx${m.done ? ' on' : ''}"><b>${m.need}</b><span>+${fmt(m.bonus)}</span></div>`).join('');
     const nx = d.next ? L(`Ещё ${d.next[0] - d.active} ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} — и бонус +${fmt(d.next[1])} PLT`, `${d.next[0] - d.active} more ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} and you get +${fmt(d.next[1])} PLT`) : L('Все награды за друзей собраны.', 'All friend rewards collected.');
-    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L(`Друг получает ${fmt(d.reward.friend)} PLT, вы — ${fmt(d.reward.inviter)} PLT, как только он откроет ${d.reward.needOpens} кейса. Друзей можно звать сколько угодно.`, `Your friend gets ${fmt(d.reward.friend)} PLT and you get ${fmt(d.reward.inviter)} PLT once they open ${d.reward.needOpens} cases. Invite as many as you like.`)}</p>
+    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L('Друг зарегистрировался по ссылке', 'A friend signs up via your link')} — <b class="up">+${fmt(d.reward.signupInviter)} PLT</b> ${L('вам сразу', 'to you instantly')}. ${L(`Открыл ${d.reward.needOpens} кейса`, `Opens ${d.reward.needOpens} cases`)} — <b class="up">+${fmt(d.reward.inviter)} PLT</b> ${L('ещё', 'more')}. ${L(`Другу — ${fmt(d.reward.signupFriend + d.reward.friend)} PLT в подарок. Друзей — без ограничений.`, `Your friend gets ${fmt(d.reward.signupFriend + d.reward.friend)} PLT as a gift. No limit on friends.`)}</p>
       <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button><button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button><button class="btn btn-ghost" data-act="refqr">QR</button></div>
       <p class="small" style="margin:8px 0 0;opacity:.7">${L('Короткий вид', 'Short form')}: <span class="mono">${esc(d.codeLink.replace(/^https?:\/\//, ''))}</span></p>
       <div class="stats s4" style="margin-top:14px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
       <div class="msrow" style="margin-top:14px">${ms}</div>
       <p class="small" style="margin:8px 0 0">${nx}</p>
-      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid ? ' plus' : ''}">${f.paid ? '+' + fmt(d.reward.inviter) : L('ждём', 'waiting')}</span></div>`).join('')}</div>` : `<p class="small" style="margin-top:10px;opacity:.75">${L('Пока никто не перешёл. Отправьте ссылку в чат или выложите в сторис — за сторис ещё и 5 000 PLT.', 'Nobody has joined yet. Send the link in a chat or post it to your story — a story also pays 5,000 PLT.')}</p>`}`;
+      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid || f.joinPaid ? ' plus' : ''}">${'+' + fmt((f.joinPaid ? d.reward.signupInviter : 0) + (f.paid ? d.reward.inviter : 0))}${f.paid ? '' : ' · ' + L('ждём 3 кейса', 'waiting for 3 cases')}</span></div>`).join('')}</div>` : `<p class="small" style="margin-top:10px;opacity:.75">${L('Пока никто не перешёл. Отправьте ссылку в чат или выложите в сторис — за сторис ещё и 5 000 PLT.', 'Nobody has joined yet. Send the link in a chat or post it to your story — a story also pays 5,000 PLT.')}</p>`}`;
   } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
 }
 async function loadQuests() {
@@ -817,6 +818,9 @@ let MEDIA_LANG = null;
 VIEWS.media = async () => {
   const ml = MEDIA_LANG || LANG;
   const B = [
+    ['play', L('ИГРАТЬ — большая кнопка', 'PLAY NOW — big button'), L('Самый заметный. Пульсирует и блестит.', 'The loudest one. Pulses and shines.')],
+    ['playtop', L('ИГРАТЬ сверху', 'PLAY NOW on top'), L('Кнопка + «бесплатно».', 'Button + “free”.')],
+    ['invite', L('+1000 за друга', '+1000 per friend'), L('Для рекламы своей ссылки.', 'To promote your invite link.')],
     ['pill', L('Плашка с логотипом', 'Logo pill'), L('Снизу кадра. Самая универсальная.', 'Bottom of the frame. The all-rounder.')],
     ['plate', L('Номер + плашка', 'Plate + pill'), L('Когда показываете номера.', 'When you show plates.')],
     ['cta', L('Призыв', 'Call to action'), L('С пульсирующей точкой.', 'With a pulsing dot.')],
@@ -829,7 +833,7 @@ VIEWS.media = async () => {
     ['promo', L('Полный ролик', 'Full promo'), '15 ' + L('сек', 'sec'), L('Логотип, редкость, кейс, рынок, призыв.', 'Logo, rarity, a case, the market, the call.')],
     ['teaser', L('Тизер с кейсом', 'Case teaser'), '7 ' + L('сек', 'sec'), L('Только разлом кейса и рулетка.', 'Just the case breaking and the roulette.')],
     ['drop', L('Про редкость', 'About rarity'), '8 ' + L('сек', 'sec'), L('Две копии номера на весь мир.', 'Two copies of a plate in the whole world.')],
-    ['invite', L('Про друзей', 'About invites'), '6 ' + L('сек', 'sec'), L('250 PLT другу, 500 PLT вам.', '250 PLT for a friend, 500 PLT for you.')],
+    ['invite', L('Про друзей', 'About invites'), '6 ' + L('сек', 'sec'), L('+1 000 PLT вам сразу за регистрацию друга.', '+1,000 PLT the moment a friend signs up.')],
   ];
   const bcard = ([id, name, note]) => `<article class="mcard"><div class="mprev"><img src="/media/banner-${id}-${ml}.png" alt="${esc(name)}" loading="lazy"></div>
     <div><h3 class="h3">${esc(name)}</h3><p class="small" style="margin:6px 0 10px">${esc(note)}</p>

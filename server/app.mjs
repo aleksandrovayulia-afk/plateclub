@@ -137,6 +137,27 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     }
     return null;
   }
+  // same device = same signup IP hash; such an invite never pays
+  async function refGuard(Q, inviterId, friendId) {
+    const [inv] = await Q('SELECT nickname,signup_ip FROM users WHERE id=$1 AND blocked_at IS NULL', [inviterId]);
+    if (!inv) return null;
+    const [fr] = await Q('SELECT signup_ip FROM users WHERE id=$1', [friendId]);
+    if (inv.signup_ip && fr && fr.signup_ip && inv.signup_ip === fr.signup_ip) return { inv, same: true };
+    const [{ d }] = await Q(`SELECT count(*)::int AS d FROM ledger WHERE user_id=$1 AND kind='referral' AND created_at > now() - interval '24 hours'`, [inviterId]);
+    return { inv, same: false, capped: n(d) >= REFERRAL.maxPerDay * 2 };
+  }
+  // Paid the moment a friend registers through the link: +1000 to the inviter, +500 extra to the friend.
+  async function paySignupReferral(Q, friendId) {
+    const [f] = await Q('SELECT id,nickname,referred_by FROM users WHERE id=$1 FOR UPDATE', [friendId]);
+    if (!f || !f.referred_by) return;
+    const inviterId = n(f.referred_by);
+    const [done] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['refsu:' + friendId]);
+    if (done) return;
+    const g = await refGuard(Q, inviterId, friendId);
+    if (!g || g.same || g.capped) return;
+    await ledger(Q, inviterId, 'referral', REFERRAL.signupInviter, `Друг ${f.nickname} зарегистрировался`, 'refsu:' + friendId);
+    await ledger(Q, friendId, 'referral', REFERRAL.signupFriend, `Бонус за приглашение от ${g.inv.nickname}`, 'refsu:' + friendId + ':f');
+  }
   // Pays both sides once the invited friend has really started playing (opened a few cases).
   async function payReferral(Q, friendId) {
     const [f] = await Q('SELECT id,nickname,referred_by FROM users WHERE id=$1 FOR UPDATE', [friendId]);
@@ -146,18 +167,15 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     if (done) return;
     const [{ c }] = await Q(`SELECT count(*)::int AS c FROM ledger WHERE user_id=$1 AND kind='case_open'`, [friendId]);
     if (n(c) < REFERRAL.needOpens) return;
-    const [{ d }] = await Q(`SELECT count(*)::int AS d FROM ledger WHERE user_id=$1 AND kind='referral' AND created_at > now() - interval '24 hours'`, [inviterId]);
-    if (n(d) >= REFERRAL.maxPerDay) return;
-    const [inv] = await Q('SELECT nickname,signup_ip FROM users WHERE id=$1 AND blocked_at IS NULL', [inviterId]);
-    if (!inv) return;
+    const g = await refGuard(Q, inviterId, friendId);
+    if (!g || g.capped) return;
+    const inv = g.inv;
     // a second account from the same device does not pay the inviter
-    const [me2] = await Q('SELECT signup_ip FROM users WHERE id=$1', [friendId]);
-    const sameDevice = inv.signup_ip && me2 && me2.signup_ip && inv.signup_ip === me2.signup_ip;
-    if (sameDevice) { await Q(`INSERT INTO ledger(id,user_id,kind,amount,balance_after,ref,label) SELECT $1,$2,'referral',0,balance,$3,$4 FROM users WHERE id=$2`, [newId('TX'), friendId, 'ref:' + friendId, 'Приглашение не засчитано: то же устройство']); return; }
+    if (g.same) { await Q(`INSERT INTO ledger(id,user_id,kind,amount,balance_after,ref,label) SELECT $1,$2,'referral',0,balance,$3,$4 FROM users WHERE id=$2`, [newId('TX'), friendId, 'ref:' + friendId, 'Приглашение не засчитано: то же устройство']); return; }
     await ledger(Q, inviterId, 'referral', REFERRAL.inviter, `Друг ${f.nickname} начал играть`, 'ref:' + friendId);
     await ledger(Q, friendId, 'referral', REFERRAL.friend, `Приглашение от ${inv.nickname}`, 'ref:' + friendId + ':f');
     // milestones: 3, 10, 25, 50, 100 active friends
-    const [{ act }] = await Q(`SELECT count(*)::int AS act FROM ledger WHERE user_id=$1 AND kind='referral' AND amount=$2`, [inviterId, REFERRAL.inviter]);
+    const [{ act }] = await Q(`SELECT count(*)::int AS act FROM ledger WHERE user_id=$1 AND kind='referral' AND ref ~ '^ref:[0-9]+$' AND amount > 0`, [inviterId]);
     for (const [need, bonus] of refMilestone(n(act))) {
       const ref = 'refms:' + need;
       const [had] = await Q(`SELECT 1 FROM ledger WHERE user_id=$1 AND ref=$2`, [inviterId, ref]);
@@ -251,7 +269,10 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     if (inviteCode) {
       try {
         const [inv] = await q(`SELECT id FROM users WHERE (ref_code=$1 OR nick_norm=lower($1)) AND blocked_at IS NULL AND role <> 'bot'`, [inviteCode]);
-        if (inv && n(inv.id) !== user.id) await q('UPDATE users SET referred_by=$1 WHERE id=$2 AND referred_by IS NULL', [n(inv.id), user.id]);
+        if (inv && n(inv.id) !== user.id) {
+          await q('UPDATE users SET referred_by=$1 WHERE id=$2 AND referred_by IS NULL', [n(inv.id), user.id]);
+          await tx(Q => paySignupReferral(Q, user.id));
+        }
       } catch {}
     }
     const cookie = await newSession(user.id);
@@ -836,10 +857,11 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const code = await tx(Q => ensureRefCode(Q, user.id));
     const rows = await q(`SELECT u.nickname,(extract(epoch from u.created_at)*1000)::bigint AS at,
         (SELECT count(*) FROM ledger WHERE user_id=u.id AND kind='case_open')::int AS opens,
-        EXISTS(SELECT 1 FROM ledger WHERE kind='referral' AND ref='ref:' || u.id) AS paid
+        EXISTS(SELECT 1 FROM ledger WHERE kind='referral' AND ref='ref:' || u.id AND amount > 0) AS paid,
+        EXISTS(SELECT 1 FROM ledger WHERE kind='referral' AND ref='refsu:' || u.id) AS joinpaid
       FROM users u WHERE u.referred_by=$1 ORDER BY u.created_at DESC LIMIT 100`, [user.id]);
     const [e] = await q(`SELECT coalesce(sum(amount),0)::bigint AS s FROM ledger WHERE user_id=$1 AND kind='referral'`, [user.id]);
-    const friends = rows.map(r => ({ nickname: r.nickname, at: n(r.at), opens: n(r.opens), paid: r.paid === true || r.paid === 't' }));
+    const friends = rows.map(r => ({ nickname: r.nickname, at: n(r.at), opens: n(r.opens), paid: r.paid === true || r.paid === 't', joinPaid: r.joinpaid === true || r.joinpaid === 't' }));
     const active = friends.filter(f => f.paid).length;
     return {
       code, nick: user.nickname,
@@ -848,7 +870,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       friends, earned: n(e.s), joined: friends.length, active,
       milestones: REFERRAL.milestones.map(([need, bonus]) => ({ need, bonus, done: active >= need })),
       next: refNext(active),
-      reward: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, needOpens: REFERRAL.needOpens },
+      reward: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, signupInviter: REFERRAL.signupInviter, signupFriend: REFERRAL.signupFriend, needOpens: REFERRAL.needOpens },
     };
   }, { auth: true });
 
