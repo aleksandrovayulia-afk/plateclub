@@ -66,7 +66,8 @@ VIEWS.plate = async ({ arg }) => {
       <div class="vf-id iri-t" id="vfId">${p.id}</div>
       <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}${gone ? `<span class="tag">${p.status === 'BURNED' ? L('Сожжён', 'Burned') : L('У банка', 'With the bank')}</span>` : ''}</div>
       <button class="btn btn-chrome btn-lg" data-act="verify" data-id="${p.id}">${IC.shield.replace('<svg', '<svg width="20" height="20"')}${L('Проверить подлинность', 'Verify authenticity')}</button>
-      <div class="vf-res" id="vfRes" aria-live="polite"></div></section>
+      <div class="vf-res" id="vfRes" aria-live="polite"></div>
+      <button class="btn btn-ghost" data-act="shareplate" data-id="${p.id}">${L('Поделиться номером', 'Share this plate')}</button></section>
     <section class="split" style="padding-bottom:80px">
       <div class="panel"><h1 class="h2">${esc(plateStr(p))}</h1>
         <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd>${p.id}</dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.copy || 1} ${L('из', 'of')} 2</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>

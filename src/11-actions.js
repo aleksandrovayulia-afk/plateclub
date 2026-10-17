@@ -75,6 +75,50 @@ A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
 A.mkmore = btn => { MK_SHOW += 24; mkSig = ''; busy(btn, true, '…'); loadMarket(); };
 A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
+// Draws a shareable card with the plate — players post these, and a story is worth 5 000 PLT.
+A.shareplate = async btn => {
+  const id = btn.dataset.id;
+  let p; try { p = (await GET('/api/plates/' + encodeURIComponent(id))).plate; } catch (e) { return toast(e.message, true); }
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#0b1220'); g.addColorStop(.55, '#070a12'); g.addColorStop(1, '#0d1726');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const rg = x.createRadialGradient(W / 2, H * .42, 40, W / 2, H * .42, W * .75);
+  rg.addColorStop(0, 'rgba(74,168,238,.35)'); rg.addColorStop(1, 'transparent'); x.fillStyle = rg; x.fillRect(0, 0, W, H);
+  const round = (a, b, w, h, r) => { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); };
+  // the plate itself
+  const by = p.country === 'BY';
+  const pw = 820, ph = by ? 210 : 230, px = (W - pw) / 2, py = H * .30;
+  x.save(); x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 50; x.shadowOffsetY = 24;
+  round(px, py, pw, ph, 26); x.fillStyle = '#f3f5f7'; x.fill(); x.restore();
+  round(px, py, pw, ph, 26); x.lineWidth = 7; x.strokeStyle = '#cfd6dd'; x.stroke();
+  x.fillStyle = '#0b0c0f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const main = by ? `${p.digits} - ${p.region}` : `${p.letters[0]}${p.digits}${p.letters.slice(1)}`;
+  x.font = '700 128px "IBM Plex Mono", ui-monospace, monospace';
+  x.fillText(main, px + pw * (by ? .5 : .40), py + ph / 2);
+  if (!by) { x.beginPath(); x.moveTo(px + pw * .72, py + 10); x.lineTo(px + pw * .72, py + ph - 10); x.lineWidth = 6; x.strokeStyle = '#cfd6dd'; x.stroke();
+    x.font = '700 76px "IBM Plex Mono", ui-monospace, monospace'; x.fillText(p.region, px + pw * .86, py + ph * .42);
+    x.font = '700 26px "IBM Plex Mono", ui-monospace, monospace'; x.fillStyle = '#555'; x.fillText('RUS', px + pw * .86, py + ph * .76); }
+  // rarity + value
+  x.textAlign = 'center';
+  x.fillStyle = ({ common: '#9FB4CC', fine: '#8FD3FF', rare: '#C9A8FF', elite: '#FF7AD9', grail: '#FFD25E' })[p.tier] || '#fff';
+  x.font = '800 62px Unbounded, Manrope, system-ui, sans-serif';
+  x.fillText(tierName(p.tier).toUpperCase(), W / 2, py + ph + 110);
+  x.fillStyle = '#DCE9F7'; x.font = '600 44px Manrope, system-ui, sans-serif';
+  x.fillText(`${L('оценка', 'value')} ${fmt(p.value)} PLT`, W / 2, py + ph + 186);
+  x.fillStyle = 'rgba(220,233,247,.6)'; x.font = '500 32px "IBM Plex Mono", ui-monospace, monospace';
+  x.fillText(p.id, W / 2, py + ph + 246);
+  // footer
+  x.fillStyle = '#8FD3FF'; x.font = '700 40px "IBM Plex Mono", ui-monospace, monospace';
+  x.fillText('plate-club.netlify.app', W / 2, H - 96);
+  x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '600 30px Manrope, system-ui, sans-serif';
+  x.fillText('PLATE CLUB', W / 2, H - 150);
+  const url = c.toDataURL('image/png');
+  openDialog(`<div class="dlg qrbox"><h2 class="h3" id="dlgTitle">${L('Поделиться номером', 'Share this plate')}</h2>
+    <img src="${url}" alt="" style="width:min(300px,72vw);border-radius:16px">
+    <p class="small" style="margin:0;text-align:center">${L('Сохраните картинку и выложите в сторис с ссылкой на сайт — за это дают 5 000 PLT в разделе «Бонусы».', 'Save the picture and post it to your story with a link to the site — that pays 5,000 PLT in Perks.')}</p>
+    <div class="dlg-acts"><a class="btn btn-chrome" href="${url}" download="plate-${esc(p.id)}.png">${L('Скачать', 'Download')}</a><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
+};
 A.refqr = () => {
   const link = $('#refLink').value;
   openDialog(`<div class="dlg qrbox"><h2 class="h3" id="dlgTitle">${L('Ваша ссылка', 'Your link')}</h2>${qrSvg(link, { quiet: 2 })}<p class="small mono" style="margin:0;text-align:center;word-break:break-all">${esc(link)}</p><p class="small" style="margin:0;text-align:center;opacity:.75">${L('Покажите камере телефона — друг сразу попадёт на сайт по вашей ссылке.', 'Point a phone camera at it — your friend lands on the site through your link.')}</p><div class="dlg-acts"><button class="btn btn-chrome" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
