@@ -29,38 +29,48 @@ function bezier(p1x, p1y, p2x, p2y) {
 }
 // gentle start, long smooth deceleration — about 10 cards per second at the top speed
 const EASE = bezier(0.3, 0.55, 0.12, 1);
-let rollState = null;
-function rollAbort() { if (rollState) { cancelAnimationFrame(rollState.raf); rollState = null; } }
-function roll(root, c, plate) {
+let rollState = null; const ROLLS = new Set();
+function rollAbort() { ROLLS.forEach(r => cancelAnimationFrame(r.raf)); ROLLS.clear(); rollState = null; }
+// slow start (you see it pick up speed), long glide, slow finish
+const EASE2 = k => { const a = 0.14; if (k < a) return 0.5 * a * (k / a) * (k / a) / (1 - a / 2) * 0.62; const v0 = 0.5 * a / (1 - a / 2) * 0.62; return v0 + (1 - v0) * EASE((k - a) / (1 - a)); };
+function roll(root, c, plate, spinEl, extra = 0) {
   return new Promise(res => {
-    const spin = root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 48, WIN = 40;
+    const spin = spinEl || root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 64, WIN = 56;
     spin.classList.remove('done'); spin.style.removeProperty('--tc');
     track.style.transform = 'translate3d(0,0,0)';
     track.innerHTML = Array.from({ length: N }, (_, i) => cardHtml(i === WIN ? plate : visualPlate(c), i === WIN)).join('');
     const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 7600, SETTLE = 520; const t0 = performance.now();
-    let lastIdx = -1, lastX = 0, skipFrom = null;
+    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700; const t0 = performance.now();
+    let lastIdx = -1, lastX = 0, skipFrom = null; const me = { raf: 0 };
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
-    const done = () => { if (!rollState) return; rollState = null; setX(target); res(); };
+    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; setX(target); res(); };
     const frame = now => {
-      if (!rollState) return; let x;
+      if (!ROLLS.has(me)) return; let x;
       if (skipFrom) { const k = Math.min(1, (now - skipFrom.t) / 300); x = skipFrom.x + (target - skipFrom.x) * (1 - Math.pow(1 - k, 3)); if (k >= 1) return done(); }
-      else { const el = now - t0; if (el < D) x = (target + over) * EASE(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
+      else { const el = now - t0; if (el < D) x = (target + over) * EASE2(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
       setX(x);
       const v = Math.abs(x - lastX);
-      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
-      lastX = x; rollState.raf = requestAnimationFrame(frame);
+      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0 && !extra) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
+      lastX = x; me.raf = requestAnimationFrame(frame);
     };
-    rollState = { raf: 0, skip: () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; } };
-    if (!D) { setX(target); rollState = null; return setTimeout(res, 30); }
-    rollState.raf = requestAnimationFrame(frame);
+    me.skip = () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; };
+    ROLLS.add(me); rollState = { skip: () => ROLLS.forEach(r => r.skip()) };
+    if (!D) { setX(target); ROLLS.delete(me); return setTimeout(res, 30); }
+    me.raf = requestAnimationFrame(frame);
   });
 }
+// several cases at once: one strip per case, all spinning together, each stops on its own plate
+function rollMany(root, c, plates) {
+  const host = root.querySelector('.st-roll'); const tpl = host.querySelector('.spin');
+  host.classList.add('multi'); host.innerHTML = '';
+  const spins = plates.map(() => { const sp = tpl.cloneNode(true); host.appendChild(sp); return sp; });
+  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 600)));
+}
 const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70 };
-function celebrate(root, p) {
-  const spin = root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
+function celebrate(root, p, spinEl) {
+  const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
   const n = PARTS[p.tier]; const box = spin.querySelector('.spin-in');
@@ -87,7 +97,7 @@ function openStage(c) {
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
-function spinCase(st, ready, min = 1500) {
+function spinCase(st, ready, min = 2800) {
   return new Promise(res => {
     const box = st.el.querySelector('.box3'); let ang = 0, last = performance.now(), t0 = last, isReady = false, lastQ = 0;
     ready.then(() => { isReady = true; });

@@ -1377,6 +1377,24 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       return { ok: true, blocked: block };
     });
   }, { admin: true });
+  // delete a player: account is anonymised (history must stay consistent), plates go back to the bank
+  R('POST', '/api/admin/users/:id/delete', async ({ user, params, body }) => {
+    const id = Number(params.id);
+    if (id === user.id) throw new HttpError(409, 'Нельзя удалить самого себя.');
+    if (String(body.confirm || '') !== 'DELETE') throw bad('Подтвердите удаление.');
+    return tx(async Q => {
+      const [t] = await Q('SELECT id,nickname,role FROM users WHERE id=$1 FOR UPDATE', [id]); if (!t) throw new HttpError(404, 'Игрок не найден.');
+      if (t.role !== 'user') throw new HttpError(409, 'Удалить можно только игрока (не админа и не бота).');
+      await Q(`UPDATE plates SET status='OWNED' WHERE id IN (SELECT plate_id FROM listings WHERE seller_id=$1 AND status IN ('ACTIVE','RESERVED'))`, [id]);
+      await Q(`UPDATE listings SET status='CANCELLED', updated_at=now() WHERE seller_id=$1 AND status IN ('ACTIVE','RESERVED')`, [id]);
+      await Q(`UPDATE plates SET status='BANKED' WHERE owner_id=$1 AND status='OWNED'`, [id]);
+      await Q('DELETE FROM sessions WHERE user_id=$1', [id]);
+      const tag = 'deleted_' + id;
+      await Q(`UPDATE users SET nickname=$2, nick_norm=$2, email=$3, email_norm=$3, pass_hash='!', avatar=NULL, balance=0, ref_code=NULL, blocked_at=now(), blocked_reason='Аккаунт удалён' WHERE id=$1`, [id, tag, tag + '@deleted.invalid']);
+      await adminLog(Q, user.id, 'delete_user', t.nickname, null, null);
+      return { ok: true };
+    });
+  }, { admin: true });
   R('POST', '/api/admin/users/:id/plate', async ({ user, params, body }) => {
     needSecret();
     const id = Number(params.id); const tier = String(body.tier || ''); if (!(tier in TI)) throw bad('Выберите редкость.');

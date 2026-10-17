@@ -1176,7 +1176,7 @@ async function adminUser(id) {
         <p class="err" id="ugerr" hidden></p><button class="btn btn-chrome" type="submit">${L('Отправить', 'Send')}</button></form>
       <div style="display:grid;gap:18px;align-content:start">
         <form class="panel" id="uGift" data-id="${u.id}" style="display:grid;gap:12px"><h3 class="h3">${L('Подарить номер', 'Gift a plate')}</h3><div class="row" style="gap:10px;flex-wrap:nowrap"><select class="field" id="gtier">${CFG.tiers.map(t => `<option value="${t.id}">${tierName(t.id)}</option>`).join('')}</select><select class="field" id="gcountry"><option value="RU">${L('Россия', 'Russia')}</option><option value="BY">${L('Беларусь', 'Belarus')}</option></select></div><button class="btn btn-ghost" type="submit">${L('Выпустить и подарить', 'Mint and gift')}</button></form>
-        <div class="panel row" style="gap:10px"><button class="btn btn-ghost" data-act="umsg" data-id="${u.id}" data-n="${esc(u.nickname)}">${IC.chat}${L('Написать', 'Message')}</button>${u.role === 'user' ? (u.blocked ? `<button class="btn btn-ghost" data-act="ublock" data-id="${u.id}" data-b="0">${L('Разблокировать', 'Unblock')}</button>` : `<button class="btn btn-ghost danger" data-act="ublock" data-id="${u.id}" data-b="1">${L('Заблокировать', 'Block')}</button>`) : ''}<a class="btn btn-ghost" href="#/u/${esc(u.nickname)}">${L('Профиль', 'Profile')}</a>${u.id !== ME.id ? `<button class="btn btn-ghost" data-act="urole" data-id="${u.id}" data-n="${esc(u.nickname)}" data-a="${u.role === 'admin' ? 0 : 1}">${IC.crown}${u.role === 'admin' ? L('Снять админа', 'Remove admin') : L('Сделать админом', 'Make admin')}</button>` : ''}</div></div></div>
+        <div class="panel row" style="gap:10px;flex-wrap:wrap">${u.role === 'user' ? `<button class="btn btn-danger" data-act="udelete" data-id="${u.id}" data-n="${esc(u.nickname)}">${L('Удалить аккаунт', 'Delete account')}</button>` : ''}<button class="btn btn-ghost" data-act="umsg" data-id="${u.id}" data-n="${esc(u.nickname)}">${IC.chat}${L('Написать', 'Message')}</button>${u.role === 'user' ? (u.blocked ? `<button class="btn btn-ghost" data-act="ublock" data-id="${u.id}" data-b="0">${L('Разблокировать', 'Unblock')}</button>` : `<button class="btn btn-ghost danger" data-act="ublock" data-id="${u.id}" data-b="1">${L('Заблокировать', 'Block')}</button>`) : ''}<a class="btn btn-ghost" href="#/u/${esc(u.nickname)}">${L('Профиль', 'Profile')}</a>${u.id !== ME.id ? `<button class="btn btn-ghost" data-act="urole" data-id="${u.id}" data-n="${esc(u.nickname)}" data-a="${u.role === 'admin' ? 0 : 1}">${IC.crown}${u.role === 'admin' ? L('Снять админа', 'Remove admin') : L('Сделать админом', 'Make admin')}</button>` : ''}</div></div></div>
     <section class="sec">${SH(L('Номера', 'Plates'))}${d.plates.length ? `<div class="pgrid">${d.plates.slice(0, 24).map(p => PlateCard(p, { pl: true })).join('')}</div>` : `<p class="small">${L('Номеров нет.', 'No plates.')}</p>`}</section>
     <div class="split" style="padding-bottom:60px"><div class="panel">${SH(L('Операции', 'Transactions'))}${d.ledger.map(TxRow).join('') || `<p class="small">${L('Пусто.', 'Empty.')}</p>`}</div>
       <div class="panel" style="align-self:start">${SH(L('Обращения', 'Requests'))}${d.tickets.length ? `<div class="tlist">${d.tickets.map(t => TicketRow(t, '#/admin/support?id=' + t.id, t.adminUnread)).join('')}</div>` : `<p class="small">${L('Обращений нет.', 'No requests.')}</p>`}</div></div>`;
@@ -1323,6 +1323,12 @@ ADMIN_ACTS.aremove = btn => {
   $('#remForm').addEventListener('submit', async e => { e.preventDefault(); const sb = e.target.querySelector('[type=submit]'); busy(sb, true, '…'); try { await POST(`/api/admin/listings/${btn.dataset.id}/remove`, { reason: $('#rreason').value.trim() }); dlg.close(); toast('OK'); render(false); } catch (x) { $('#rerr').hidden = false; $('#rerr').textContent = x.message; busy(sb, false); } });
 };
 
+ADMIN_ACTS.udelete = async btn => {
+  const ok = await confirmDialog({ title: L('Удалить аккаунт ', 'Delete account ') + esc(btn.dataset.n) + '?', lede: L('Игрок не сможет войти, ник и email освободятся, номера уйдут в банк. Отменить нельзя.', 'The player can no longer sign in, nickname and email are freed, plates go to the bank. This cannot be undone.'), ok: L('Удалить навсегда', 'Delete forever'), danger: true });
+  if (!ok) return;
+  try { await POST(`/api/admin/users/${btn.dataset.id}/delete`, { confirm: 'DELETE' }); toast(L('Аккаунт удалён', 'Account deleted')); go('#/admin/users'); } catch (e) { toast(e.message, true); }
+};
+
 
 /* ---------- roulette: a readable Standoff-style strip that slows down and stops on the server's plate ---------- */
 // decorative strip cards follow the same pattern rules as the server, so a "rare" card looks rare
@@ -1354,38 +1360,48 @@ function bezier(p1x, p1y, p2x, p2y) {
 }
 // gentle start, long smooth deceleration — about 10 cards per second at the top speed
 const EASE = bezier(0.3, 0.55, 0.12, 1);
-let rollState = null;
-function rollAbort() { if (rollState) { cancelAnimationFrame(rollState.raf); rollState = null; } }
-function roll(root, c, plate) {
+let rollState = null; const ROLLS = new Set();
+function rollAbort() { ROLLS.forEach(r => cancelAnimationFrame(r.raf)); ROLLS.clear(); rollState = null; }
+// slow start (you see it pick up speed), long glide, slow finish
+const EASE2 = k => { const a = 0.14; if (k < a) return 0.5 * a * (k / a) * (k / a) / (1 - a / 2) * 0.62; const v0 = 0.5 * a / (1 - a / 2) * 0.62; return v0 + (1 - v0) * EASE((k - a) / (1 - a)); };
+function roll(root, c, plate, spinEl, extra = 0) {
   return new Promise(res => {
-    const spin = root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 48, WIN = 40;
+    const spin = spinEl || root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 64, WIN = 56;
     spin.classList.remove('done'); spin.style.removeProperty('--tc');
     track.style.transform = 'translate3d(0,0,0)';
     track.innerHTML = Array.from({ length: N }, (_, i) => cardHtml(i === WIN ? plate : visualPlate(c), i === WIN)).join('');
     const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 7600, SETTLE = 520; const t0 = performance.now();
-    let lastIdx = -1, lastX = 0, skipFrom = null;
+    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700; const t0 = performance.now();
+    let lastIdx = -1, lastX = 0, skipFrom = null; const me = { raf: 0 };
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
-    const done = () => { if (!rollState) return; rollState = null; setX(target); res(); };
+    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; setX(target); res(); };
     const frame = now => {
-      if (!rollState) return; let x;
+      if (!ROLLS.has(me)) return; let x;
       if (skipFrom) { const k = Math.min(1, (now - skipFrom.t) / 300); x = skipFrom.x + (target - skipFrom.x) * (1 - Math.pow(1 - k, 3)); if (k >= 1) return done(); }
-      else { const el = now - t0; if (el < D) x = (target + over) * EASE(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
+      else { const el = now - t0; if (el < D) x = (target + over) * EASE2(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
       setX(x);
       const v = Math.abs(x - lastX);
-      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
-      lastX = x; rollState.raf = requestAnimationFrame(frame);
+      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0 && !extra) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
+      lastX = x; me.raf = requestAnimationFrame(frame);
     };
-    rollState = { raf: 0, skip: () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; } };
-    if (!D) { setX(target); rollState = null; return setTimeout(res, 30); }
-    rollState.raf = requestAnimationFrame(frame);
+    me.skip = () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; };
+    ROLLS.add(me); rollState = { skip: () => ROLLS.forEach(r => r.skip()) };
+    if (!D) { setX(target); ROLLS.delete(me); return setTimeout(res, 30); }
+    me.raf = requestAnimationFrame(frame);
   });
 }
+// several cases at once: one strip per case, all spinning together, each stops on its own plate
+function rollMany(root, c, plates) {
+  const host = root.querySelector('.st-roll'); const tpl = host.querySelector('.spin');
+  host.classList.add('multi'); host.innerHTML = '';
+  const spins = plates.map(() => { const sp = tpl.cloneNode(true); host.appendChild(sp); return sp; });
+  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 600)));
+}
 const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70 };
-function celebrate(root, p) {
-  const spin = root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
+function celebrate(root, p, spinEl) {
+  const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
   const n = PARTS[p.tier]; const box = spin.querySelector('.spin-in');
@@ -1412,7 +1428,7 @@ function openStage(c) {
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
-function spinCase(st, ready, min = 1500) {
+function spinCase(st, ready, min = 2800) {
   return new Promise(res => {
     const box = st.el.querySelector('.box3'); let ang = 0, last = performance.now(), t0 = last, isReady = false, lastQ = 0;
     ready.then(() => { isReady = true; });
@@ -1820,8 +1836,8 @@ A.open = async btn => {
     ME.balance = r.balance; ME.stats.opened += (r.count || 1); chrome();
     if (st.dead) { toast(L(`Номер ${plateStr(r.plate)} уже в коллекции`, `${plateStr(r.plate)} is in your collection`)); refreshMe().then(refreshPerks); return; }
     await burstCase(st); if (st.dead) return;
-    await roll(st.el, c, r.plate); if (st.dead) return;
-    celebrate(st.el, r.plate);
+    if (r.plates && r.plates.length > 1) { await rollMany(st.el, c, r.plates); if (st.dead) return; st.el.querySelectorAll('.st-roll .spin').forEach((sp, i) => celebrate(st.el, r.plates[i], sp)); }
+    else { await roll(st.el, c, r.plate); if (st.dead) return; celebrate(st.el, r.plate); }
     await wait(reduced() ? 0 : ({ common: 800, fine: 1000, rare: 1300, elite: 1600, grail: 2100 })[r.plate.tier]); if (st.dead) return;
     st.el.querySelector('.st-res').innerHTML = r.plates && r.plates.length > 1 ? resultMulti(c, r.plates, r.count) : resultHtml(c, r.plate); st.el.classList.add('st-done'); st.el.querySelector('.st-skip').hidden = true;
     st.el.querySelector('.st-res [autofocus]')?.focus();

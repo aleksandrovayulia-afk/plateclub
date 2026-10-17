@@ -647,5 +647,12 @@ console.log('\n20. Multi-open, daily tasks, wheel, higher-or-lower, profiles, ph
   ok(cfg.cases.find(c => c.id === 'S1' && c.until > Date.now()), 'seasonal case is in the catalogue with an end date');
 }
 
+{ const D = client(); await D.call('POST', '/api/auth/register', { email: 'gone@example.com', nickname: 'GoneUser', password: 'gone-pass-123', terms: true });
+  const [{ id }] = await q1(`SELECT id FROM users WHERE nick_norm='goneuser'`);
+  let r = await ADM.call('POST', `/api/admin/users/${id}/delete`, { confirm: 'DELETE' }); ok(r.status === 200, 'admin deletes a player', r.data);
+  ok(!(await D.call('GET', '/api/me')).data.user, 'deleted player is signed out');
+  r = await client().call('POST', '/api/auth/register', { email: 'gone@example.com', nickname: 'GoneUser', password: 'gone-pass-123', terms: true }); ok(r.data.ok === true, 'nickname and email are free again', r.data);
+  r = await client().call('POST', `/api/admin/users/${id}/delete`, { confirm: 'DELETE' }); ok(r.status === 401 || r.status === 403, 'only admins can delete'); }
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

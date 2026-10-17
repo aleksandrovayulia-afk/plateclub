@@ -18,8 +18,8 @@ A.open = async btn => {
     ME.balance = r.balance; ME.stats.opened += (r.count || 1); chrome();
     if (st.dead) { toast(L(`Номер ${plateStr(r.plate)} уже в коллекции`, `${plateStr(r.plate)} is in your collection`)); refreshMe().then(refreshPerks); return; }
     await burstCase(st); if (st.dead) return;
-    await roll(st.el, c, r.plate); if (st.dead) return;
-    celebrate(st.el, r.plate);
+    if (r.plates && r.plates.length > 1) { await rollMany(st.el, c, r.plates); if (st.dead) return; st.el.querySelectorAll('.st-roll .spin').forEach((sp, i) => celebrate(st.el, r.plates[i], sp)); }
+    else { await roll(st.el, c, r.plate); if (st.dead) return; celebrate(st.el, r.plate); }
     await wait(reduced() ? 0 : ({ common: 800, fine: 1000, rare: 1300, elite: 1600, grail: 2100 })[r.plate.tier]); if (st.dead) return;
     st.el.querySelector('.st-res').innerHTML = r.plates && r.plates.length > 1 ? resultMulti(c, r.plates, r.count) : resultHtml(c, r.plate); st.el.classList.add('st-done'); st.el.querySelector('.st-skip').hidden = true;
     st.el.querySelector('.st-res [autofocus]')?.focus();
