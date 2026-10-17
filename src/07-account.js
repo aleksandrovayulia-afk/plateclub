@@ -157,6 +157,10 @@ VIEWS.media = async () => {
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Материалы', 'Media kit')}</p><h1 class="h1" style="margin-top:12px">${L('Баннеры для роликов', 'Banners for your videos')}</h1>
     <p class="lede" style="margin-top:12px">${L('Небольшие анимированные плашки 1080×1920 с прозрачным фоном — положите поверх своего видео в любом редакторе. Они не закрывают кадр.', 'Small animated 1080×1920 overlays with a transparent background — drop one on top of your video in any editor. They don’t cover the frame.')}</p></div></section>
     <div class="mgrid">${B.map(card).join('')}</div>
+    <section class="sec"><div class="panel" style="display:grid;gap:14px">${SH(L('Готовый ролик', 'Ready-made clip'), L('15 секунд, со звуком', '15 seconds, with sound'))}
+      <video class="promo-v" src="/media/plate-club-promo.mp4" poster="/media/promo-cover.jpg" controls playsinline preload="none"></video>
+      <p class="small" style="margin:0">${L('Можно выложить как есть или вставить кусок в свой ролик. Звук уже внутри.', 'Post it as is or cut a piece into your own video. The sound is already in it.')}</p>
+      <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/plate-club-promo.mp4" download>${L('Скачать видео', 'Download the video')}</a><a class="btn btn-sm btn-ghost" href="/media/promo-cover.jpg" download>${L('Обложка', 'Cover')}</a></div></div></section>
     <section class="sec" style="padding-bottom:80px"><div class="panel">${SH(L('Как пользоваться', 'How to use'))}
       <ol class="steps-ol"><li>${L('Скачайте WebM — в нём прозрачный фон (CapCut, Premiere, DaVinci). Для Instagram-редактора удобнее GIF, для статичной обложки — PNG.', 'Download the WebM — it has a transparent background (CapCut, Premiere, DaVinci). For the Instagram editor a GIF is easier; for a still, take the PNG.')}</li>
         <li>${L('Положите файл вторым слоем поверх своего видео.', 'Put the file as a second layer over your video.')}</li>

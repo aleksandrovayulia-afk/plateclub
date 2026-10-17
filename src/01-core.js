@@ -72,6 +72,8 @@ const MSG_RX = [
   [/^Комиссия рынка ([\d.]+)% · (.+)$/, m => `Market fee ${m[1]}% · ${m[2]}`], [/^Пополнение (\d+) PLT · (.+)$/, m => `Top-up ${m[1]} PLT · ${m[2]}`], [/^Продан банку: (.+)$/, m => `Sold to the bank: ${m[1]}`],
   [/^Ставка на аукционе дня$/, () => 'Bid in the auction of the day'], [/^Аукцион дня: ставка повышена$/, () => 'Auction of the day: bid raised'], [/^Аукцион дня: ставку перебили, PLT возвращены$/, () => 'Auction of the day: outbid, PLT returned'],
   [/^Баттл (\S+) · (\d+) × (.+)$/, m => `Battle ${m[1]} · ${m[2]} × ${enCase('', m[3])}`], [/^Возврат за баттл (\S+)$/, m => `Battle refund ${m[1]}`], [/^Доплата за обмен (\S+)$/, m => `Swap top-up ${m[1]}`],
+  [/^Друг (.+) начал играть$/, m => `Your friend ${m[1]} started playing`], [/^Приглашение от (.+)$/, m => `Invited by ${m[1]}`],
+  [/^Задание: сторис с отметкой Plate Club$/, () => 'Quest: a story tagging Plate Club'], [/^Задание: TikTok · (.+) просмотров$/, m => `Quest: TikTok · ${m[1]} views`],
   [/^Вступление в Telegram-чат игроков$/, () => 'Joined the players’ Telegram chat'], [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
   [/^Кейс (\d+) · (.+)$/, m => `Case ${m[1]} · ${enCase(m[1], m[2])}`], [/^Апгрейд из (.+)$/, m => `Upgrade from ${m[1]}`],
 ];

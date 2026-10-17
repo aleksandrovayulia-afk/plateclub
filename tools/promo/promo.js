@@ -87,8 +87,8 @@ function sceneCase(t) {
     // the roulette flies out of the wreck and decelerates onto the winning plate
     const k = loc(a, burst, burst + 0.3);
     const roll = clamp((a - burst - 0.1) / 1.9);
-    const CARD = 316, N = 22, WINI = 16;
-    const target = WINI * CARD - 540 + CARD / 2;
+    const CARD = 300, GAP = 16, PITCH = CARD + GAP, N = 22, WINI = 16;
+    const target = WINI * PITCH - 540 + CARD / 2;
     const x = -target * ease(roll);
     reseed(5);
     let cards = '';
@@ -104,7 +104,7 @@ function sceneCase(t) {
       <div class="marker" style="opacity:${ease(k)}"></div></div>`;
     if (roll > 0.97) {
       const g = loc(a, burst + 2.0, burst + 2.3);
-      html += `<div class="layer" style="align-items:end;padding-bottom:300px;opacity:${g * (1 - out)}"><div style="display:grid;gap:20px;justify-items:center"><span class="tag t-grail">Грааль · 21 000 PLT</span></div></div>`;
+      html += `<div class="layer" style="align-items:end;padding-bottom:520px;opacity:${g * (1 - out)}"><div style="display:grid;gap:18px;justify-items:center;transform:scale(${lerp(0.85, 1, ease(g))})"><span class="tag t-grail" style="font-size:40px;padding:16px 38px">Грааль · 21 000 PLT</span><span class="sub" style="font-size:34px">выпадает раз на тысячу</span></div></div>`;
     }
   }
   return html;

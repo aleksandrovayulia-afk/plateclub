@@ -26,14 +26,22 @@ function dealerPanel(d) {
     <div class="dealer-d">${d.demands.map(x => `<span class="dem">${esc(L(x.ru, x.en))}</span>`).join('')}</div></section>`;
 }
 let mkSeq = 0;
+let MK_SHOW = 24, mkSig = '';
+// a new search starts from the first page again
+const mkReset = () => { MK_SHOW = 24; mkSig = ''; };
 async function loadMarket(silent = false) {
   const box = $('#mres'); if (!box) return; const seq = ++mkSeq;
   const p = new URLSearchParams({ sort: M.sort }); if (M.q) p.set('q', M.q); if (M.tiers.length) p.set('tiers', M.tiers.join(',')); if (M.group) p.set('group', M.group); if (M.min !== '') p.set('min', M.min); if (M.max !== '') p.set('max', M.max); if (M.who) p.set('who', M.who);
   let d; try { d = await GET('/api/market?' + p); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
   if (seq !== mkSeq || !$('#mres')) return;
+  // the silent refresh rewrites the grid only when something really changed — rebuilding 120 cards
+  // every 12 s used to eat memory on phones and the tab would reload
+  const sig = d.listings.map(l => l.id + ':' + l.price).join(',');
+  if (silent && sig === mkSig) return;
+  mkSig = sig;
   const filtered = M.q || M.tiers.length || M.group || M.who || M.min !== '' || M.max !== '';
   box.innerHTML = `<div class="meta"><span>${d.listings.length} ${pl(d.listings.length, ['объявление', 'объявления', 'объявлений'], ['listing', 'listings'])}</span><span>${L('Поиск понимает русские и латинские буквы', 'Search understands Cyrillic and Latin letters')}</span></div>
-  ${d.listings.length ? `<div class="pgrid">${d.listings.map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>`
+  ${d.listings.length ? `<div class="pgrid">${d.listings.slice(0, MK_SHOW).map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>${d.listings.length > MK_SHOW ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-ghost" data-act="mkmore">${L('Показать ещё', 'Show more')} (${d.listings.length - MK_SHOW})</button></div>` : ''}`
     : filtered ? Empty(L('Ничего не нашлось', 'Nothing found'), L('Уберите часть фильтров или сократите запрос.', 'Remove some filters or shorten the query.'), `<button class="btn btn-ghost" data-act="mreset">${L('Сбросить фильтры', 'Reset filters')}</button>`)
       : Empty(L('Станьте первым продавцом', 'Be the first seller'), L('На рынке пока нет номеров.', 'There are no plates on the market yet.'), ME ? `<button class="btn btn-chrome" data-act="listdlg">${L('Выставить номер', 'List a plate')}</button>` : `<a class="btn btn-chrome" href="#/register">${L('Создать аккаунт', 'Create an account')}</a>`, { letters: 'ААА', digits: '001', region: '77' })}`;
   if (!silent) fx(box);

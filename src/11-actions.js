@@ -73,6 +73,7 @@ A.editlisting = btn => {
 };
 A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
+A.mkmore = btn => { MK_SHOW += 24; mkSig = ''; busy(btn, true, '…'); loadMarket(); };
 A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
 A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
 A.qsend = btn => {
@@ -118,21 +119,40 @@ A.listdlg = async btn => {
   let col; try { col = (await GET('/api/collection')).plates; } catch (e) { return toast(e.message, true); }
   const av = col.filter(p => !p.listing).sort((a, b) => b.value - a.value);
   if (!av.length) { openDialog(`<div class="dlg"><h2 class="h3" id="dlgTitle">${L('Выставить номер', 'List a plate')}</h2>${Empty(L('Нечего выставить', 'Nothing to list'), L('Здесь появятся ваши номера, которые ещё не на рынке.', 'Your plates that are not on the market will appear here.'), `<a class="btn btn-chrome" href="#/cases">${L('К кейсам', 'To cases')}</a>`)}<div class="dlg-acts"><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`); return; }
-  const sel = btn.dataset.id && av.find(p => p.id === btn.dataset.id) ? btn.dataset.id : av[0].id;
-  openDialog(`<form class="dlg" id="listForm" novalidate><h2 class="h3" id="dlgTitle">${L('Выставить на рынок', 'List on the market')}</h2>
-    <fieldset style="border:0;padding:0;margin:0"><legend class="small" style="margin-bottom:8px;font-weight:700">${L('Номер', 'Plate')}</legend><div class="pick">${av.map(p => `<label><input type="radio" name="pl" value="${p.id}" ${p.id === sel ? 'checked' : ''}>${Plate(p)}<span class="small">${tierName(p.tier)} · ${fmt(p.value)}</span></label>`).join('')}</div></fieldset>
-    <div class="fld"><label for="lprice">${L('Цена, PLT', 'Price, PLT')}</label><input class="field mono" id="lprice" type="number" inputmode="numeric" min="1" max="10000000" required></div>
-    <dl class="kv" id="lcalc"></dl><p class="err" id="lerr" hidden></p>
+  let sel = btn.dataset.id && av.find(p => p.id === btn.dataset.id) ? av.find(p => p.id === btn.dataset.id) : av[0];
+  let q = '';
+  const row = p => `<button type="button" class="lsrow${p.id === sel.id ? ' on' : ''}" data-lp="${p.id}">${Plate(p)}<span class="t"><b>${tierName(p.tier)}</b><span class="small">${esc(regionLabel(p))}</span></span><span class="v mono">${fmt(p.value)}</span></button>`;
+  const list = () => { const f = q ? av.filter(p => (plateStr(p) + ' ' + p.id).toLowerCase().includes(q.toLowerCase())) : av;
+    return f.length ? f.slice(0, 60).map(row).join('') : `<p class="small" style="padding:10px">${L('Ничего не нашлось.', 'Nothing found.')}</p>`; };
+  openDialog(`<form class="dlg lsdlg" id="listForm" novalidate>
+    <h2 class="h3" id="dlgTitle">${L('Выставить на рынок', 'List on the market')}</h2>
+    <div class="lspick" id="lsPick">${Plate(sel)}<span class="t"><b id="lsTier">${tierName(sel.tier)}</b><span class="small" id="lsVal">${L('оценка', 'value')} ${fmt(sel.value)} PLT</span></span><button type="button" class="btn btn-sm btn-ghost" data-act="lstoggle">${L('Сменить', 'Change')}</button></div>
+    <div class="lslist" id="lsList" hidden><label class="search" style="margin-bottom:8px">${IC.search}<input id="lsQ" type="search" placeholder="${L('Поиск по номеру', 'Search by plate')}" autocomplete="off"></label><div class="lsrows" id="lsRows">${list()}</div></div>
+    <div class="fld"><label for="lprice">${L('Цена, PLT', 'Price, PLT')}</label><input class="field mono lsprice" id="lprice" type="number" inputmode="numeric" min="1" max="10000000" required></div>
+    <div class="lschips" id="lsChips"></div>
+    <dl class="kv" id="lcalc"></dl><p class="small" id="lsHint" style="margin:-6px 0 0;min-height:1.2em;color:var(--fg3)"></p><p class="err" id="lerr" hidden></p>
     <div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Выставить', 'List')}</button></div></form>`);
-  const f = $('#listForm'), pr = $('#lprice'); const cur = () => av.find(p => p.id === f.pl.value);
-  const calc = () => { $('#lcalc').innerHTML = feeRows(+pr.value || 0); };
-  const def = () => { pr.value = Math.round(cur().value * 1.1); calc(); }; def();
-  f.addEventListener('change', e => { if (e.target.name === 'pl') def(); }); pr.addEventListener('input', calc);
+  const f = $('#listForm'), pr = $('#lprice');
+  const chips = () => { const v = sel.value; const opts = [[0.9, '−10%'], [1, L('оценка', 'value')], [1.1, '+10%'], [1.25, '+25%'], [1.5, '+50%']];
+    $('#lsChips').innerHTML = opts.map(([k, t]) => `<button type="button" class="chip" data-lsp="${Math.max(1, Math.round(v * k))}">${t}<small>${fmt(Math.max(1, Math.round(v * k)))}</small></button>`).join(''); };
+  const calc = () => { const v = +pr.value || 0; $('#lcalc').innerHTML = feeRows(v);
+    const d = v && sel.value ? Math.round((v / sel.value - 1) * 100) : 0;
+    $$('#lsChips .chip').forEach(c => c.setAttribute('aria-pressed', +c.dataset.lsp === v));
+    const hint = $('#lsHint'); if (hint) hint.textContent = d > 25 ? L('Дороже оценки — могут не купить', 'Above value — may not sell') : d < -10 ? L('Дешевле оценки — купят быстро', 'Below value — sells fast') : ''; };
+  const pick = p => { sel = p; $('#lsPick').firstChild.outerHTML = Plate(p); $('#lsTier').textContent = tierName(p.tier); $('#lsVal').textContent = L('оценка', 'value') + ' ' + fmt(p.value) + ' PLT';
+    pr.value = Math.round(p.value * 1.1); chips(); calc(); $('#lsList').hidden = true; };
+  pr.value = Math.round(sel.value * 1.1); chips(); calc();
+  f.addEventListener('input', e => { if (e.target.id === 'lprice') calc(); if (e.target.id === 'lsQ') { q = e.target.value; $('#lsRows').innerHTML = list(); } });
+  f.addEventListener('click', e => {
+    const c = e.target.closest('[data-lsp]'); if (c) { pr.value = c.dataset.lsp; calc(); return; }
+    const r = e.target.closest('[data-lp]'); if (r) { const p = av.find(x => x.id === r.dataset.lp); if (p) pick(p); return; }
+    if (e.target.closest('[data-act="lstoggle"]')) { const l = $('#lsList'); l.hidden = !l.hidden; if (!l.hidden) $('#lsQ').focus(); }
+  });
   f.addEventListener('submit', async e => {
     e.preventDefault(); const v = Math.round(+pr.value), err = $('#lerr');
     if (!(v >= 1 && v <= 1e7)) { err.hidden = false; err.textContent = L('Введите целую цену от 1 до 10 000 000 PLT.', 'Enter a whole price from 1 to 10 000 000 PLT.'); pr.focus(); return; }
     const sb = f.querySelector('[type=submit]'); busy(sb, true, '…');
-    try { const r = await POST('/api/market/listings', { plateId: cur().id, price: v }); sfx('confirm'); dlg.close(); closeStage(); toast(L(`Выставлено за ${fmt(v)} PLT`, `Listed for ${fmt(v)} PLT`) + ` · ${r.listing.id}`); if (parseRoute().name !== 'case') render(false); }
+    try { const r = await POST('/api/market/listings', { plateId: sel.id, price: v }); sfx('confirm'); dlg.close(); closeStage(); toast(L(`Выставлено за ${fmt(v)} PLT`, `Listed for ${fmt(v)} PLT`) + ` · ${r.listing.id}`); if (parseRoute().name !== 'case') { mkReset(); render(false); } }
     catch (x) { err.hidden = false; err.textContent = x.message; busy(sb, false); }
   });
 };
@@ -149,8 +169,8 @@ A.verify = async btn => {
     : `<div class="vf-mark no" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.5"/></svg></div><p class="vf-status">${L('Не подтверждено', 'Not verified')}</p><p class="small" style="margin:0">${esc(srv(d.reason) || '')}</p>${checks ? `<ul class="checks">${checks}</ul>` : ''}`;
   sfx(d.verified ? 'rare' : 'fail'); busy(btn, false); btn.textContent = L('Проверить ещё раз', 'Check again');
 };
-A.mtier = btn => { const t = btn.dataset.t; M.tiers = M.tiers.includes(t) ? M.tiers.filter(x => x !== t) : [...M.tiers, t]; btn.setAttribute('aria-pressed', M.tiers.includes(t)); loadMarket(); };
-A.mseg = btn => { M[btn.dataset.k] = btn.dataset.v; btn.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn)); loadMarket(); };
+A.mtier = btn => { const t = btn.dataset.t; M.tiers = M.tiers.includes(t) ? M.tiers.filter(x => x !== t) : [...M.tiers, t]; btn.setAttribute('aria-pressed', M.tiers.includes(t)); mkReset(); loadMarket(); };
+A.mseg = btn => { M[btn.dataset.k] = btn.dataset.v; btn.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn)); mkReset(); loadMarket(); };
 A.mreset = () => { Object.assign(M, { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '' }); render(false); };
 A.ctier = btn => { C.tier = btn.dataset.t; render(false); };
 A.pwshow = btn => { const i = btn.previousElementSibling; const s = i.type === 'password'; i.type = s ? 'text' : 'password'; btn.textContent = s ? L('Скрыть', 'Hide') : L('Показать', 'Show'); };
@@ -172,8 +192,8 @@ document.addEventListener('pointerdown', e => { const b = e.target.closest('.btn
 let qT;
 document.addEventListener('input', e => {
   const t = e.target;
-  if (t.id === 'mq') { M.q = t.value; clearTimeout(qT); qT = setTimeout(loadMarket, 220); }
-  if (t.id === 'mmin' || t.id === 'mmax') { M[t.id === 'mmin' ? 'min' : 'max'] = t.value; clearTimeout(qT); qT = setTimeout(loadMarket, 300); }
+  if (t.id === 'mq') { M.q = t.value; clearTimeout(qT); qT = setTimeout(() => { mkReset(); loadMarket(); }, 220); }
+  if (t.id === 'mmin' || t.id === 'mmax') { M[t.id === 'mmin' ? 'min' : 'max'] = t.value; clearTimeout(qT); qT = setTimeout(() => { mkReset(); loadMarket(); }, 300); }
   if (t.id === 'svol') { PREF.vol = +t.value; savePref(); $('#volTxt').textContent = Math.round(PREF.vol * 100) + '%'; }
   if (t.classList && t.classList.contains('field') && t.getAttribute('aria-invalid') === 'true' && t.id !== 'nickname') { t.removeAttribute('aria-invalid'); const er = $('#' + t.id + '-e'); if (er) er.hidden = true; }
 });

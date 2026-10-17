@@ -115,6 +115,16 @@ const EN = {
   '3–20 латинских букв, цифр или подчёркиваний.': '3–20 Latin letters, digits or underscores.',
   'Примите правила и политику конфиденциальности.': 'Accept the terms and the privacy policy.',
   'Неверный пароль.': 'Wrong password.',
+  'Выберите задание.': 'Choose a quest.',
+  'Пришлите ссылку целиком, она должна начинаться с https://': 'Send the full link, it must start with https://',
+  'Нужна ссылка вида https://…': 'A link like https://… is required.',
+  'Укажите свой аккаунт — он должен быть открытым, чтобы мы увидели публикацию.': 'Give us your account — it must be public so we can see the post.',
+  'Укажите ваш аккаунт.': 'Give us your account.',
+  'Эта ссылка уже отправлена на проверку.': 'This link is already in review.',
+  'Заявка не найдена.': 'Request not found.',
+  'Эта заявка уже рассмотрена.': 'This request has already been reviewed.',
+  'Укажите количество просмотров.': 'Enter the view count.',
+  'Укажите причину — игрок её увидит.': 'Give a reason — the player will see it.',
   'Награда за Telegram уже получена.': 'The Telegram reward is already claimed.',
 };
 const PAT = [
@@ -122,6 +132,7 @@ const PAT = [
   [/^Не хватает PLT для доплаты: на балансе (\d+) PLT\.$/, m => `Not enough PLT for the top-up: you have ${m[1]} PLT.`],
   [/^Не хватает PLT/, () => 'Not enough PLT.'],
   [/^Минимальная ставка сейчас (\d+) PLT\.$/, m => `The minimum bid is now ${m[1]} PLT.`],
+  [/^Награду за сторис можно получать раз в (\d+) дней\.$/, m => `The story reward can be claimed once every ${m[1]} days.`],
   [/^Аккаунт заблокирован администратором: (.*)$/, m => `Your account was blocked by an admin: ${m[1]}`],
 ];
 export function tr(msg, lang) {

@@ -72,6 +72,8 @@ const MSG_RX = [
   [/^Комиссия рынка ([\d.]+)% · (.+)$/, m => `Market fee ${m[1]}% · ${m[2]}`], [/^Пополнение (\d+) PLT · (.+)$/, m => `Top-up ${m[1]} PLT · ${m[2]}`], [/^Продан банку: (.+)$/, m => `Sold to the bank: ${m[1]}`],
   [/^Ставка на аукционе дня$/, () => 'Bid in the auction of the day'], [/^Аукцион дня: ставка повышена$/, () => 'Auction of the day: bid raised'], [/^Аукцион дня: ставку перебили, PLT возвращены$/, () => 'Auction of the day: outbid, PLT returned'],
   [/^Баттл (\S+) · (\d+) × (.+)$/, m => `Battle ${m[1]} · ${m[2]} × ${enCase('', m[3])}`], [/^Возврат за баттл (\S+)$/, m => `Battle refund ${m[1]}`], [/^Доплата за обмен (\S+)$/, m => `Swap top-up ${m[1]}`],
+  [/^Друг (.+) начал играть$/, m => `Your friend ${m[1]} started playing`], [/^Приглашение от (.+)$/, m => `Invited by ${m[1]}`],
+  [/^Задание: сторис с отметкой Plate Club$/, () => 'Quest: a story tagging Plate Club'], [/^Задание: TikTok · (.+) просмотров$/, m => `Quest: TikTok · ${m[1]} views`],
   [/^Вступление в Telegram-чат игроков$/, () => 'Joined the players’ Telegram chat'], [/^Коллекция «(.+)»$/, m => `Collection “${m[1]}”`], [/^Выигрыш в баттле (\S+)$/, m => `Battle win ${m[1]}`],
   [/^Кейс (\d+) · (.+)$/, m => `Case ${m[1]} · ${enCase(m[1], m[2])}`], [/^Апгрейд из (.+)$/, m => `Upgrade from ${m[1]}`],
 ];
@@ -505,14 +507,22 @@ function dealerPanel(d) {
     <div class="dealer-d">${d.demands.map(x => `<span class="dem">${esc(L(x.ru, x.en))}</span>`).join('')}</div></section>`;
 }
 let mkSeq = 0;
+let MK_SHOW = 24, mkSig = '';
+// a new search starts from the first page again
+const mkReset = () => { MK_SHOW = 24; mkSig = ''; };
 async function loadMarket(silent = false) {
   const box = $('#mres'); if (!box) return; const seq = ++mkSeq;
   const p = new URLSearchParams({ sort: M.sort }); if (M.q) p.set('q', M.q); if (M.tiers.length) p.set('tiers', M.tiers.join(',')); if (M.group) p.set('group', M.group); if (M.min !== '') p.set('min', M.min); if (M.max !== '') p.set('max', M.max); if (M.who) p.set('who', M.who);
   let d; try { d = await GET('/api/market?' + p); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
   if (seq !== mkSeq || !$('#mres')) return;
+  // the silent refresh rewrites the grid only when something really changed — rebuilding 120 cards
+  // every 12 s used to eat memory on phones and the tab would reload
+  const sig = d.listings.map(l => l.id + ':' + l.price).join(',');
+  if (silent && sig === mkSig) return;
+  mkSig = sig;
   const filtered = M.q || M.tiers.length || M.group || M.who || M.min !== '' || M.max !== '';
   box.innerHTML = `<div class="meta"><span>${d.listings.length} ${pl(d.listings.length, ['объявление', 'объявления', 'объявлений'], ['listing', 'listings'])}</span><span>${L('Поиск понимает русские и латинские буквы', 'Search understands Cyrillic and Latin letters')}</span></div>
-  ${d.listings.length ? `<div class="pgrid">${d.listings.map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>`
+  ${d.listings.length ? `<div class="pgrid">${d.listings.slice(0, MK_SHOW).map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>${d.listings.length > MK_SHOW ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-ghost" data-act="mkmore">${L('Показать ещё', 'Show more')} (${d.listings.length - MK_SHOW})</button></div>` : ''}`
     : filtered ? Empty(L('Ничего не нашлось', 'Nothing found'), L('Уберите часть фильтров или сократите запрос.', 'Remove some filters or shorten the query.'), `<button class="btn btn-ghost" data-act="mreset">${L('Сбросить фильтры', 'Reset filters')}</button>`)
       : Empty(L('Станьте первым продавцом', 'Be the first seller'), L('На рынке пока нет номеров.', 'There are no plates on the market yet.'), ME ? `<button class="btn btn-chrome" data-act="listdlg">${L('Выставить номер', 'List a plate')}</button>` : `<a class="btn btn-chrome" href="#/register">${L('Создать аккаунт', 'Create an account')}</a>`, { letters: 'ААА', digits: '001', region: '77' })}`;
   if (!silent) fx(box);
@@ -717,6 +727,10 @@ VIEWS.media = async () => {
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Материалы', 'Media kit')}</p><h1 class="h1" style="margin-top:12px">${L('Баннеры для роликов', 'Banners for your videos')}</h1>
     <p class="lede" style="margin-top:12px">${L('Небольшие анимированные плашки 1080×1920 с прозрачным фоном — положите поверх своего видео в любом редакторе. Они не закрывают кадр.', 'Small animated 1080×1920 overlays with a transparent background — drop one on top of your video in any editor. They don’t cover the frame.')}</p></div></section>
     <div class="mgrid">${B.map(card).join('')}</div>
+    <section class="sec"><div class="panel" style="display:grid;gap:14px">${SH(L('Готовый ролик', 'Ready-made clip'), L('15 секунд, со звуком', '15 seconds, with sound'))}
+      <video class="promo-v" src="/media/plate-club-promo.mp4" poster="/media/promo-cover.jpg" controls playsinline preload="none"></video>
+      <p class="small" style="margin:0">${L('Можно выложить как есть или вставить кусок в свой ролик. Звук уже внутри.', 'Post it as is or cut a piece into your own video. The sound is already in it.')}</p>
+      <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/plate-club-promo.mp4" download>${L('Скачать видео', 'Download the video')}</a><a class="btn btn-sm btn-ghost" href="/media/promo-cover.jpg" download>${L('Обложка', 'Cover')}</a></div></div></section>
     <section class="sec" style="padding-bottom:80px"><div class="panel">${SH(L('Как пользоваться', 'How to use'))}
       <ol class="steps-ol"><li>${L('Скачайте WebM — в нём прозрачный фон (CapCut, Premiere, DaVinci). Для Instagram-редактора удобнее GIF, для статичной обложки — PNG.', 'Download the WebM — it has a transparent background (CapCut, Premiere, DaVinci). For the Instagram editor a GIF is easier; for a still, take the PNG.')}</li>
         <li>${L('Положите файл вторым слоем поверх своего видео.', 'Put the file as a second layer over your video.')}</li>
@@ -1586,6 +1600,7 @@ A.editlisting = btn => {
 };
 A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
+A.mkmore = btn => { MK_SHOW += 24; mkSig = ''; busy(btn, true, '…'); loadMarket(); };
 A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
 A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
 A.qsend = btn => {
@@ -1631,21 +1646,40 @@ A.listdlg = async btn => {
   let col; try { col = (await GET('/api/collection')).plates; } catch (e) { return toast(e.message, true); }
   const av = col.filter(p => !p.listing).sort((a, b) => b.value - a.value);
   if (!av.length) { openDialog(`<div class="dlg"><h2 class="h3" id="dlgTitle">${L('Выставить номер', 'List a plate')}</h2>${Empty(L('Нечего выставить', 'Nothing to list'), L('Здесь появятся ваши номера, которые ещё не на рынке.', 'Your plates that are not on the market will appear here.'), `<a class="btn btn-chrome" href="#/cases">${L('К кейсам', 'To cases')}</a>`)}<div class="dlg-acts"><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`); return; }
-  const sel = btn.dataset.id && av.find(p => p.id === btn.dataset.id) ? btn.dataset.id : av[0].id;
-  openDialog(`<form class="dlg" id="listForm" novalidate><h2 class="h3" id="dlgTitle">${L('Выставить на рынок', 'List on the market')}</h2>
-    <fieldset style="border:0;padding:0;margin:0"><legend class="small" style="margin-bottom:8px;font-weight:700">${L('Номер', 'Plate')}</legend><div class="pick">${av.map(p => `<label><input type="radio" name="pl" value="${p.id}" ${p.id === sel ? 'checked' : ''}>${Plate(p)}<span class="small">${tierName(p.tier)} · ${fmt(p.value)}</span></label>`).join('')}</div></fieldset>
-    <div class="fld"><label for="lprice">${L('Цена, PLT', 'Price, PLT')}</label><input class="field mono" id="lprice" type="number" inputmode="numeric" min="1" max="10000000" required></div>
-    <dl class="kv" id="lcalc"></dl><p class="err" id="lerr" hidden></p>
+  let sel = btn.dataset.id && av.find(p => p.id === btn.dataset.id) ? av.find(p => p.id === btn.dataset.id) : av[0];
+  let q = '';
+  const row = p => `<button type="button" class="lsrow${p.id === sel.id ? ' on' : ''}" data-lp="${p.id}">${Plate(p)}<span class="t"><b>${tierName(p.tier)}</b><span class="small">${esc(regionLabel(p))}</span></span><span class="v mono">${fmt(p.value)}</span></button>`;
+  const list = () => { const f = q ? av.filter(p => (plateStr(p) + ' ' + p.id).toLowerCase().includes(q.toLowerCase())) : av;
+    return f.length ? f.slice(0, 60).map(row).join('') : `<p class="small" style="padding:10px">${L('Ничего не нашлось.', 'Nothing found.')}</p>`; };
+  openDialog(`<form class="dlg lsdlg" id="listForm" novalidate>
+    <h2 class="h3" id="dlgTitle">${L('Выставить на рынок', 'List on the market')}</h2>
+    <div class="lspick" id="lsPick">${Plate(sel)}<span class="t"><b id="lsTier">${tierName(sel.tier)}</b><span class="small" id="lsVal">${L('оценка', 'value')} ${fmt(sel.value)} PLT</span></span><button type="button" class="btn btn-sm btn-ghost" data-act="lstoggle">${L('Сменить', 'Change')}</button></div>
+    <div class="lslist" id="lsList" hidden><label class="search" style="margin-bottom:8px">${IC.search}<input id="lsQ" type="search" placeholder="${L('Поиск по номеру', 'Search by plate')}" autocomplete="off"></label><div class="lsrows" id="lsRows">${list()}</div></div>
+    <div class="fld"><label for="lprice">${L('Цена, PLT', 'Price, PLT')}</label><input class="field mono lsprice" id="lprice" type="number" inputmode="numeric" min="1" max="10000000" required></div>
+    <div class="lschips" id="lsChips"></div>
+    <dl class="kv" id="lcalc"></dl><p class="small" id="lsHint" style="margin:-6px 0 0;min-height:1.2em;color:var(--fg3)"></p><p class="err" id="lerr" hidden></p>
     <div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Выставить', 'List')}</button></div></form>`);
-  const f = $('#listForm'), pr = $('#lprice'); const cur = () => av.find(p => p.id === f.pl.value);
-  const calc = () => { $('#lcalc').innerHTML = feeRows(+pr.value || 0); };
-  const def = () => { pr.value = Math.round(cur().value * 1.1); calc(); }; def();
-  f.addEventListener('change', e => { if (e.target.name === 'pl') def(); }); pr.addEventListener('input', calc);
+  const f = $('#listForm'), pr = $('#lprice');
+  const chips = () => { const v = sel.value; const opts = [[0.9, '−10%'], [1, L('оценка', 'value')], [1.1, '+10%'], [1.25, '+25%'], [1.5, '+50%']];
+    $('#lsChips').innerHTML = opts.map(([k, t]) => `<button type="button" class="chip" data-lsp="${Math.max(1, Math.round(v * k))}">${t}<small>${fmt(Math.max(1, Math.round(v * k)))}</small></button>`).join(''); };
+  const calc = () => { const v = +pr.value || 0; $('#lcalc').innerHTML = feeRows(v);
+    const d = v && sel.value ? Math.round((v / sel.value - 1) * 100) : 0;
+    $$('#lsChips .chip').forEach(c => c.setAttribute('aria-pressed', +c.dataset.lsp === v));
+    const hint = $('#lsHint'); if (hint) hint.textContent = d > 25 ? L('Дороже оценки — могут не купить', 'Above value — may not sell') : d < -10 ? L('Дешевле оценки — купят быстро', 'Below value — sells fast') : ''; };
+  const pick = p => { sel = p; $('#lsPick').firstChild.outerHTML = Plate(p); $('#lsTier').textContent = tierName(p.tier); $('#lsVal').textContent = L('оценка', 'value') + ' ' + fmt(p.value) + ' PLT';
+    pr.value = Math.round(p.value * 1.1); chips(); calc(); $('#lsList').hidden = true; };
+  pr.value = Math.round(sel.value * 1.1); chips(); calc();
+  f.addEventListener('input', e => { if (e.target.id === 'lprice') calc(); if (e.target.id === 'lsQ') { q = e.target.value; $('#lsRows').innerHTML = list(); } });
+  f.addEventListener('click', e => {
+    const c = e.target.closest('[data-lsp]'); if (c) { pr.value = c.dataset.lsp; calc(); return; }
+    const r = e.target.closest('[data-lp]'); if (r) { const p = av.find(x => x.id === r.dataset.lp); if (p) pick(p); return; }
+    if (e.target.closest('[data-act="lstoggle"]')) { const l = $('#lsList'); l.hidden = !l.hidden; if (!l.hidden) $('#lsQ').focus(); }
+  });
   f.addEventListener('submit', async e => {
     e.preventDefault(); const v = Math.round(+pr.value), err = $('#lerr');
     if (!(v >= 1 && v <= 1e7)) { err.hidden = false; err.textContent = L('Введите целую цену от 1 до 10 000 000 PLT.', 'Enter a whole price from 1 to 10 000 000 PLT.'); pr.focus(); return; }
     const sb = f.querySelector('[type=submit]'); busy(sb, true, '…');
-    try { const r = await POST('/api/market/listings', { plateId: cur().id, price: v }); sfx('confirm'); dlg.close(); closeStage(); toast(L(`Выставлено за ${fmt(v)} PLT`, `Listed for ${fmt(v)} PLT`) + ` · ${r.listing.id}`); if (parseRoute().name !== 'case') render(false); }
+    try { const r = await POST('/api/market/listings', { plateId: sel.id, price: v }); sfx('confirm'); dlg.close(); closeStage(); toast(L(`Выставлено за ${fmt(v)} PLT`, `Listed for ${fmt(v)} PLT`) + ` · ${r.listing.id}`); if (parseRoute().name !== 'case') { mkReset(); render(false); } }
     catch (x) { err.hidden = false; err.textContent = x.message; busy(sb, false); }
   });
 };
@@ -1662,8 +1696,8 @@ A.verify = async btn => {
     : `<div class="vf-mark no" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.5"/></svg></div><p class="vf-status">${L('Не подтверждено', 'Not verified')}</p><p class="small" style="margin:0">${esc(srv(d.reason) || '')}</p>${checks ? `<ul class="checks">${checks}</ul>` : ''}`;
   sfx(d.verified ? 'rare' : 'fail'); busy(btn, false); btn.textContent = L('Проверить ещё раз', 'Check again');
 };
-A.mtier = btn => { const t = btn.dataset.t; M.tiers = M.tiers.includes(t) ? M.tiers.filter(x => x !== t) : [...M.tiers, t]; btn.setAttribute('aria-pressed', M.tiers.includes(t)); loadMarket(); };
-A.mseg = btn => { M[btn.dataset.k] = btn.dataset.v; btn.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn)); loadMarket(); };
+A.mtier = btn => { const t = btn.dataset.t; M.tiers = M.tiers.includes(t) ? M.tiers.filter(x => x !== t) : [...M.tiers, t]; btn.setAttribute('aria-pressed', M.tiers.includes(t)); mkReset(); loadMarket(); };
+A.mseg = btn => { M[btn.dataset.k] = btn.dataset.v; btn.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn)); mkReset(); loadMarket(); };
 A.mreset = () => { Object.assign(M, { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '' }); render(false); };
 A.ctier = btn => { C.tier = btn.dataset.t; render(false); };
 A.pwshow = btn => { const i = btn.previousElementSibling; const s = i.type === 'password'; i.type = s ? 'text' : 'password'; btn.textContent = s ? L('Скрыть', 'Hide') : L('Показать', 'Show'); };
@@ -1685,8 +1719,8 @@ document.addEventListener('pointerdown', e => { const b = e.target.closest('.btn
 let qT;
 document.addEventListener('input', e => {
   const t = e.target;
-  if (t.id === 'mq') { M.q = t.value; clearTimeout(qT); qT = setTimeout(loadMarket, 220); }
-  if (t.id === 'mmin' || t.id === 'mmax') { M[t.id === 'mmin' ? 'min' : 'max'] = t.value; clearTimeout(qT); qT = setTimeout(loadMarket, 300); }
+  if (t.id === 'mq') { M.q = t.value; clearTimeout(qT); qT = setTimeout(() => { mkReset(); loadMarket(); }, 220); }
+  if (t.id === 'mmin' || t.id === 'mmax') { M[t.id === 'mmin' ? 'min' : 'max'] = t.value; clearTimeout(qT); qT = setTimeout(() => { mkReset(); loadMarket(); }, 300); }
   if (t.id === 'svol') { PREF.vol = +t.value; savePref(); $('#volTxt').textContent = Math.round(PREF.vol * 100) + '%'; }
   if (t.classList && t.classList.contains('field') && t.getAttribute('aria-invalid') === 'true' && t.id !== 'nickname') { t.removeAttribute('aria-invalid'); const er = $('#' + t.id + '-e'); if (er) er.hidden = true; }
 });
