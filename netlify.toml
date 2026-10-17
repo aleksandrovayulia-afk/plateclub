@@ -1,6 +1,8 @@
 [build]
   publish = "public"
-  command = "node tools/build-app.mjs"
+  # public/app.js is committed (built by tools/build-app.mjs before every push),
+  # so Netlify has nothing to compile — this keeps deploys instant and free of build minutes.
+  command = ""
 
 [functions]
   node_bundler = "esbuild"
