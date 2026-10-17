@@ -493,7 +493,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   // live feed: the latest rare-or-better plates minted from cases, and the latest upgrade attempts (real data only)
   R('GET', '/api/drops', async () => {
     const rows = await q(`SELECT ${PLATE_COLS}, u.nickname, (extract(epoch from p.created_at)*1000)::bigint AS at_ms FROM plates p JOIN users u ON u.id = (SELECT e.to_user FROM plate_events e WHERE e.plate_id=p.id AND e.kind='MINTED' LIMIT 1)
-      WHERE p.tier IN ('rare','elite','grail') ORDER BY p.created_at DESC LIMIT 12`);
+      WHERE p.tier IN ('rare','elite','grail') AND u.role <> 'bot' AND u.nick_norm <> lower($1) ORDER BY p.created_at DESC LIMIT 12`, [MARKET_BOT.nick]);
     return { drops: rows.map(r => ({ plate: plateRow(r), nickname: r.nickname, at: n(r.at_ms) })) };
   });
   R('GET', '/api/upgrade/recent', async () => {
@@ -739,7 +739,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   }
   let medalCache = { at: 0, map: {} };
   async function medalsMap() {
-    if (now() - medalCache.at < 30000) return medalCache.map;
+    if (now() - medalCache.at < 120000) return medalCache.map;
     const rows = (await rankStats()).map(r => ({ id: n(r.id), total: n(r.balance) + n(r.pvalue) })).sort((a, b) => b.total - a.total);
     const map = {}; rows.slice(0, 10).forEach((r, i) => { if (r.total > 0) map[r.id] = i < 3 ? ['top10', 'top3'] : ['top10']; });
     const act = await q(`SELECT user_id,

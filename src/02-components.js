@@ -89,7 +89,7 @@ function LvlRing(lv, size = 42) {
 function toast(msg, bad = false) { const el = document.createElement('div'); el.className = 'toast' + (bad ? ' bad' : ''); el.textContent = msg; $('#toasts').append(el); setTimeout(() => el.remove(), bad ? 5600 : 3400); }
 function busy(btn, on, label) { if (!btn) return; if (on) { btn.dataset.l = btn.innerHTML; btn.disabled = true; btn.classList.add('is-loading'); if (label) btn.textContent = label; } else { btn.disabled = false; btn.classList.remove('is-loading'); if (btn.dataset.l) btn.innerHTML = btn.dataset.l; } }
 const dlg = $('#dlg');
-function openDialog(html) { dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector('[autofocus]') || dlg.querySelector('button,input'); f && f.focus(); }
+function openDialog(html) { dlg.returnValue = ''; dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector('[autofocus]') || dlg.querySelector('button,input'); f && f.focus(); }
 function confirmDialog({ title, lede = '', rows = [], ok = L('Подтвердить', 'Confirm'), danger = false }) {
   return new Promise(res => {
     openDialog(`<form method="dialog" class="dlg"><h2 class="h3" id="dlgTitle">${title}</h2>${lede ? `<p class="small" style="margin:0">${lede}</p>` : ''}
@@ -98,7 +98,8 @@ function confirmDialog({ title, lede = '', rows = [], ok = L('Подтверди
     dlg.addEventListener('close', () => res(dlg.returnValue === 'ok'), { once: true });
   });
 }
-dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close('cancel'); });
+dlg.addEventListener('cancel', () => { dlg.returnValue = 'cancel'; });
 function coins(from, n = 14) {
   if (reduced() || !from) return; const r = from.getBoundingClientRect(); const to = ($('#balPill') || from).getBoundingClientRect();
   for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'coin-burst'; c.style.left = r.left + r.width / 2 + 'px'; c.style.top = r.top + r.height / 2 + 'px'; c.style.setProperty('--dx', (to.left + to.width / 2 - r.left - r.width / 2 + (Math.random() - 0.5) * 40) + 'px'); c.style.setProperty('--dy', (to.top - r.top + (Math.random() - 0.5) * 30) + 'px'); c.style.animationDelay = i * 35 + 'ms'; document.body.appendChild(c); setTimeout(() => c.remove(), 1400); }

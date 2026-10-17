@@ -2,7 +2,7 @@
 /* ---------- actions ---------- */
 const A = Object.assign({}, ADMIN_ACTS, UA, GA);
 A.drawer = () => openDrawer(); A.drawerclose = () => closeDrawer(); A.drawerbg = (el, e) => { if (e.target === el) closeDrawer(); };
-A.lang = btn => { const l = btn.dataset.l; if (l === LANG) return; LANG = l; store.set('lang', l); applyPrefs(); sfx('click'); render(false); };
+A.lang = btn => { const l = btn.dataset.l; if (l === LANG) return; LANG = l; store.set('lang', l); applyPrefs(); sfx('click'); render(false); LIVE_SIG = ''; liveFeed(); };
 A.ccat = btn => { CF.cat = btn.dataset.k; $$('.cats .chip').forEach(b => b.setAttribute('aria-pressed', b === btn)); $('#cgridBox').innerHTML = casesGrid(); fx($('#cgridBox')); };
 let opening = false;
 A.open = async btn => {
@@ -15,8 +15,8 @@ A.open = async btn => {
     await spinCase(st, req);
     const { r, e } = await req;
     if (e) { closeStage(); toast(e.message, true); return; }
-    if (st.dead) return;
     ME.balance = r.balance; ME.stats.opened += (r.count || 1); chrome();
+    if (st.dead) { toast(L(`Номер ${plateStr(r.plate)} уже в коллекции`, `${plateStr(r.plate)} is in your collection`)); refreshMe().then(refreshPerks); return; }
     await burstCase(st); if (st.dead) return;
     await roll(st.el, c, r.plate); if (st.dead) return;
     celebrate(st.el, r.plate);
@@ -207,6 +207,11 @@ async function avatarUpload(file) {
 }
 document.addEventListener('change', e => { if (e.target && e.target.id === 'avaFile') avatarUpload(e.target.files[0]); });
 A.avadel = async () => { try { await POST('/api/me/avatar', { image: null }); ME.av = null; render(false); } catch (e) { toast(e.message, true); } };
+A.onlinelist = async () => {
+  let d; try { d = await GET('/api/online'); } catch (e) { return toast(e.message, true); }
+  openDialog(`<div class="dlg"><div class="row" style="justify-content:space-between"><h2 class="h3" id="dlgTitle"><span class="on-dot"></span>${L('Сейчас в игре', 'Online now')} · ${d.count}</h2><button class="btn btn-sm btn-ghost" data-act="dlgclose">✕</button></div>
+    <div class="online-list">${d.players.length ? d.players.map(n => `<a href="#/u/${encodeURIComponent(n)}" class="online-i">${Ava(n)}<b>${esc(n)}</b><span>→</span></a>`).join('') : `<p class="small">${L('Пока никого', 'Nobody yet')}</p>`}</div></div>`);
+};
 A.ufilter = btn => { UF.tier = btn.dataset.t; render(false); };
 A.rkby = btn => { RK.by = btn.dataset.k; render(false); };
 A.odds = btn => { const c = caseById(btn.dataset.case); if (c) { sfx('click'); oddsDialog(c); } };

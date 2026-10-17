@@ -254,7 +254,7 @@ const achText = a => (LANG === 'en' && ACH_EN[a.id] ? ACH_EN[a.id][1] : a.text);
 const regMult = p => (p.country === 'BY' ? CFG.byMult : (CFG.groupMult[(CFG.regions[p.region] || [])[1]] || 1));
 const targetValue = (p, tier) => Math.round(CFG.tiers[TI()[tier]].base * regMult(p));
 const upChance = (p, tier, extra = 0) => { const u = CFG.upgrade; return Math.max(u.min, Math.min(u.max, Math.floor(u.edge * (p.value + extra) / targetValue(p, tier) * 10000) / 10000)); };
-async function refreshMe() { try { ME = (await GET('/api/me')).user; } catch { ME = null; } chrome(); return ME; }
+async function refreshMe() { try { ME = (await GET('/api/me')).user; } catch (e) { if (e.status === 401) ME = null; } chrome(); return ME; }
 async function refreshPerks() { if (!ME) { PERKS = null; return null; } try { PERKS = await GET('/api/perks'); } catch {} chrome(); return PERKS; }
 
 /* ---------- preferences (this device) ---------- */
@@ -384,7 +384,7 @@ function LvlRing(lv, size = 42) {
 function toast(msg, bad = false) { const el = document.createElement('div'); el.className = 'toast' + (bad ? ' bad' : ''); el.textContent = msg; $('#toasts').append(el); setTimeout(() => el.remove(), bad ? 5600 : 3400); }
 function busy(btn, on, label) { if (!btn) return; if (on) { btn.dataset.l = btn.innerHTML; btn.disabled = true; btn.classList.add('is-loading'); if (label) btn.textContent = label; } else { btn.disabled = false; btn.classList.remove('is-loading'); if (btn.dataset.l) btn.innerHTML = btn.dataset.l; } }
 const dlg = $('#dlg');
-function openDialog(html) { dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector('[autofocus]') || dlg.querySelector('button,input'); f && f.focus(); }
+function openDialog(html) { dlg.returnValue = ''; dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector('[autofocus]') || dlg.querySelector('button,input'); f && f.focus(); }
 function confirmDialog({ title, lede = '', rows = [], ok = L('Подтвердить', 'Confirm'), danger = false }) {
   return new Promise(res => {
     openDialog(`<form method="dialog" class="dlg"><h2 class="h3" id="dlgTitle">${title}</h2>${lede ? `<p class="small" style="margin:0">${lede}</p>` : ''}
@@ -393,7 +393,8 @@ function confirmDialog({ title, lede = '', rows = [], ok = L('Подтверди
     dlg.addEventListener('close', () => res(dlg.returnValue === 'ok'), { once: true });
   });
 }
-dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close('cancel'); });
+dlg.addEventListener('cancel', () => { dlg.returnValue = 'cancel'; });
 function coins(from, n = 14) {
   if (reduced() || !from) return; const r = from.getBoundingClientRect(); const to = ($('#balPill') || from).getBoundingClientRect();
   for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'coin-burst'; c.style.left = r.left + r.width / 2 + 'px'; c.style.top = r.top + r.height / 2 + 'px'; c.style.setProperty('--dx', (to.left + to.width / 2 - r.left - r.width / 2 + (Math.random() - 0.5) * 40) + 'px'); c.style.setProperty('--dy', (to.top - r.top + (Math.random() - 0.5) * 30) + 'px'); c.style.animationDelay = i * 35 + 'ms'; document.body.appendChild(c); setTimeout(() => c.remove(), 1400); }
@@ -513,7 +514,7 @@ async function liveFeed() {
     if (sig !== LIVE_SIG) {
       LIVE_SIG = sig;
       const run = items.length ? items.join('') : `<span class="li">${L('Открой кейс — твой номер появится здесь', 'Open a case — your plate shows up here')}</span>`;
-      box.innerHTML = `<span class="live-on"><i></i>${fmt(on.count || 1)} ${L('онлайн', 'online')}</span><div class="live-track"><div class="live-run" style="--dur:${Math.max(24, items.length * 6)}s">${run}${items.length ? run : ''}</div></div>`;
+      box.innerHTML = `<button class="live-on" data-act="onlinelist"><i></i>${fmt(on.count || 1)} ${L('онлайн', 'online')}</button><div class="live-track"><div class="live-run" style="--dur:${Math.max(24, items.length * 6)}s">${run}${items.length ? run : ''}</div></div>`;
     }
   } catch {}
   clearTimeout(liveFeed.t); liveFeed.t = setTimeout(() => { if (document.visibilityState === 'visible') liveFeed(); else liveFeed.t = setTimeout(liveFeed, 30000); }, 30000);
@@ -554,7 +555,7 @@ VIEWS[''] = async () => {
       <img class="hero-logo" src="${BRAND('logo-chrome.png')}" alt="Plate Club" width="1417" height="542">
       <p class="hero-sub">${L('Коллекционные номера России и Беларуси. Открывай кейсы, улучшай номера и торгуй с другими игроками.', 'Collectible plates from Russia and Belarus. Open cases, upgrade plates and trade with other players.')}</p>
       <div class="row"><a class="btn btn-chrome btn-xl" href="#/cases">${L('Открыть кейс', 'Open a case')} <i>→</i></a><a class="btn btn-glass btn-xl" href="#/upgrade">${L('Апгрейд', 'Upgrade')}</a></div>
-      <div class="hero-chips">${on.count ? `<a class="hchip glass online-chip" href="#/top" title="${esc(on.players.join(', '))}"><i class="live"></i><b>${on.count}</b>${L('онлайн', 'online')}</a>` : ''}<span class="hchip glass"><b>${CFG.cases.length}</b>${L('кейса', 'cases')}</span><span class="hchip glass"><b>2</b>${L('страны', 'countries')}</span><span class="hchip glass"><b>+${CFG.daily.base}</b>${L('PLT каждый день', 'PLT every day')}</span><span class="hchip glass"><b>2</b>${L('копии номера — максимум', 'copies per plate, max')}</span></div>
+      <div class="hero-chips">${on.count ? `<button class="hchip glass online-chip" data-act="onlinelist"><i class="live"></i><b>${on.count}</b>${L('онлайн', 'online')}</button>` : ''}<span class="hchip glass"><b>${CFG.cases.length}</b>${L('кейса', 'cases')}</span><span class="hchip glass"><b>2</b>${L('страны', 'countries')}</span><span class="hchip glass"><b>+${CFG.daily.base}</b>${L('PLT каждый день', 'PLT every day')}</span><span class="hchip glass"><b>2</b>${L('копии номера — максимум', 'copies per plate, max')}</span></div>
     </div></section>
   <div class="wrap">
     ${(() => { const sc = CFG.cases.find(c => c.until && c.until > Date.now()); return sc ? `<a class="season-ban rv" href="#/case/${sc.id}" style="--c:${sc.color};--c2:${sc.color2}"><div><p class="eyebrow">🍂 ${L('Сезонный кейс', 'Seasonal case')} · ${L('только до', 'until')} ${day(sc.until - 1)}</p><h2 class="h2" style="margin-top:6px">${esc(caseName(sc))}</h2><p class="small" style="margin:6px 0 0">${L('Шансы на редкие и элитные номера выше обычного. Потом кейс исчезнет.', 'Better odds on rare and elite plates. Then it disappears.')}</p></div><div class="season-r"><span class="mono" id="seasonCd" data-t="${sc.until}"></span><span class="btn btn-chrome">${L('Открыть за', 'Open for')} ${fmt(priceOf(sc))}</span></div></a>` : ''; })()}
@@ -635,7 +636,6 @@ VIEWS.market = async () => {
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow"><span class="live"></span>${L('Рынок онлайн', 'Live market')}${on.count ? ` · ${on.count} ${pl(on.count, ['игрок', 'игрока', 'игроков'], ['player', 'players'])} ${L('в сети', 'online')}` : ''} · ${L('комиссия продавца', 'seller fee')} ${CFG.fee * 100}%</p><h1 class="h1" style="margin-top:12px">${L('Рынок', 'Market')}</h1><p class="lede" style="margin-top:10px">${L('Покупайте ниже оценки — продавайте дороже. Зелёная метка — лот дешевле оценки.', 'Buy below value, sell higher. A green tag means the lot is below its value.')}</p></div>
     <div class="row">${ME ? `<button class="btn btn-chrome" data-act="listdlg">${L('Выставить номер', 'List a plate')}</button><a class="btn btn-ghost" href="#/trades">${L('Мои сделки', 'My trades')}</a>` : `<a class="btn btn-chrome" href="#/login?next=%23%2Fmarket">${L('Войти, чтобы торговать', 'Sign in to trade')}</a>`}</div></section>
   ${st ? `<div class="mk-stats"><div class="stat rv"><span>${L('В продаже', 'Listed')}</span><b>${fmt(st.active)}</b></div><div class="stat rv"><span>${L('Ниже оценки', 'Below value')}</span><b class="up">${fmt(st.deals)}</b></div><div class="stat rv"><span>${L('Сделок за сутки', 'Trades, 24h')}</span><b>${fmt(st.sales)}</b></div><div class="stat rv"><span>${L('Оборот за сутки', 'Volume, 24h')}</span><b>${fmt(st.volume)}</b></div></div>` : ''}
-  ${dl ? dealerPanel(dl) : ''}
   <section class="tools" aria-label="${L('Поиск и фильтры', 'Search and filters')}">
     <div class="tools-row"><label class="search">${IC.search}<span class="sr-only">${L('Поиск номера', 'Search plates')}</span><input id="mq" type="search" placeholder="А777АА, 777, 7777 AB…" value="${esc(M.q)}" autocomplete="off"></label>
       ${seg('sort', [['deal', L('Выгодные', 'Best deals')], ['new', L('Новые', 'New')], ['pa', L('Дешевле', 'Cheapest')], ['pd', L('Дороже', 'Priciest')], ['rar', L('Редкие', 'Rarest')]])}</div>
@@ -644,6 +644,7 @@ VIEWS.market = async () => {
       <div class="range"><label class="sr-only" for="mmin">${L('Цена от', 'Min price')}</label><input class="field mono" id="mmin" type="number" inputmode="numeric" min="0" placeholder="${L('от', 'min')}" value="${esc(M.min)}"><label class="sr-only" for="mmax">${L('Цена до', 'Max price')}</label><input class="field mono" id="mmax" type="number" inputmode="numeric" min="0" placeholder="${L('до', 'max')}" value="${esc(M.max)}"></div>
       <button class="btn-text" data-act="mreset">${L('Сбросить', 'Reset')}</button></div>
   </section><div id="mres">${skel()}</div>
+  ${dl ? `<div style="margin-top:22px">${dealerPanel(dl)}</div>` : ''}
   ${sales.sales.length ? `<section class="sec" style="padding-bottom:80px">${SH(L('Последние сделки', 'Latest trades'))}<div class="drops">${sales.sales.map(s => `<a class="drop t-${s.plate.tier}" href="#/plate/${s.plate.id}">${Plate(s.plate, { iri: false })}<span class="price">${fmt(s.price)}<small>PLT</small></span><small>${esc(s.seller)} → ${esc(s.buyer)} · ${rel(s.at)}</small></a>`).join('')}</div></section>` : '<div style="height:80px"></div>'}</div>`;
 };
 function dealerPanel(d) {
@@ -1547,7 +1548,7 @@ VIEWS.battle = async ({ arg }) => {
     const p = b.players.find(x => x.seat === i); const won = b.status === 'DONE' && b.winnerSeat === i;
     const drops = d.drops.filter(x => x.seat === i);
     return `<div class="bcol${won && !animate ? ' win' : ''}${p ? '' : ' wait'}" data-seat="${i}">
-      <div class="bcol-h">${p ? `<span class="bava lg${p.bot ? ' bot' : ''}">${esc((p.nickname || '?').replace('Бот ', '')[0].toUpperCase())}</span><div class="bname"><b>${esc(p.bot ? p.nickname.replace(/^Бот /, '') : p.nickname)}</b><span class="small">${p.bot ? L('бот', 'bot') : me && me.seat === i ? L('это вы', 'you') : L('игрок', 'player')}</span></div>` : `<span class="bava lg free">?</span><div class="bname"><b>${L('Свободно', 'Free seat')}</b><span class="small">${L('ждём игрока…', 'waiting…')}</span></div>`}<span class="crown" aria-hidden="true">${IC.crown}</span></div>
+      <div class="bcol-h">${p ? `<span class="bava lg${p.bot ? ' bot' : ''}">${esc((p.nickname || '?').replace('Бот ', '')[0].toUpperCase())}</span><div class="bname"><b>${p.bot ? esc(p.nickname.replace(/^Бот /, '')) : `<a href="#/u/${encodeURIComponent(p.nickname)}" style="color:inherit">${esc(p.nickname)}</a>`}</b><span class="small">${p.bot ? L('бот', 'bot') : me && me.seat === i ? L('это вы', 'you') : L('игрок', 'player')}</span></div>` : `<span class="bava lg free">?</span><div class="bname"><b>${L('Свободно', 'Free seat')}</b><span class="small">${L('ждём игрока…', 'waiting…')}</span></div>`}<span class="crown" aria-hidden="true">${IC.crown}</span></div>
       <div class="btotal"><span class="mono" data-total="${p ? p.total : 0}">${animate ? '0' : fmt(p ? p.total : 0)}</span><small>PLT</small></div>
       <div class="breel" aria-hidden="true"><div class="breel-in">${b.status === 'DONE' && !animate && drops.length ? cardHtml(drops[drops.length - 1].plate) : `<div class="breel-idle">${p ? (b.status === 'OPEN' ? L('готов', 'ready') : '') : '…'}</div>`}</div><span class="breel-mark l"></span><span class="breel-mark r"></span></div>
       <div class="bdrops">${animate ? '' : drops.map(x => `<a class="bdrop t-${x.plate.tier}" href="#/plate/${x.plate.id}">${Plate(x.plate, { iri: false })}<span class="mono">${fmt(x.value)}</span></a>`).join('')}</div></div>`;
@@ -1663,6 +1664,7 @@ GA.sclaim = async btn => { busy(btn, true, '…'); try { const r = await POST(`/
 /* ---------- swaps ---------- */
 const SWT = { tab: 'in' };
 VIEWS.swap = async ({ arg, query }) => {
+  if (query && ME && String(query.get('to') || '').toLowerCase() === ME.nickname.toLowerCase()) { query.delete('to'); toast(L('Нельзя меняться с самим собой', 'You can’t swap with yourself'), true); }
   if (arg === 'new') return swapBuilder(query);
   const d = await GET('/api/swaps'); const list = SWT.tab === 'in' ? d.incoming : d.outgoing;
   const pin = d.incoming.filter(x => x.status === 'PENDING').length, pout = d.outgoing.filter(x => x.status === 'PENDING').length;
@@ -1796,11 +1798,13 @@ GA.hlguess = async btn => {
 };
 GA.hlcash = async btn => { busy(btn, true, '…'); try { const r = await POST(`/api/hilo/${HL.run.id}/cash`, {}); coins(btn, 18); sfx('coin'); toast(`+${fmt(r.amount)} PLT`); HL.run = null; await refreshMe(); hlPaint(); } catch (e) { toast(e.message, true); busy(btn, false); } };
 
+VIEWS.swap.auth = true;
+
 
 /* ---------- actions ---------- */
 const A = Object.assign({}, ADMIN_ACTS, UA, GA);
 A.drawer = () => openDrawer(); A.drawerclose = () => closeDrawer(); A.drawerbg = (el, e) => { if (e.target === el) closeDrawer(); };
-A.lang = btn => { const l = btn.dataset.l; if (l === LANG) return; LANG = l; store.set('lang', l); applyPrefs(); sfx('click'); render(false); };
+A.lang = btn => { const l = btn.dataset.l; if (l === LANG) return; LANG = l; store.set('lang', l); applyPrefs(); sfx('click'); render(false); LIVE_SIG = ''; liveFeed(); };
 A.ccat = btn => { CF.cat = btn.dataset.k; $$('.cats .chip').forEach(b => b.setAttribute('aria-pressed', b === btn)); $('#cgridBox').innerHTML = casesGrid(); fx($('#cgridBox')); };
 let opening = false;
 A.open = async btn => {
@@ -1813,8 +1817,8 @@ A.open = async btn => {
     await spinCase(st, req);
     const { r, e } = await req;
     if (e) { closeStage(); toast(e.message, true); return; }
-    if (st.dead) return;
     ME.balance = r.balance; ME.stats.opened += (r.count || 1); chrome();
+    if (st.dead) { toast(L(`Номер ${plateStr(r.plate)} уже в коллекции`, `${plateStr(r.plate)} is in your collection`)); refreshMe().then(refreshPerks); return; }
     await burstCase(st); if (st.dead) return;
     await roll(st.el, c, r.plate); if (st.dead) return;
     celebrate(st.el, r.plate);
@@ -2005,6 +2009,11 @@ async function avatarUpload(file) {
 }
 document.addEventListener('change', e => { if (e.target && e.target.id === 'avaFile') avatarUpload(e.target.files[0]); });
 A.avadel = async () => { try { await POST('/api/me/avatar', { image: null }); ME.av = null; render(false); } catch (e) { toast(e.message, true); } };
+A.onlinelist = async () => {
+  let d; try { d = await GET('/api/online'); } catch (e) { return toast(e.message, true); }
+  openDialog(`<div class="dlg"><div class="row" style="justify-content:space-between"><h2 class="h3" id="dlgTitle"><span class="on-dot"></span>${L('Сейчас в игре', 'Online now')} · ${d.count}</h2><button class="btn btn-sm btn-ghost" data-act="dlgclose">✕</button></div>
+    <div class="online-list">${d.players.length ? d.players.map(n => `<a href="#/u/${encodeURIComponent(n)}" class="online-i">${Ava(n)}<b>${esc(n)}</b><span>→</span></a>`).join('') : `<p class="small">${L('Пока никого', 'Nobody yet')}</p>`}</div></div>`);
+};
 A.ufilter = btn => { UF.tier = btn.dataset.t; render(false); };
 A.rkby = btn => { RK.by = btn.dataset.k; render(false); };
 A.odds = btn => { const c = caseById(btn.dataset.case); if (c) { sfx('click'); oddsDialog(c); } };

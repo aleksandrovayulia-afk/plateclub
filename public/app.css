@@ -1342,3 +1342,11 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .tip-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:rgba(143,211,255,.12)}
 @media(max-width:600px){.hl-arena .hl-card .plate{--ps:4.4px}.rk-tabs{grid-template-columns:repeat(3,1fr)!important;gap:6px!important}.rk-tabs button{padding:10px 8px!important}.rk-tabs button span{font-size:10.5px}}
 .hl-card .plate{--ps:6.4px}
+.lstrip .live-on{background:none;border:0;padding:0;cursor:pointer;font:inherit;font-weight:800;color:#C6FF3D}
+.online-list{display:grid;gap:6px;max-height:60vh;overflow:auto;margin-top:10px}
+.online-i{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);text-decoration:none;color:inherit}
+.online-i b{flex:1}
+/* phones: lighter background animation */
+@media(max-width:820px){.aurora i{animation:none;filter:blur(60px)}}
+/* battle arena with 3–4 players on phones */
+@media(max-width:600px){.bcol{min-width:0;overflow:hidden}.bname{min-width:0}.bname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}[style*="--n:3"] .bcol,[style*="--n:4"] .bcol{padding:7px}[style*="--n:3"] .bcol .plate,[style*="--n:4"] .bcol .plate{--ps:2.5px}[style*="--n:3"] .bava.lg{display:none}[style*="--n:3"] .bname b{font-size:11px}}

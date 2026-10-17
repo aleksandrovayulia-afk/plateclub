@@ -108,7 +108,7 @@ async function liveFeed() {
     if (sig !== LIVE_SIG) {
       LIVE_SIG = sig;
       const run = items.length ? items.join('') : `<span class="li">${L('Открой кейс — твой номер появится здесь', 'Open a case — your plate shows up here')}</span>`;
-      box.innerHTML = `<span class="live-on"><i></i>${fmt(on.count || 1)} ${L('онлайн', 'online')}</span><div class="live-track"><div class="live-run" style="--dur:${Math.max(24, items.length * 6)}s">${run}${items.length ? run : ''}</div></div>`;
+      box.innerHTML = `<button class="live-on" data-act="onlinelist"><i></i>${fmt(on.count || 1)} ${L('онлайн', 'online')}</button><div class="live-track"><div class="live-run" style="--dur:${Math.max(24, items.length * 6)}s">${run}${items.length ? run : ''}</div></div>`;
     }
   } catch {}
   clearTimeout(liveFeed.t); liveFeed.t = setTimeout(() => { if (document.visibilityState === 'visible') liveFeed(); else liveFeed.t = setTimeout(liveFeed, 30000); }, 30000);

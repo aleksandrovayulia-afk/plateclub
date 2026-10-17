@@ -166,7 +166,7 @@ const achText = a => (LANG === 'en' && ACH_EN[a.id] ? ACH_EN[a.id][1] : a.text);
 const regMult = p => (p.country === 'BY' ? CFG.byMult : (CFG.groupMult[(CFG.regions[p.region] || [])[1]] || 1));
 const targetValue = (p, tier) => Math.round(CFG.tiers[TI()[tier]].base * regMult(p));
 const upChance = (p, tier, extra = 0) => { const u = CFG.upgrade; return Math.max(u.min, Math.min(u.max, Math.floor(u.edge * (p.value + extra) / targetValue(p, tier) * 10000) / 10000)); };
-async function refreshMe() { try { ME = (await GET('/api/me')).user; } catch { ME = null; } chrome(); return ME; }
+async function refreshMe() { try { ME = (await GET('/api/me')).user; } catch (e) { if (e.status === 401) ME = null; } chrome(); return ME; }
 async function refreshPerks() { if (!ME) { PERKS = null; return null; } try { PERKS = await GET('/api/perks'); } catch {} chrome(); return PERKS; }
 
 /* ---------- preferences (this device) ---------- */

@@ -7,7 +7,6 @@ VIEWS.market = async () => {
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow"><span class="live"></span>${L('Рынок онлайн', 'Live market')}${on.count ? ` · ${on.count} ${pl(on.count, ['игрок', 'игрока', 'игроков'], ['player', 'players'])} ${L('в сети', 'online')}` : ''} · ${L('комиссия продавца', 'seller fee')} ${CFG.fee * 100}%</p><h1 class="h1" style="margin-top:12px">${L('Рынок', 'Market')}</h1><p class="lede" style="margin-top:10px">${L('Покупайте ниже оценки — продавайте дороже. Зелёная метка — лот дешевле оценки.', 'Buy below value, sell higher. A green tag means the lot is below its value.')}</p></div>
     <div class="row">${ME ? `<button class="btn btn-chrome" data-act="listdlg">${L('Выставить номер', 'List a plate')}</button><a class="btn btn-ghost" href="#/trades">${L('Мои сделки', 'My trades')}</a>` : `<a class="btn btn-chrome" href="#/login?next=%23%2Fmarket">${L('Войти, чтобы торговать', 'Sign in to trade')}</a>`}</div></section>
   ${st ? `<div class="mk-stats"><div class="stat rv"><span>${L('В продаже', 'Listed')}</span><b>${fmt(st.active)}</b></div><div class="stat rv"><span>${L('Ниже оценки', 'Below value')}</span><b class="up">${fmt(st.deals)}</b></div><div class="stat rv"><span>${L('Сделок за сутки', 'Trades, 24h')}</span><b>${fmt(st.sales)}</b></div><div class="stat rv"><span>${L('Оборот за сутки', 'Volume, 24h')}</span><b>${fmt(st.volume)}</b></div></div>` : ''}
-  ${dl ? dealerPanel(dl) : ''}
   <section class="tools" aria-label="${L('Поиск и фильтры', 'Search and filters')}">
     <div class="tools-row"><label class="search">${IC.search}<span class="sr-only">${L('Поиск номера', 'Search plates')}</span><input id="mq" type="search" placeholder="А777АА, 777, 7777 AB…" value="${esc(M.q)}" autocomplete="off"></label>
       ${seg('sort', [['deal', L('Выгодные', 'Best deals')], ['new', L('Новые', 'New')], ['pa', L('Дешевле', 'Cheapest')], ['pd', L('Дороже', 'Priciest')], ['rar', L('Редкие', 'Rarest')]])}</div>
@@ -16,6 +15,7 @@ VIEWS.market = async () => {
       <div class="range"><label class="sr-only" for="mmin">${L('Цена от', 'Min price')}</label><input class="field mono" id="mmin" type="number" inputmode="numeric" min="0" placeholder="${L('от', 'min')}" value="${esc(M.min)}"><label class="sr-only" for="mmax">${L('Цена до', 'Max price')}</label><input class="field mono" id="mmax" type="number" inputmode="numeric" min="0" placeholder="${L('до', 'max')}" value="${esc(M.max)}"></div>
       <button class="btn-text" data-act="mreset">${L('Сбросить', 'Reset')}</button></div>
   </section><div id="mres">${skel()}</div>
+  ${dl ? `<div style="margin-top:22px">${dealerPanel(dl)}</div>` : ''}
   ${sales.sales.length ? `<section class="sec" style="padding-bottom:80px">${SH(L('Последние сделки', 'Latest trades'))}<div class="drops">${sales.sales.map(s => `<a class="drop t-${s.plate.tier}" href="#/plate/${s.plate.id}">${Plate(s.plate, { iri: false })}<span class="price">${fmt(s.price)}<small>PLT</small></span><small>${esc(s.seller)} → ${esc(s.buyer)} · ${rel(s.at)}</small></a>`).join('')}</div></section>` : '<div style="height:80px"></div>'}</div>`;
 };
 function dealerPanel(d) {

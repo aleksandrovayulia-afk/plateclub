@@ -63,7 +63,7 @@ VIEWS.battle = async ({ arg }) => {
     const p = b.players.find(x => x.seat === i); const won = b.status === 'DONE' && b.winnerSeat === i;
     const drops = d.drops.filter(x => x.seat === i);
     return `<div class="bcol${won && !animate ? ' win' : ''}${p ? '' : ' wait'}" data-seat="${i}">
-      <div class="bcol-h">${p ? `<span class="bava lg${p.bot ? ' bot' : ''}">${esc((p.nickname || '?').replace('Бот ', '')[0].toUpperCase())}</span><div class="bname"><b>${esc(p.bot ? p.nickname.replace(/^Бот /, '') : p.nickname)}</b><span class="small">${p.bot ? L('бот', 'bot') : me && me.seat === i ? L('это вы', 'you') : L('игрок', 'player')}</span></div>` : `<span class="bava lg free">?</span><div class="bname"><b>${L('Свободно', 'Free seat')}</b><span class="small">${L('ждём игрока…', 'waiting…')}</span></div>`}<span class="crown" aria-hidden="true">${IC.crown}</span></div>
+      <div class="bcol-h">${p ? `<span class="bava lg${p.bot ? ' bot' : ''}">${esc((p.nickname || '?').replace('Бот ', '')[0].toUpperCase())}</span><div class="bname"><b>${p.bot ? esc(p.nickname.replace(/^Бот /, '')) : `<a href="#/u/${encodeURIComponent(p.nickname)}" style="color:inherit">${esc(p.nickname)}</a>`}</b><span class="small">${p.bot ? L('бот', 'bot') : me && me.seat === i ? L('это вы', 'you') : L('игрок', 'player')}</span></div>` : `<span class="bava lg free">?</span><div class="bname"><b>${L('Свободно', 'Free seat')}</b><span class="small">${L('ждём игрока…', 'waiting…')}</span></div>`}<span class="crown" aria-hidden="true">${IC.crown}</span></div>
       <div class="btotal"><span class="mono" data-total="${p ? p.total : 0}">${animate ? '0' : fmt(p ? p.total : 0)}</span><small>PLT</small></div>
       <div class="breel" aria-hidden="true"><div class="breel-in">${b.status === 'DONE' && !animate && drops.length ? cardHtml(drops[drops.length - 1].plate) : `<div class="breel-idle">${p ? (b.status === 'OPEN' ? L('готов', 'ready') : '') : '…'}</div>`}</div><span class="breel-mark l"></span><span class="breel-mark r"></span></div>
       <div class="bdrops">${animate ? '' : drops.map(x => `<a class="bdrop t-${x.plate.tier}" href="#/plate/${x.plate.id}">${Plate(x.plate, { iri: false })}<span class="mono">${fmt(x.value)}</span></a>`).join('')}</div></div>`;
@@ -179,6 +179,7 @@ GA.sclaim = async btn => { busy(btn, true, '…'); try { const r = await POST(`/
 /* ---------- swaps ---------- */
 const SWT = { tab: 'in' };
 VIEWS.swap = async ({ arg, query }) => {
+  if (query && ME && String(query.get('to') || '').toLowerCase() === ME.nickname.toLowerCase()) { query.delete('to'); toast(L('Нельзя меняться с самим собой', 'You can’t swap with yourself'), true); }
   if (arg === 'new') return swapBuilder(query);
   const d = await GET('/api/swaps'); const list = SWT.tab === 'in' ? d.incoming : d.outgoing;
   const pin = d.incoming.filter(x => x.status === 'PENDING').length, pout = d.outgoing.filter(x => x.status === 'PENDING').length;
@@ -311,3 +312,5 @@ GA.hlguess = async btn => {
   HL.run = r; hlPaint();
 };
 GA.hlcash = async btn => { busy(btn, true, '…'); try { const r = await POST(`/api/hilo/${HL.run.id}/cash`, {}); coins(btn, 18); sfx('coin'); toast(`+${fmt(r.amount)} PLT`); HL.run = null; await refreshMe(); hlPaint(); } catch (e) { toast(e.message, true); busy(btn, false); } };
+
+VIEWS.swap.auth = true;
