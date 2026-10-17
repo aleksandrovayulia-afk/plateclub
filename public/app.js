@@ -1,3 +1,91 @@
+/* Tiny QR encoder (byte mode, versions 1–10, error level M) — enough for an invite link.
+   No dependency, ~90 lines: builds the matrix and returns an SVG string. */
+const QR_EC = { 1: 10, 2: 16, 3: 26, 4: 18, 5: 24, 6: 16, 7: 18, 8: 22, 9: 22, 10: 26 };     // EC codewords per block, level M
+const QR_BLOCKS = { 1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 5, 10: 5 };
+const QR_TOTAL = { 1: 26, 2: 44, 3: 70, 4: 100, 5: 134, 6: 172, 7: 196, 8: 242, 9: 292, 10: 346 };
+const QR_ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50] };
+
+const gfExp = new Uint8Array(512), gfLog = new Uint8Array(256);
+(() => { let x = 1; for (let i = 0; i < 255; i++) { gfExp[i] = x; gfLog[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; } for (let i = 255; i < 512; i++) gfExp[i] = gfExp[i - 255]; })();
+const gfMul = (a, b) => (a && b ? gfExp[gfLog[a] + gfLog[b]] : 0);
+
+function rsGen(n) { let p = [1]; for (let i = 0; i < n; i++) { const q = [...p, 0]; for (let j = 0; j < p.length; j++) q[j + 1] ^= gfMul(p[j], gfExp[i]); p = q; } return p; }
+function rsEncode(data, n) {
+  const gen = rsGen(n), res = new Uint8Array(n);
+  for (const d of data) { const f = d ^ res[0]; res.copyWithin(0, 1); res[n - 1] = 0; for (let i = 0; i < n; i++) res[i] ^= gfMul(gen[i + 1], f); }
+  return res;
+}
+
+function qrSvg(text, { scale = 8, quiet = 3 } = {}) {
+  const bytes = new TextEncoder().encode(text);
+  let ver = 0;
+  for (let v = 1; v <= 10; v++) {
+    const cap = QR_TOTAL[v] - QR_EC[v] * QR_BLOCKS[v];
+    if (bytes.length + (v < 10 ? 2 : 3) <= cap) { ver = v; break; }
+  }
+  if (!ver) return '';
+  const total = QR_TOTAL[ver], nb = QR_BLOCKS[ver], ecc = QR_EC[ver], dataLen = total - ecc * nb;
+
+  // bit stream: mode 0100, length, payload, terminator, padding
+  const bits = [];
+  const put = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >> i) & 1); };
+  put(4, 4); put(bytes.length, ver < 10 ? 8 : 16);
+  for (const b of bytes) put(b, 8);
+  for (let i = 0; i < 4 && bits.length < dataLen * 8; i++) bits.push(0);
+  while (bits.length % 8) bits.push(0);
+  const data = []; for (let i = 0; i < bits.length; i += 8) data.push(parseInt(bits.slice(i, i + 8).join(''), 2));
+  const PAD = [0xec, 0x11]; let pi = 0; while (data.length < dataLen) data.push(PAD[pi++ % 2]);
+
+  // split into blocks, interleave with their EC words
+  const short = Math.floor(dataLen / nb), extra = dataLen % nb;
+  const blocks = []; let off = 0;
+  for (let i = 0; i < nb; i++) { const len = short + (i >= nb - extra ? 1 : 0); const d = data.slice(off, off + len); off += len; blocks.push({ d, e: rsEncode(d, ecc) }); }
+  const out = [];
+  for (let i = 0; i < short + 1; i++) for (const b of blocks) if (i < b.d.length) out.push(b.d[i]);
+  for (let i = 0; i < ecc; i++) for (const b of blocks) out.push(b.e[i]);
+
+  // matrix
+  const size = ver * 4 + 17;
+  const m = Array.from({ length: size }, () => new Int8Array(size).fill(-1));
+  const setF = (r, c, v) => { if (r >= 0 && r < size && c >= 0 && c < size) m[r][c] = v; };
+  const finder = (r, c) => { for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++) { const v = (i >= 0 && i <= 6 && (j === 0 || j === 6)) || (j >= 0 && j <= 6 && (i === 0 || i === 6)) || (i >= 2 && i <= 4 && j >= 2 && j <= 4) ? 1 : 0; setF(r + i, c + j, v); } };
+  finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+  for (let i = 8; i < size - 8; i++) { m[6][i] = i % 2 ? 0 : 1; m[i][6] = i % 2 ? 0 : 1; }
+  for (const a of QR_ALIGN[ver]) for (const b of QR_ALIGN[ver]) {
+    if ((a === 6 && b === 6) || (a === 6 && b === size - 7) || (a === size - 7 && b === 6)) continue;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) setF(a + i, b + j, Math.max(Math.abs(i), Math.abs(j)) !== 1 ? 1 : 0);
+  }
+  setF(size - 8, 8, 1);
+  // reserve format areas
+  for (let i = 0; i < 9; i++) { if (m[8][i] === -1) m[8][i] = 0; if (m[i][8] === -1) m[i][8] = 0; }
+  for (let i = 0; i < 8; i++) { if (m[8][size - 1 - i] === -1) m[8][size - 1 - i] = 0; if (m[size - 1 - i][8] === -1) m[size - 1 - i][8] = 0; }
+
+  // place data, mask 0 ((r+c)%2===0)
+  let bi = 0; const bitAt = k => (out[k >> 3] >> (7 - (k & 7))) & 1;
+  for (let col = size - 1; col > 0; col -= 2) {
+    if (col === 6) col--;
+    for (let k = 0; k < size; k++) {
+      const row = ((size - 1 - col) >> 1) % 2 === 0 ? size - 1 - k : k;
+      for (const c of [col, col - 1]) {
+        if (m[row][c] !== -1) continue;
+        let v = bi < out.length * 8 ? bitAt(bi++) : 0;
+        if ((row + c) % 2 === 0) v ^= 1;
+        m[row][c] = v;
+      }
+    }
+  }
+  // format info for level M + mask 0
+  const fmt = 0x5412 ^ 0; const FMT = [0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0][0];
+  for (let i = 0; i < 15; i++) {
+    const b = (FMT >> i) & 1;
+    if (i < 6) m[i][8] = b; else if (i < 8) m[i + 1][8] = b; else if (i === 8) m[8][7] = b; else m[8][14 - i] = b;
+    if (i < 8) m[8][size - 1 - i] = b; else m[size - 15 + i][8] = b;
+  }
+  const dim = size + quiet * 2, px = [];
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (m[r][c] === 1) px.push(`M${c + quiet} ${r + quiet}h1v1h-1z`);
+  return `<svg viewBox="0 0 ${dim} ${dim}" shape-rendering="crispEdges" role="img" aria-label="QR"><rect width="${dim}" height="${dim}" fill="#fff"/><path d="${px.join('')}" fill="#040507"/></svg>`;
+}
+
 // PLATE CLUB v6 client — liquid chrome, RU/EN. The server is the source of truth for everything.
 // Built from src/*.js by tools/build-app.mjs — edit the sources, not public/app.js.
 'use strict';
@@ -649,10 +737,15 @@ async function loadRef() {
   const box = $('#refBox'); if (!box) return;
   try {
     const d = await GET('/api/referral'); REF = d;
+    const ms = d.milestones.map(m => `<div class="msx${m.done ? ' on' : ''}"><b>${m.need}</b><span>+${fmt(m.bonus)}</span></div>`).join('');
+    const nx = d.next ? L(`Ещё ${d.next[0] - d.active} ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} — и бонус +${fmt(d.next[1])} PLT`, `${d.next[0] - d.active} more ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} and you get +${fmt(d.next[1])} PLT`) : L('Все награды за друзей собраны.', 'All friend rewards collected.');
     box.innerHTML = `<p class="small" style="margin:0 0 10px">${L(`Друг получает ${fmt(d.reward.friend)} PLT, вы — ${fmt(d.reward.inviter)} PLT, как только он откроет ${d.reward.needOpens} кейса. Друзей можно звать сколько угодно.`, `Your friend gets ${fmt(d.reward.friend)} PLT and you get ${fmt(d.reward.inviter)} PLT once they open ${d.reward.needOpens} cases. Invite as many as you like.`)}</p>
-      <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button>${navigator.share ? `<button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button>` : ''}</div>
-      <div class="stats s4" style="margin-top:12px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
-      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid ? ' plus' : ''}">${f.paid ? '+' + fmt(d.reward.inviter) : L('ждём', 'waiting')}</span></div>`).join('')}</div>` : ''}`;
+      <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button><button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button><button class="btn btn-ghost" data-act="refqr">QR</button></div>
+      <p class="small" style="margin:8px 0 0;opacity:.7">${L('Короткий вид', 'Short form')}: <span class="mono">${esc(d.codeLink.replace(/^https?:\/\//, ''))}</span></p>
+      <div class="stats s4" style="margin-top:14px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
+      <div class="msrow" style="margin-top:14px">${ms}</div>
+      <p class="small" style="margin:8px 0 0">${nx}</p>
+      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid ? ' plus' : ''}">${f.paid ? '+' + fmt(d.reward.inviter) : L('ждём', 'waiting')}</span></div>`).join('')}</div>` : `<p class="small" style="margin-top:10px;opacity:.75">${L('Пока никто не перешёл. Отправьте ссылку в чат или выложите в сторис — за сторис ещё и 5 000 PLT.', 'Nobody has joined yet. Send the link in a chat or post it to your story — a story also pays 5,000 PLT.')}</p>`}`;
   } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
 }
 async function loadQuests() {
@@ -1602,7 +1695,11 @@ A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
 A.mkmore = btn => { MK_SHOW += 24; mkSig = ''; busy(btn, true, '…'); loadMarket(); };
 A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
-A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
+A.refqr = () => {
+  const link = $('#refLink').value;
+  openDialog(`<div class="dlg qrbox"><h2 class="h3" id="dlgTitle">${L('Ваша ссылка', 'Your link')}</h2>${qrSvg(link, { quiet: 2 })}<p class="small mono" style="margin:0;text-align:center;word-break:break-all">${esc(link)}</p><p class="small" style="margin:0;text-align:center;opacity:.75">${L('Покажите камере телефона — друг сразу попадёт на сайт по вашей ссылке.', 'Point a phone camera at it — your friend lands on the site through your link.')}</p><div class="dlg-acts"><button class="btn btn-chrome" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
+};
+A.refshare = () => { const i = $('#refLink'); if (!navigator.share) { A.refcopy({}); return; } navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
 A.qsend = btn => {
   const kind = btn.dataset.k, story = kind === 'story';
   openDialog(`<form class="dlg" id="qsForm" novalidate><h2 class="h3" id="dlgTitle">${story ? L('Сторис с отметкой сайта', 'Story tagging the site') : L('TikTok с упоминанием', 'TikTok mentioning us')}</h2>
@@ -1785,8 +1882,9 @@ async function boot() {
   if (params.get('verify')) { try { await POST('/api/auth/verify', { token: params.get('verify') }); await refreshMe(); toast(L('Email подтверждён.', 'Email verified.')); } catch (e) { toast(e.message, true); } history.replaceState(null, '', location.pathname + (location.hash || '#/profile')); }
   if (params.get('reset')) history.replaceState(null, '', location.pathname + '#/reset?token=' + encodeURIComponent(params.get('reset')));
   // invite link: remember the code and send a new visitor straight to sign-up
-  const refCode = (params.get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', location.pathname + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
+  const pretty = (location.pathname.match(/^\/i\/([^/?#]+)/) || [])[1];
+  const refCode = decodeURIComponent(pretty || params.get('ref') || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 24);
+  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', '/' + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
   await refreshPerks();
   await render(false);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);

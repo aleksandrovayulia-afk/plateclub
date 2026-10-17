@@ -18,7 +18,7 @@ http.createServer(async (req, res) => {
       const h = Object.fromEntries(r.headers); if (h['set-cookie']) h['set-cookie'] = h['set-cookie'].replace('; Secure', '');
       res.writeHead(r.status, h); res.end(Buffer.from(await r.arrayBuffer())); return;
     }
-    let p = normalize(decodeURIComponent(req.url.split('?')[0])); if (p === '/') p = '/index.html';
+    let p = normalize(decodeURIComponent(req.url.split('?')[0])); if (p === '/' || p.startsWith('/i/')) p = '/index.html';
     const f = await readFile(join(root, p)); res.writeHead(200, { 'content-type': types[extname(p)] || 'application/octet-stream', ...(process.env.CSP ? { 'content-security-policy': process.env.CSP.replace(' upgrade-insecure-requests', '') } : {}) }); res.end(f);
   } catch (e) { res.writeHead(404); res.end('not found'); }
 }).listen(8788, () => console.log('http://localhost:8788'));

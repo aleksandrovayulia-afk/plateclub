@@ -75,7 +75,11 @@ A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
 A.mkmore = btn => { MK_SHOW += 24; mkSig = ''; busy(btn, true, '…'); loadMarket(); };
 A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
-A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
+A.refqr = () => {
+  const link = $('#refLink').value;
+  openDialog(`<div class="dlg qrbox"><h2 class="h3" id="dlgTitle">${L('Ваша ссылка', 'Your link')}</h2>${qrSvg(link, { quiet: 2 })}<p class="small mono" style="margin:0;text-align:center;word-break:break-all">${esc(link)}</p><p class="small" style="margin:0;text-align:center;opacity:.75">${L('Покажите камере телефона — друг сразу попадёт на сайт по вашей ссылке.', 'Point a phone camera at it — your friend lands on the site through your link.')}</p><div class="dlg-acts"><button class="btn btn-chrome" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
+};
+A.refshare = () => { const i = $('#refLink'); if (!navigator.share) { A.refcopy({}); return; } navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
 A.qsend = btn => {
   const kind = btn.dataset.k, story = kind === 'story';
   openDialog(`<form class="dlg" id="qsForm" novalidate><h2 class="h3" id="dlgTitle">${story ? L('Сторис с отметкой сайта', 'Story tagging the site') : L('TikTok с упоминанием', 'TikTok mentioning us')}</h2>
@@ -258,8 +262,9 @@ async function boot() {
   if (params.get('verify')) { try { await POST('/api/auth/verify', { token: params.get('verify') }); await refreshMe(); toast(L('Email подтверждён.', 'Email verified.')); } catch (e) { toast(e.message, true); } history.replaceState(null, '', location.pathname + (location.hash || '#/profile')); }
   if (params.get('reset')) history.replaceState(null, '', location.pathname + '#/reset?token=' + encodeURIComponent(params.get('reset')));
   // invite link: remember the code and send a new visitor straight to sign-up
-  const refCode = (params.get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', location.pathname + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
+  const pretty = (location.pathname.match(/^\/i\/([^/?#]+)/) || [])[1];
+  const refCode = decodeURIComponent(pretty || params.get('ref') || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 24);
+  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', '/' + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
   await refreshPerks();
   await render(false);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);

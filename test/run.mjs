@@ -256,7 +256,7 @@ r = await client().call('GET', '/api/online'); ok(r.status === 200 && r.data.cou
 console.log('\n12b. Referrals and quests');
 { const INV = client(); await INV.call('POST', '/api/auth/register', { email: 'inviter@example.com', nickname: 'Inviter', password: 'invite-pass-1', terms: true });
   const ref = (await INV.call('GET', '/api/referral')).data;
-  ok(/^[A-Z0-9]{6}$/.test(ref.code) && ref.link.includes('?ref=' + ref.code), 'every player has their own invite link', ref.link);
+  ok(/^[A-Z0-9]{6}$/.test(ref.code) && ref.link.endsWith('/i/Inviter'), 'every player has their own invite link', ref.link);
   ok((await INV.call('GET', '/api/referral')).data.code === ref.code, 'the invite code never changes');
   const FR = client(); await FR.call('POST', '/api/auth/register', { email: 'friend@example.com', nickname: 'Friend', password: 'friend-pass-1', terms: true, ref: ref.code });
   await q1(`UPDATE users SET balance=100000 WHERE nick_norm IN ('friend','inviter')`);
@@ -271,6 +271,13 @@ console.log('\n12b. Referrals and quests');
   ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 500, 'referral is paid only once per friend');
   const st = (await INV.call('GET', '/api/referral')).data;
   ok(st.joined === 1 && st.active === 1 && st.earned === 500, 'invite page shows friends and earnings', st);
+  ok(st.link.endsWith('/i/Inviter') && st.codeLink.includes('?ref=' + st.code), 'pretty invite link uses the nickname', st.link);
+  ok(st.milestones.length === 5 && st.next[0] === 3, 'milestones are shown with the next target', st.next);
+  { const F2 = client(); await F2.call('POST', '/api/auth/register', { email: 'byname@example.com', nickname: 'ByName', password: 'byname-pass-1', terms: true, ref: 'inviter' });
+    await q1(`UPDATE users SET balance=100000 WHERE nick_norm='byname'`);
+    const before = (await INV.call('GET', '/api/me')).data.user.balance;
+    for (let i = 0; i < 3; i++) await F2.call('POST', '/api/cases/01/open', {});
+    ok((await INV.call('GET', '/api/me')).data.user.balance === before + 500, 'a nickname works as an invite code too'); }
 
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'not a link', handle: '@friend' }); ok(r.status === 400, 'quest needs a real link');
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '' }); ok(r.status === 400, 'quest needs the player account');

@@ -1207,3 +1207,11 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
    fix would switch itself off. */
 .tools{min-width:0}
 .tools-row{min-width:0;max-width:100%}
+/* invite milestones */
+.msrow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.msx{display:grid;gap:2px;justify-items:center;padding:8px 2px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.msx b{font-family:var(--f-mono);font-size:15px}
+.msx span{font-size:10.5px;color:var(--fg3);white-space:nowrap}
+.msx.on{background:rgba(198,255,61,.1);border-color:rgba(198,255,61,.4)}.msx.on b,.msx.on span{color:#c6ff3d}
+.qrbox{display:grid;gap:14px;justify-items:center}
+.qrbox canvas,.qrbox svg{width:min(260px,70vw);height:auto;background:#fff;border-radius:16px;padding:12px}
