@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { createPool } from './pgmini.mjs';
 import { createApp } from '../server/app.mjs';
+import * as GAME from '../server/game.mjs';
 
 const H = { host: process.env.PG_HOST || '127.0.0.1', port: Number(process.env.PG_PORT || 5433), user: 'postgres' };
 const admin = createPool({ ...H, database: 'postgres' });
@@ -386,6 +387,7 @@ let me15 = (await U.call('GET', '/api/me')).data.user; ok(me15.level.level === 3
 r = await U.call('GET', '/api/perks'); ok(r.data.level.unclaimed === 2, '2 level rewards waiting', r.data.level);
 r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 200 && r.data.amount === 20, 'level rewards: 10 PLT per level', r.data);
 r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 409, 'level rewards are paid once');
+const upgradeChanceOf = (v, ps) => { const g = GAME; const top = ps.reduce((a, b) => (a.value >= b.value ? a : b)); return g.upgradeChance(v, g.targetValue(top, 'rare')); };
 let up = (await U.call('GET', '/api/collection')).data.plates.filter(p => p.tier === 'common' || p.tier === 'fine');
 r = await U.call('POST', '/api/upgrade', { plateId: up[0].id, target: up[0].tier }); ok(r.status === 400, 'target must be rarer than the plate');
 r = await B.call('POST', '/api/upgrade', { plateId: up[0].id, target: 'grail' }); ok(r.status === 404, 'cannot upgrade someone else’s plate');
@@ -398,6 +400,15 @@ for (const p of up.slice(0, 8)) {
   const v = (await client().call('GET', '/api/verify/' + p.id)).data; if (!(v.verified === true)) chanceOk = false;
 }
 ok(chanceOk && uwins + ulosses === Math.min(8, up.length), `upgrades follow the server roll, keep region, burned plate stays verifiable (${uwins} won / ${ulosses} lost)`);
+{ const two = (await U.call('GET', '/api/collection')).data.plates.filter(p => p.tier === 'common' && !p.listing).slice(0, 2);
+  if (two.length === 2) {
+    const x = await U.call('POST', '/api/upgrade', { plateIds: two.map(p => p.id), target: 'rare' });
+    const single = upgradeChanceOf(Math.max(two[0].value, two[1].value), two);
+    ok(x.status === 200 && x.data.burnedAll.length === 2 && x.data.chance >= single, 'two plates together give a bigger chance', [x.data.chance, single]);
+    const c = (await U.call('GET', '/api/collection')).data.plates; ok(!c.some(p => two.some(t => t.id === p.id)), 'both plates are burned');
+  }
+  const three = (await U.call('GET', '/api/collection')).data.plates.filter(p => p.tier === 'common').slice(0, 3);
+  if (three.length === 3) { const x = await U.call('POST', '/api/upgrade', { plateIds: three.map(p => p.id), target: 'rare' }); ok(x.status === 400, 'no more than 2 plates per upgrade'); } }
 const again = await U.call('POST', '/api/upgrade', { plateId: up[0].id, target: 'rare' }); ok(again.status === 404, 'a burned plate cannot be upgraded again');
 ok(!(await U.call('GET', '/api/collection')).data.plates.some(p => p.id === up[0].id), 'burned plate leaves the collection');
 const { upgradeChance, targetValue: tv } = await import('../server/game.mjs');
@@ -406,7 +417,10 @@ r = await client().call('GET', '/api/market?group=ru'); ok(r.status === 200 && r
 r = await client().call('GET', '/api/drops'); ok(r.status === 200 && r.data.drops.every(d => ['rare', 'elite', 'grail'].includes(d.plate.tier) && d.nickname), 'live drops: only rare+ plates with their owner', r.data.drops.length);
 r = await client().call('GET', '/api/upgrade/recent'); ok(r.status === 200 && r.data.upgrades.length >= 1 && r.data.upgrades.every(g => typeof g.success === 'boolean' && g.nickname === 'upgrader'), 'recent upgrades feed', r.data.upgrades[0]);
 const rk = (await client().call('GET', '/api/rankings')).data.rankings;
-ok(rk.length > 0 && rk.every((x, i) => i === 0 || rk[i - 1].total >= x.total) && !rk.some(x => x.nickname === 'Owner'), 'rankings: by account value, admins excluded', rk.slice(0, 3));
+ok(rk.length > 0 && rk.every((x, i) => i === 0 || rk[i - 1].total >= x.total), 'rankings: by account value', rk.slice(0, 3));
+{ const all = (await client().call('GET', '/api/rankings?by=total')).data; const own = all.rankings.find(x => x.nickname === 'Owner');
+  const adm = (await ADM.call('GET', '/api/me')).data.user;
+  ok(!own || (own.balance < adm.balance && !('role' in own)), 'admin appears like a normal player: no role shown, admin grants not counted', own); }
 ok(rk.every(x => x.total === x.balance + x.value && x.level >= 1), 'account value = balance + plates');
 
 console.log('\n16. Values v2 keep old plates valid');

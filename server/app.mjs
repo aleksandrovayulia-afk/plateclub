@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -692,7 +692,8 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   });
   // ---- rankings: several boards; medals (top-10, top-3) come from the main board (account value) ----
   async function rankStats() {
-    return q(`SELECT u.id,u.nickname,u.balance,
+    return q(`SELECT u.id,u.nickname,
+        CASE WHEN u.role='admin' THEN GREATEST(0, u.balance - coalesce((SELECT sum(amount) FROM ledger WHERE user_id=u.id AND kind='admin_grant'),0)) ELSE u.balance END::bigint AS balance,
         coalesce((SELECT sum(value) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED')),0)::bigint AS pvalue,
         (SELECT count(*) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED'))::int AS plates,
         (SELECT coalesce(-sum(amount),0) FROM ledger WHERE user_id=u.id AND kind='case_open')::bigint AS xp,
@@ -700,7 +701,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         (SELECT count(*) FROM ledger WHERE user_id=u.id AND kind='reward' AND ref LIKE 'set:%')::int AS sets,
         (SELECT p2.id FROM plates p2 WHERE p2.owner_id=u.id AND p2.status IN ('OWNED','LISTED') ORDER BY p2.value DESC LIMIT 1) AS best,
         coalesce((SELECT max(value) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED')),0)::bigint AS bestv
-      FROM users u WHERE u.role='user' AND u.blocked_at IS NULL`);
+      FROM users u WHERE u.role IN ('user','admin') AND u.blocked_at IS NULL`);
   }
   let medalCache = { at: 0, map: {} };
   async function medalsMap() {
@@ -942,13 +943,22 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     needSecret();
     const tierIdx = TI[body.target]; if (tierIdx == null) throw bad('Выберите редкость, до которой улучшить.');
     return withIdem(user, req, () => tx(async Q => {
-      const [p] = await Q('SELECT id,country,letters,digits,region,tier,value,status,owner_id FROM plates WHERE id=$1 FOR UPDATE', [String(body.plateId || '')]);
-      if (!p || n(p.owner_id) !== user.id || !['OWNED'].includes(p.status)) throw new HttpError(p && p.status === 'LISTED' ? 409 : 404, p && p.status === 'LISTED' ? 'Сначала снимите номер с рынка.' : 'Этого номера нет в вашей коллекции.');
-      if (tierIdx <= TI[p.tier]) throw bad('Цель должна быть редче текущего номера.');
-      const tv = targetValue(p, body.target); const chance = upgradeChance(n(p.value), tv);
+      // one or two plates; the chance grows with their combined value
+      const wantIds = [...new Set((Array.isArray(body.plateIds) ? body.plateIds : [body.plateId]).map(x => String(x || '')).filter(Boolean))];
+      if (!wantIds.length || wantIds.length > UPGRADE_MAX_PLATES) throw bad(`Выберите от 1 до ${UPGRADE_MAX_PLATES} номеров.`);
+      const got = await Q('SELECT id,country,letters,digits,region,tier,value,status,owner_id FROM plates WHERE id = ANY($1::text[]) ORDER BY id FOR UPDATE', ['{' + wantIds.join(',') + '}']);
+      for (const id of wantIds) {
+        const x = got.find(r => r.id === id);
+        if (!x || n(x.owner_id) !== user.id || x.status !== 'OWNED') throw new HttpError(x && x.status === 'LISTED' ? 409 : 404, x && x.status === 'LISTED' ? 'Сначала снимите номер с рынка.' : 'Этого номера нет в вашей коллекции.');
+      }
+      const burn = got.sort((a, b) => n(b.value) - n(a.value)); const p = burn[0];
+      if (burn.some(x => tierIdx <= TI[x.tier])) throw bad('Цель должна быть редче каждого выбранного номера.');
+      const tv = targetValue(p, body.target); const chance = upgradeChance(burn.reduce((a, x) => a + n(x.value), 0), tv);
       const roll = randomInt(0, 1_000_000) / 1_000_000; const success = roll < chance;
-      await Q(`UPDATE plates SET status='BURNED', owner_id=NULL WHERE id=$1`, [p.id]);
-      await addEvent(Q, { plate_id: p.id, kind: 'UPGRADED', from_user: user.id });
+      for (const x of burn) {
+        await Q(`UPDATE plates SET status='BURNED', owner_id=NULL WHERE id=$1`, [x.id]);
+        await addEvent(Q, { plate_id: x.id, kind: 'UPGRADED', from_user: user.id });
+      }
       let plate = null; const upId = newId('UP');
       if (success) {
         const pool = p.country === 'BY' ? { RU: [], BY: [p.region] } : { RU: [p.region], BY: [] };
@@ -963,9 +973,9 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         if (!plate) throw new HttpError(503, 'Не удалось выпустить номер. Ничего не списано, попробуйте ещё раз.');
         await addEvent(Q, { plate_id: plate.id, kind: 'MINTED', to_user: user.id, tx_id: upId });
       }
-      await Q('INSERT INTO upgrades(id,user_id,from_plate,to_plate,target_tier,chance,roll,success) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [upId, user.id, p.id, plate ? plate.id : null, body.target, chance, roll, success]);
+      await Q('INSERT INTO upgrades(id,user_id,from_plate,to_plate,target_tier,chance,roll,success,extra_plate) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)', [upId, user.id, p.id, plate ? plate.id : null, body.target, chance, roll, success, burn[1] ? burn[1].id : null]);
       const out = plate ? (({ seal: _s, mintTx: _m, combo: _c, ...pub }) => ({ ...pub, status: 'OWNED', origin: `Апгрейд из ${p.id}`, lastTx: upId }))(plate) : null;
-      return { id: upId, success, chance, roll, target: body.target, plate: out, burned: p.id };
+      return { id: upId, success, chance, roll, target: body.target, plate: out, burned: p.id, burnedAll: burn.map(x => x.id) };
     }));
   }, { auth: true });
 

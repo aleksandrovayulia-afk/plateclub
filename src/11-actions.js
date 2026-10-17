@@ -311,7 +311,7 @@ async function boot() {
   const refCode = decodeURIComponent(pretty || params.get('ref') || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 24);
   if (refCode) { store.set('ref', refCode); history.replaceState(null, '', '/' + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
   await refreshPerks();
-  await render(false);
+  await render(false); liveFeed();
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);
 }
 boot();

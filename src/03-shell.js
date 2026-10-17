@@ -27,14 +27,24 @@ async function render(scroll = true) {
   clearInterval(marketTimer); clearInterval(btPoll); btSkip = true; rollAbort(); closeStage(true); chrome();
   const view = VIEWS[r.name] || VIEWS[''];
   if (view.auth && !ME) { v.innerHTML = await VIEWS.login({ next: location.hash, query: new URLSearchParams() }); after('login'); return; }
-  v.innerHTML = skel();
+  // scroll=false is an in-place refresh after an action: no skeleton, no reveal replay, same scroll position
+  const soft = !scroll && v.firstElementChild && !v.querySelector(':scope > .page-load'); const y = window.scrollY;
+  const keep = soft ? Object.fromEntries(['refBox', 'questBox'].map(id => [id, $('#' + id)?.innerHTML]).filter(x => x[1])) : {};
+  if (!soft) v.innerHTML = skel();
   let html;
   try { html = await view(r); } catch (e) { html = `<div class="wrap" style="padding-block:60px">${Empty(e.status === 404 ? L('Не найдено', 'Not found') : L('Не удалось загрузить страницу', 'Could not load the page'), esc(e.message), `<a class="btn btn-ghost" href="#/">${L('На главную', 'Home')}</a>`)}</div>`; }
   if (seq !== renderSeq) return;
+  if (soft) v.classList.add('soft');
   v.innerHTML = (CFG && CFG.announcement && r.name !== 'admin' ? `<div class="wrap"><div class="announce">${IC.chat}<span>${esc(CFG.announcement)}</span></div></div>` : '') + html;
   const HEADS = { games: 5, battles: 5, battle: 5, sets: 1, swap: 2, auction: 3, support: 4, cases: 1, market: 2, trades: 2, collection: 2, top: 3, rankings: 3, profile: 3, u: 3, bonus: 4, achievements: 4, upgrade: 5, wallet: 6, transactions: 6, admin: 6 };
   v.style.setProperty('--head', `url(${IMG('head-' + (HEADS[r.name] || 1) + '.jpg')})`);
   if (scroll) { v.classList.remove('enter'); void v.offsetWidth; v.classList.add('enter'); window.scrollTo(0, 0); }
+  if (soft) {
+    v.querySelectorAll('.rv').forEach(el => el.classList.add('in'));
+    v.querySelectorAll('.stat b').forEach(b => { b._cnt = 1; });
+    for (const [id, h] of Object.entries(keep)) { const el = $('#' + id); if (el) el.innerHTML = h; }
+    window.scrollTo(0, y); requestAnimationFrame(() => requestAnimationFrame(() => v.classList.remove('soft')));
+  }
   after(r.name, r);
 }
 window.addEventListener('hashchange', () => { closeDrawer(); if (dlg.open) dlg.close(); render(true); });
@@ -81,4 +91,22 @@ function after(name) {
   const dcd = $('#dealerCd'); if (dcd) countdown(dcd, Number(dcd.dataset.t), () => render(false));
   const dc = $('#dailyCd'); if (dc) countdown(dc, Number(dc.dataset.t), () => render(false));
   fx($('#view'));
+}
+
+/* ---------- live strip: who is online and what rare plates just dropped ---------- */
+let LIVE_SIG = '';
+async function liveFeed() {
+  let box = $('#live');
+  if (!box) { box = document.createElement('div'); box.id = 'live'; box.className = 'lstrip'; box.setAttribute('aria-label', L('Сейчас в игре', 'Live now')); $('#view').before(box); }
+  try {
+    const [d, on] = await Promise.all([GET('/api/drops'), GET('/api/online').catch(() => ({ count: 0 }))]);
+    const items = d.drops.slice(0, 12).map(x => `<span class="li t-${x.plate.tier}"><i></i><b>${esc(x.nickname)}</b> ${L('выбил', 'pulled')} <span class="mono">${esc(plateStr(x.plate))}</span> <em>${tierName(x.plate.tier)}</em></span>`);
+    const sig = on.count + '|' + d.drops.map(x => x.plate.id).join(',');
+    if (sig !== LIVE_SIG) {
+      LIVE_SIG = sig;
+      const run = items.length ? items.join('') : `<span class="li">${L('Открой кейс — твой номер появится здесь', 'Open a case — your plate shows up here')}</span>`;
+      box.innerHTML = `<span class="live-on"><i></i>${fmt(on.count || 1)} ${L('онлайн', 'online')}</span><div class="live-track"><div class="live-run" style="--dur:${Math.max(24, items.length * 6)}s">${run}${items.length ? run : ''}</div></div>`;
+    }
+  } catch {}
+  clearTimeout(liveFeed.t); liveFeed.t = setTimeout(() => { if (document.visibilityState === 'visible') liveFeed(); else liveFeed.t = setTimeout(liveFeed, 30000); }, 30000);
 }
