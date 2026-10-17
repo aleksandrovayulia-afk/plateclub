@@ -1142,3 +1142,25 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .qrow{display:grid;gap:12px;align-items:start}
 @media(min-width:760px){.qrow{grid-template-columns:minmax(0,1fr) auto}}
 .qacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* ===== v15 · the case shatters and the roulette flies out of it ===== */
+.box3.crack .seam{height:5px;background:linear-gradient(90deg,transparent,#fff,transparent);box-shadow:0 0 16px #fff,0 0 36px var(--c);animation:crackGlow .45s ease-in-out infinite alternate}
+.box3.crack .f::after{content:"";position:absolute;inset:0;border-radius:inherit;background:
+  linear-gradient(74deg,transparent 48.6%,rgba(255,255,255,.95) 49.4%,transparent 50.2%),
+  linear-gradient(-58deg,transparent 37.8%,rgba(255,255,255,.75) 38.6%,transparent 39.4%),
+  linear-gradient(22deg,transparent 63.8%,rgba(255,255,255,.6) 64.5%,transparent 65.2%);
+  mix-blend-mode:screen;opacity:0;animation:crackIn .5s ease-out forwards}
+@keyframes crackIn{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
+@keyframes crackGlow{to{box-shadow:0 0 26px #fff,0 0 60px var(--c)}}
+.shards{position:absolute;inset:0;pointer-events:none;perspective:900px;z-index:4}
+.shards i{position:absolute;display:block;border-radius:3px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--c) 70%,#fff),var(--c) 45%,color-mix(in srgb,var(--c2) 70%,#000));
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 60%,transparent);
+  clip-path:polygon(12% 0,100% 18%,86% 100%,0 72%);
+  animation:shardFly 900ms cubic-bezier(.16,.8,.3,1) var(--d) forwards}
+@keyframes shardFly{
+  0%{transform:translate3d(0,0,0) rotate(0) rotateX(0);opacity:1}
+  70%{opacity:1}
+  100%{transform:translate3d(var(--dx),calc(var(--dy) + 180px),0) rotate(var(--rz)) rotateX(var(--rx));opacity:0}}
+/* the strip bursts out of the box: a thin line that snaps open wide */
+#stage.roll-in .st-roll{transform:translateY(-50%) scaleX(.12) scaleY(.06);opacity:.9;filter:brightness(2.2)}
+#stage.rolling .st-roll{transition:opacity 220ms,transform 420ms cubic-bezier(.18,1.3,.4,1),filter 420ms}

@@ -109,11 +109,34 @@ function spinCase(st, ready, min = 1500) {
     st.raf = requestAnimationFrame(frame);
   });
 }
+// The case cracks, shatters into shards, and the roulette flies out of it already spinning.
+function shatter(st) {
+  const wrap = st.el; if (!wrap || reduced()) return;
+  const host = document.createElement('div'); host.className = 'shards';
+  const N = 30;
+  const calcL = () => 38 + Math.random() * 24, calcT = () => 36 + Math.random() * 24;
+  for (let i = 0; i < N; i++) {
+    const sh = document.createElement('i');
+    const a = (i / N) * Math.PI * 2 + Math.random() * 0.5, r = 120 + Math.random() * 320;
+    const w = 22 + Math.random() * 56, h = 16 + Math.random() * 48;
+    sh.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r - 40}px;--rz:${(Math.random() - 0.5) * 900}deg;--rx:${(Math.random() - 0.5) * 700}deg;--d:${Math.random() * 90}ms;width:${w}px;height:${h}px;left:${calcL()}%;top:${calcT()}%`;
+    host.appendChild(sh);
+  }
+  wrap.appendChild(host);
+  setTimeout(() => host.remove(), 1400);
+}
 async function burstCase(st) {
-  const box = st.el.querySelector('.box3'); box.classList.add('shake'); await wait(reduced() ? 0 : 240); box.classList.remove('shake');
-  box.classList.add('open'); sfx('boom'); st.el.querySelector('.st-flash').classList.add('go');
-  await wait(reduced() ? 0 : 480); if (!st.dead) st.el.classList.add('rolling');
-  await wait(reduced() ? 0 : 420);
+  const box = st.el.querySelector('.box3');
+  // 1. the case strains and cracks
+  box.classList.add('crack'); sfx('tick', 1); await wait(reduced() ? 0 : 150);
+  box.classList.add('shake'); await wait(reduced() ? 0 : 260); box.classList.remove('shake');
+  // 2. it bursts: lid off, shards fly, flash
+  box.classList.add('open'); sfx('boom'); st.el.querySelector('.st-flash').classList.add('go'); shatter(st);
+  await wait(reduced() ? 0 : 170);
+  // 3. the roulette flies out of the wreck and is already spinning
+  if (!st.dead) { st.el.classList.add('rolling', 'roll-in'); sfx('whoosh'); }
+  await wait(reduced() ? 0 : 260);
+  if (!st.dead) st.el.classList.remove('roll-in');
 }
 function resultHtml(c, p) {
   const word = tierName(p.tier); const canMore = ME && ME.balance >= priceOf(c);
