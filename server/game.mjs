@@ -336,7 +336,7 @@ export function casePrice(c, st = SETTINGS_DEFAULT, ts = Date.now()) {
 }
 export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
   const stripe = !!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  return { telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
+  return { referral: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, needOpens: REFERRAL.needOpens }, quests: { story: QUESTS.story.reward, tiktokPerView: QUESTS.tiktok.perView, tiktokMax: QUESTS.tiktok.maxPerVideo }, telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
     announcement: st.announcement || '',
     letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS, patNames: PAT_NAME, cats: CATS,
     cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
@@ -359,6 +359,10 @@ export const LEVEL_TITLES = [[100, 'legend'], [75, 'tycoon'], [50, 'star'], [25,
 export const levelTitle = l => LEVEL_TITLES.find(([min]) => l >= min)[1];
 // medals for big activity (besides the TOP-10 / TOP-3 ranking medals)
 export const TELEGRAM = { url: 'https://t.me/+pMbT6m8-iuM2YjFk', reward: 500 };
+// invite a friend: both sides get PLT once the friend has really started playing
+export const REFERRAL = { friend: 250, inviter: 500, needOpens: 3, maxPerDay: 20 };
+// social quests checked by an admin
+export const QUESTS = { story: { reward: 5000, cooldownDays: 30 }, tiktok: { perView: 1, maxPerVideo: 50000 } };
 export const MEDAL_RULES = { trader: 50, spender: 100000, earner: 50000, lv50: 50, lv100: 100 };
 export function levelOf(xp) { let l = 1; while (l < 999 && xpFor(l + 1) <= xp) l++; return { level: l, xp, cur: xpFor(l), next: xpFor(l + 1), title: levelTitle(l) }; }
 

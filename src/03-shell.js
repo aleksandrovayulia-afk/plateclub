@@ -70,6 +70,7 @@ function after(name) {
   if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 12000); }
   if (name === 'wallet' || name === 'transactions') walletHooks();
   if (name === 'register') regHooks();
+  if (name === 'bonus') { loadRef(); loadQuests(); }
   if (name === 'admin') adminHooks();
   if (name === 'support') supportHooks();
   if (name === 'battle') { btSkip = false; battleHooks(); }

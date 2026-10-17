@@ -253,6 +253,46 @@ r = await client().call('GET', '/api/online'); ok(r.status === 200 && r.data.cou
   r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 200 && r.data.amount === 500 && r.data.balance === b0 + 500, 'Telegram chat reward +500 PLT', r.data);
   r = await T.call('POST', '/api/perks/telegram', {}); ok(r.status === 409, 'Telegram reward only once');
   ok((await T.call('GET', '/api/perks')).data.telegram === true, 'perks remember the Telegram reward'); }
+console.log('\n12b. Referrals and quests');
+{ const INV = client(); await INV.call('POST', '/api/auth/register', { email: 'inviter@example.com', nickname: 'Inviter', password: 'invite-pass-1', terms: true });
+  const ref = (await INV.call('GET', '/api/referral')).data;
+  ok(/^[A-Z0-9]{6}$/.test(ref.code) && ref.link.includes('?ref=' + ref.code), 'every player has their own invite link', ref.link);
+  ok((await INV.call('GET', '/api/referral')).data.code === ref.code, 'the invite code never changes');
+  const FR = client(); await FR.call('POST', '/api/auth/register', { email: 'friend@example.com', nickname: 'Friend', password: 'friend-pass-1', terms: true, ref: ref.code });
+  await q1(`UPDATE users SET balance=100000 WHERE nick_norm IN ('friend','inviter')`);
+  const invBefore = (await INV.call('GET', '/api/me')).data.user.balance;
+  for (let i = 0; i < 2; i++) await FR.call('POST', '/api/cases/01/open', {});
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore, 'no referral pay-out until the friend really plays');
+  const frBefore = (await FR.call('GET', '/api/me')).data.user.balance;
+  r = await FR.call('POST', '/api/cases/01/open', {});
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 500, 'inviter gets 500 PLT on the 3rd case', (await INV.call('GET', '/api/me')).data.user.balance - invBefore);
+  ok((await FR.call('GET', '/api/me')).data.user.balance === frBefore - r.data.price + 250, 'friend gets 250 PLT too');
+  for (let i = 0; i < 2; i++) await FR.call('POST', '/api/cases/01/open', {});
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 500, 'referral is paid only once per friend');
+  const st = (await INV.call('GET', '/api/referral')).data;
+  ok(st.joined === 1 && st.active === 1 && st.earned === 500, 'invite page shows friends and earnings', st);
+
+  r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'not a link', handle: '@friend' }); ok(r.status === 400, 'quest needs a real link');
+  r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '' }); ok(r.status === 400, 'quest needs the player account');
+  r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '@friend' }); const qid = r.data.id;
+  ok(r.status === 200 && qid, 'story quest submitted');
+  r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '@friend' }); ok(r.status === 409, 'the same link cannot be sent twice');
+  ok((await FR.call('GET', '/api/quests')).data.quests[0].status === 'PENDING', 'player sees the request as pending');
+  r = await FR.call('GET', '/api/admin/quests'); ok(r.status === 403, 'players cannot see the review queue');
+  r = await ADM.call('GET', '/api/admin/quests'); ok(r.data.pending >= 1 && r.data.quests.some(x => x.id === qid), 'admin sees the queue', r.data.pending);
+  const fb = (await FR.call('GET', '/api/me')).data.user.balance;
+  r = await ADM.call('POST', '/api/admin/quests/' + qid, { approve: true }); ok(r.status === 200 && r.data.amount === 5000, 'approved story pays 5000 PLT', r.data);
+  ok((await FR.call('GET', '/api/me')).data.user.balance === fb + 5000, 'the 5000 PLT really arrived');
+  r = await ADM.call('POST', '/api/admin/quests/' + qid, { approve: true }); ok(r.status === 409, 'a request is reviewed once');
+  r = await FR.call('POST', '/api/quests', { kind: 'tiktok', url: 'https://tiktok.com/@friend/video/1', handle: '@friend' }); const tid = r.data.id;
+  const fb2 = (await FR.call('GET', '/api/me')).data.user.balance;
+  r = await ADM.call('POST', '/api/admin/quests/' + tid, { approve: true, views: 12345 });
+  ok(r.data.amount === 12345 && (await FR.call('GET', '/api/me')).data.user.balance === fb2 + 12345, 'TikTok pays 1 PLT per view', r.data);
+  r = await FR.call('POST', '/api/quests', { kind: 'tiktok', url: 'https://tiktok.com/@friend/video/2', handle: '@friend' }); const tid2 = r.data.id;
+  r = await ADM.call('POST', '/api/admin/quests/' + tid2, { approve: true, views: 9_000_000 }); ok(r.data.amount === 50000, 'TikTok pay-out is capped per video', r.data);
+  r = await FR.call('POST', '/api/quests', { kind: 'tiktok', url: 'https://tiktok.com/@friend/video/3', handle: '@friend' }); const tid3 = r.data.id;
+  r = await ADM.call('POST', '/api/admin/quests/' + tid3, { approve: false, reason: 'нет отметки сайта' });
+  ok(r.data.status === 'REJECTED' && (await FR.call('GET', '/api/quests')).data.quests[0].reason === 'нет отметки сайта', 'rejection reason reaches the player'); }
 r = await ADM.call('GET', '/api/admin/overview'); ok(r.status === 200 && r.data.overview.users >= 4 && r.data.log.length >= 1, 'overview and audit log');
 r = await ADM.call('GET', '/api/admin/users?q=bor'); ok(r.data.users.length === 1 && r.data.users[0].nickname === 'Boris', 'user search');
 const bBefore = (await B.call('GET', '/api/me')).data.user.balance;

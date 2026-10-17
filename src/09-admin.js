@@ -24,9 +24,9 @@ function supportHooks() {
 }
 
 /* ---------- admin control panel ---------- */
-const AD = { q: '', status: 'ACTIVE', tk: 'OPEN' }; const ADMIN_ACTS = {};
-const ADMIN_TABS = () => [['overview', L('Обзор', 'Overview'), 'chart'], ['users', L('Участники', 'Players'), 'users'], ['support', L('Сообщения', 'Messages'), 'chat'], ['market', L('Рынок', 'Market'), 'market'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['promos', L('Промокоды', 'Promo codes'), 'gift'], ['settings', L('Настройки', 'Settings'), 'sliders'], ['log', L('Журнал', 'Log'), 'list']];
-const ACT_NAMES = () => ({ claim_admin: L('Админ активирован', 'Admin claimed'), make_admin: L('Назначен админ', 'Admin appointed'), remove_admin: L('Снят админ', 'Admin removed'), grant_plt: L('Начислено', 'Granted'), deduct_plt: L('Списано', 'Deducted'), remove_listing: L('Снято объявление', 'Listing removed'), create_promo: L('Создан промокод', 'Promo created'), enable_promo: L('Промокод включён', 'Promo enabled'), disable_promo: L('Промокод выключен', 'Promo disabled'), message: L('Сообщение', 'Message'), block_user: L('Блокировка', 'Blocked'), unblock_user: L('Разблокировка', 'Unblocked'), gift_plate: L('Подарен номер', 'Plate gifted'), grant_all: L('Бонус всем', 'Bonus to all'), settings: L('Настройки', 'Settings') });
+const AD = { q: '', status: 'ACTIVE', tk: 'OPEN', qs: 'PENDING' }; const ADMIN_ACTS = {};
+const ADMIN_TABS = () => [['overview', L('Обзор', 'Overview'), 'chart'], ['users', L('Участники', 'Players'), 'users'], ['support', L('Сообщения', 'Messages'), 'chat'], ['quests', L('Задания', 'Quests'), 'gift'], ['market', L('Рынок', 'Market'), 'market'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['promos', L('Промокоды', 'Promo codes'), 'gift'], ['settings', L('Настройки', 'Settings'), 'sliders'], ['log', L('Журнал', 'Log'), 'list']];
+const ACT_NAMES = () => ({ claim_admin: L('Админ активирован', 'Admin claimed'), quest_pay: L('Задание оплачено', 'Quest paid'), quest_reject: L('Задание отклонено', 'Quest rejected'), make_admin: L('Назначен админ', 'Admin appointed'), remove_admin: L('Снят админ', 'Admin removed'), grant_plt: L('Начислено', 'Granted'), deduct_plt: L('Списано', 'Deducted'), remove_listing: L('Снято объявление', 'Listing removed'), create_promo: L('Создан промокод', 'Promo created'), enable_promo: L('Промокод включён', 'Promo enabled'), disable_promo: L('Промокод выключен', 'Promo disabled'), message: L('Сообщение', 'Message'), block_user: L('Блокировка', 'Blocked'), unblock_user: L('Разблокировка', 'Unblocked'), gift_plate: L('Подарен номер', 'Plate gifted'), grant_all: L('Бонус всем', 'Bonus to all'), settings: L('Настройки', 'Settings') });
 const LogRow = e => `<div class="tx"><span class="lbl">${ACT_NAMES()[e.action] || e.action} · ${esc(e.target || '')}${e.reason ? ' — ' + esc(e.reason) : ''}</span><span class="when">${date(e.at)} · ${esc(e.admin)}</span><span class="amt">${e.amount ? (e.amount > 0 ? '+' : '−') + fmt(Math.abs(e.amount)) : ''}</span></div>`;
 const KV = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
@@ -45,7 +45,7 @@ ADMIN_VIEWS.overview = async () => {
   const [o, e] = await Promise.all([GET('/api/admin/overview'), GET('/api/admin/economy')]); const O = o.overview, E = e.economy;
   const st = (k, v, cls = '') => `<div class="stat"><span>${k}</span><b class="${cls}">${v}</b></div>`;
   const qa = (h, ic, t, sub, hot) => `<a class="qa${hot ? ' hot' : ''}" href="#/admin/${h}">${IC[ic] || ''}<b>${t}</b><span>${sub}</span></a>`;
-  return `<div class="qa-row">${qa('users', 'users', L('Игроки', 'Players'), L('найти, начислить, заблокировать', 'find, grant, block'))}${qa('support', 'chat', L('Сообщения', 'Messages'), E.open_tickets ? L(`ждут ответа: ${E.open_tickets}`, `waiting: ${E.open_tickets}`) : L('новых нет', 'nothing new'), E.open_tickets)}${qa('promos', 'gift', L('Промокоды', 'Promo codes'), L('создать код с PLT', 'create a PLT code'))}${qa('settings', 'sliders', L('Настройки', 'Settings'), L('бонусы, цены, объявление', 'bonuses, prices, banner'))}</div>
+  return `<div class="qa-row">${qa('users', 'users', L('Игроки', 'Players'), L('найти, начислить, заблокировать', 'find, grant, block'))}${qa('support', 'chat', L('Сообщения', 'Messages'), E.open_tickets ? L(`ждут ответа: ${E.open_tickets}`, `waiting: ${E.open_tickets}`) : L('новых нет', 'nothing new'), E.open_tickets)}${qa('quests', 'gift', L('Задания', 'Quests'), E.open_quests ? L(`на проверке: ${E.open_quests}`, `in review: ${E.open_quests}`) : L('новых нет', 'nothing new'), E.open_quests)}${qa('settings', 'sliders', L('Настройки', 'Settings'), L('бонусы, цены, объявление', 'bonuses, prices, banner'))}</div>
     <div class="stats s4">${st(L('Игроков', 'Players'), fmt(O.users))}${st(L('Новых за сутки', 'New, 24h'), fmt(E.new24))}${st(L('Активных за сутки', 'Active, 24h'), fmt(E.active24))}${st(L('Открытых обращений', 'Open requests'), `<a href="#/admin/support">${fmt(E.open_tickets)}</a>`, E.open_tickets ? 'up' : '')}
       ${st(L('Открыто кейсов', 'Cases opened'), fmt(O.opens))}${st(L('Потрачено на кейсы', 'Spent on cases'), fmt(E.case_spent))}${st(L('Продаж · оборот', 'Sales · volume'), fmt(O.sold) + ' · ' + fmt(O.volume))}${st(L('Ваша комиссия', 'Your fees'), fmt(O.fees), 'up')}
       ${st(L('PLT у игроков', 'PLT with players'), fmt(O.user_plt))}${st(L('Выплачено банком', 'Paid by the bank'), fmt(E.bank_paid))}${st(L('Выплачено скупщиком', 'Paid by the dealer'), fmt(E.dealer_paid))}${st(L('Бонусы и награды', 'Bonuses & rewards'), fmt(E.bonuses))}</div>
@@ -177,6 +177,33 @@ ADMIN_ACTS.sreset = async () => { const ok = await confirmDialog({ title: L('В�
 ADMIN_ACTS.umsg = btn => {
   openDialog(`<form class="dlg" id="umForm" novalidate><h2 class="h3" id="dlgTitle">${L('Сообщение для', 'Message to')} ${esc(btn.dataset.n)}</h2><div class="fld"><label for="umsubj">${L('Тема', 'Subject')}</label><input class="field" id="umsubj" maxlength="120" value="${L('Сообщение от Plate Club', 'Message from Plate Club')}"></div><div class="fld"><label for="umbody">${L('Текст', 'Text')}</label><textarea class="field" id="umbody" rows="4" maxlength="4000" required autofocus></textarea></div><p class="err" id="umerr" hidden></p><div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отправить', 'Send')}</button></div></form>`);
   $('#umForm').addEventListener('submit', async e => { e.preventDefault(); const sb = e.target.querySelector('[type=submit]'); busy(sb, true, '…'); try { await POST('/api/admin/message', { userId: Number(btn.dataset.id), subject: $('#umsubj').value, body: $('#umbody').value }); dlg.close(); toast(L('Отправлено', 'Sent')); render(false); } catch (x) { $('#umerr').hidden = false; $('#umerr').textContent = x.message; busy(sb, false); } });
+};
+ADMIN_VIEWS.quests = async () => {
+  const d = await GET('/api/admin/quests?status=' + AD.qs);
+  const seg = `<div class="seg" role="group">${[['PENDING', L('На проверке', 'In review')], ['PAID', L('Начислено', 'Paid')], ['REJECTED', L('Отклонено', 'Rejected')]].map(([v, t]) => `<button data-act="aqs" data-s="${v}" aria-pressed="${AD.qs === v}">${t}${v === 'PENDING' && d.pending ? ` (${d.pending})` : ''}</button>`).join('')}</div>`;
+  const row = x => `<div class="panel qrow"><div><p class="eyebrow">${x.kind === 'story' ? 'Instagram / Stories' : 'TikTok'} · ${date(x.at)}</p>
+      <h3 class="h3" style="margin:6px 0"><a href="#/u/${esc(x.nickname)}">${esc(x.nickname)}</a> · <span class="mono small">${esc(x.handle)}</span></h3>
+      <p class="small" style="margin:0"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url.slice(0, 70))}</a></p>
+      ${x.note ? `<p class="small" style="margin:6px 0 0;opacity:.8">${esc(x.note)}</p>` : ''}
+      ${x.status !== 'PENDING' ? `<p class="small" style="margin:6px 0 0">${QSTAT()[x.status]}${x.amount ? ' · +' + fmt(x.amount) + ' PLT' : ''}${x.views ? ' · ' + fmt(x.views) + ' ' + L('просмотров', 'views') : ''}${x.reason ? ' · ' + esc(x.reason) : ''}</p>` : ''}</div>
+    ${x.status === 'PENDING' ? `<div class="qacts">${x.kind === 'tiktok' ? `<input class="field mono" id="qv-${x.id}" type="number" min="0" max="100000000" placeholder="${L('просмотров', 'views')}" style="max-width:130px">` : ''}
+      <button class="btn btn-sm btn-chrome" data-act="aqok" data-id="${x.id}" data-k="${x.kind}">${L('Начислить', 'Pay')}</button>
+      <button class="btn btn-sm btn-ghost danger" data-act="aqno" data-id="${x.id}">${L('Отклонить', 'Reject')}</button></div>` : ''}</div>`;
+  return `<p class="small" style="margin:0 0 10px">${L('Проверьте публикацию по ссылке: аккаунт открыт, есть отметка Plate Club. Для TikTok впишите просмотры — начислится 1 PLT за просмотр.', 'Open the link and check: public account, Plate Club mentioned. For TikTok type the view count — 1 PLT per view.')}</p>
+    <div class="tools-row" style="margin-bottom:12px">${seg}</div>
+    <div class="qlist">${d.quests.length ? d.quests.map(row).join('') : `<p class="small">${L('Пусто.', 'Empty.')}</p>`}</div>`;
+};
+ADMIN_ACTS.aqs = btn => { AD.qs = btn.dataset.s; render(false); };
+ADMIN_ACTS.aqok = async btn => {
+  const id = btn.dataset.id, views = btn.dataset.k === 'tiktok' ? Number(($('#qv-' + id) || {}).value || 0) : 0;
+  if (btn.dataset.k === 'tiktok' && !(views > 0)) return toast(L('Впишите количество просмотров.', 'Enter the view count.'), true);
+  busy(btn, true, '…');
+  try { const r = await POST(`/api/admin/quests/${id}`, { approve: true, views }); toast(`+${fmt(r.amount)} PLT`); render(false); } catch (e) { toast(e.message, true); busy(btn, false); }
+};
+ADMIN_ACTS.aqno = btn => {
+  openDialog(`<form class="dlg" id="qnForm"><h2 class="h3" id="dlgTitle">${L('Отклонить заявку', 'Reject the request')}</h2><div class="fld"><label for="qnr">${L('Причина — игрок её увидит', 'Reason — the player sees it')}</label><input class="field" id="qnr" maxlength="200" required autofocus></div><p class="err" id="qnerr" hidden></p><div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отклонить', 'Reject')}</button></div></form>`);
+  $('#qnForm').addEventListener('submit', async e => { e.preventDefault(); const b = e.target.querySelector('[type=submit]'); busy(b, true, '…');
+    try { await POST(`/api/admin/quests/${btn.dataset.id}`, { approve: false, reason: $('#qnr').value }); dlg.close(); toast(L('Отклонено', 'Rejected')); render(false); } catch (x) { $('#qnerr').hidden = false; $('#qnerr').textContent = x.message; busy(b, false); } });
 };
 ADMIN_ACTS.urole = btn => {
   const mk = btn.dataset.a === '1';

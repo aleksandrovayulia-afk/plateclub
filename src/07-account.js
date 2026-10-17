@@ -68,8 +68,37 @@ VIEWS.bonus = async () => {
       ${lv.unclaimed ? `<button class="btn btn-chrome" data-act="lvlclaim">${L(`Забрать ${lv.unclaimed * lv.reward} PLT за уровни`, `Claim ${lv.unclaimed * lv.reward} PLT for levels`)}</button>` : ''}</section>
     <section class="panel bonus-card" style="--bc:rgba(168,124,255,.22)"><p class="eyebrow">${L('Промокод', 'Promo code')}</p><h2 class="h3">${L('Есть промокод?', 'Got a code?')}</h2><p class="small" style="margin:0">${L('Каждый код — один раз на аккаунт.', 'Each code works once per account.')}</p>${promoForm()}</section>
   </div>
+  <section class="sec">${SH(L('Пригласи друга', 'Invite a friend'), L('Своя ссылка у каждого', 'Everyone has their own link'))}<div id="refBox" class="panel">${Spin()}</div></section>
+  <section class="sec">${SH(L('Задания за PLT', 'Quests for PLT'), L('Проверяет админ', 'Reviewed by an admin'))}<div id="questBox">${Spin()}</div></section>
   <section class="sec" style="padding-bottom:80px">${SH(L('Достижения', 'Achievements'), `${ach.filter(a => a.done).length} / ${ach.length}`)}${AchGrid(ach)}</section></div>`;
 };
+
+const Spin = () => `<p class="small" style="padding:10px">${L('Загрузка…', 'Loading…')}</p>`;
+const QSTAT = () => ({ PENDING: L('На проверке', 'In review'), PAID: L('Начислено', 'Paid'), REJECTED: L('Отклонено', 'Rejected') });
+async function loadRef() {
+  const box = $('#refBox'); if (!box) return;
+  try {
+    const d = await GET('/api/referral'); REF = d;
+    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L(`Друг получает ${fmt(d.reward.friend)} PLT, вы — ${fmt(d.reward.inviter)} PLT, как только он откроет ${d.reward.needOpens} кейса. Друзей можно звать сколько угодно.`, `Your friend gets ${fmt(d.reward.friend)} PLT and you get ${fmt(d.reward.inviter)} PLT once they open ${d.reward.needOpens} cases. Invite as many as you like.`)}</p>
+      <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button>${navigator.share ? `<button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button>` : ''}</div>
+      <div class="stats s4" style="margin-top:12px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
+      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid ? ' plus' : ''}">${f.paid ? '+' + fmt(d.reward.inviter) : L('ждём', 'waiting')}</span></div>`).join('')}</div>` : ''}`;
+  } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+}
+async function loadQuests() {
+  const box = $('#questBox'); if (!box) return;
+  try {
+    const d = await GET('/api/quests');
+    const card = (kind, title, reward, text) => `<section class="panel bonus-card" style="--bc:${kind === 'story' ? 'rgba(255,122,217,.22)' : 'rgba(0,242,234,.22)'}"><p class="eyebrow">${kind === 'story' ? 'Instagram / Stories' : 'TikTok'}</p><div class="bonus-big">${reward}</div><h3 class="h3" style="margin:0">${title}</h3><p class="small" style="margin:0">${text}</p><button class="btn btn-chrome btn-lg" data-act="qsend" data-k="${kind}">${L('Отправить на проверку', 'Send for review')}</button></section>`;
+    box.innerHTML = `<div class="bonus-grid">
+      ${card('story', L('Сторис с отметкой сайта', 'A story tagging the site'), `+${fmt(d.rules.story)} <span class="small">PLT</span>`, L('Выложите сторис со ссылкой на Plate Club. Аккаунт должен быть открытым, чтобы мы увидели публикацию.', 'Post a story linking to Plate Club. Your account must be public so we can see it.'))}
+      ${card('tiktok', L('TikTok с упоминанием', 'A TikTok mentioning us'), `1 ${L('просмотр', 'view')} = ${fmt(d.rules.perView)} <span class="small">PLT</span>`, L(`Снимите ролик с нашим упоминанием. Максимум ${fmt(d.rules.maxPerVideo)} PLT за ролик. Готовые баннеры — в разделе «Материалы».`, `Make a video mentioning us. Up to ${fmt(d.rules.maxPerVideo)} PLT per video. Ready-made banners are in “Media kit”.`))}
+    </div>
+    ${d.quests.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.quests.map(x => `<div class="tx"><span class="lbl">${x.kind === 'story' ? 'Stories' : 'TikTok'} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${L('ссылка', 'link')}</a>${x.reason ? ` — ${esc(x.reason)}` : ''}</span><span class="when">${day(x.at)} · ${QSTAT()[x.status]}${x.views ? ' · ' + fmt(x.views) + ' ' + L('просм.', 'views') : ''}</span><span class="amt${x.status === 'PAID' ? ' plus' : ''}">${x.amount ? '+' + fmt(x.amount) : '—'}</span></div>`).join('')}</div>` : ''}
+    <p class="small" style="margin-top:10px;opacity:.75">${L('Проверка обычно занимает до суток. PLT приходят после подтверждения админом.', 'Review usually takes up to a day. PLT arrive after an admin confirms it.')}</p>`;
+  } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+}
+let REF = null;
 VIEWS.bonus.auth = true;
 VIEWS.achievements = VIEWS.bonus;
 

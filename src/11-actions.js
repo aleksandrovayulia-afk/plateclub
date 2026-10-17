@@ -73,6 +73,21 @@ A.editlisting = btn => {
 };
 A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
+A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
+A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
+A.qsend = btn => {
+  const kind = btn.dataset.k, story = kind === 'story';
+  openDialog(`<form class="dlg" id="qsForm" novalidate><h2 class="h3" id="dlgTitle">${story ? L('Сторис с отметкой сайта', 'Story tagging the site') : L('TikTok с упоминанием', 'TikTok mentioning us')}</h2>
+    <p class="small" style="margin:0">${story ? L('Выложите сторис со ссылкой на Plate Club, затем пришлите ссылку на неё или на профиль. Аккаунт должен быть открытым.', 'Post a story linking to Plate Club, then send the link to it or to your profile. Your account must be public.') : L('Пришлите ссылку на ролик. Начислим 1 PLT за просмотр после проверки.', 'Send the link to your video. We pay 1 PLT per view after review.')}</p>
+    <div class="fld"><label for="qsHandle">${L('Ваш аккаунт (открытый)', 'Your account (public)')}</label><input class="field" id="qsHandle" maxlength="80" required autofocus placeholder="@nickname"></div>
+    <div class="fld"><label for="qsUrl">${L('Ссылка на публикацию', 'Link to the post')}</label><input class="field" id="qsUrl" type="url" maxlength="400" required placeholder="https://…"></div>
+    <div class="fld"><label for="qsNote">${L('Комментарий (не обязательно)', 'Comment (optional)')}</label><input class="field" id="qsNote" maxlength="500"></div>
+    <p class="err" id="qsErr" hidden></p>
+    <div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отправить', 'Send')}</button></div></form>`);
+  $('#qsForm').addEventListener('submit', async e => { e.preventDefault(); const b = e.target.querySelector('[type=submit]'); busy(b, true, '…');
+    try { await POST('/api/quests', { kind, url: $('#qsUrl').value, handle: $('#qsHandle').value, note: $('#qsNote').value }); dlg.close(); toast(L('Отправлено на проверку. PLT придут после подтверждения.', 'Sent for review. PLT arrive once it is confirmed.')); loadQuests(); }
+    catch (x) { $('#qsErr').hidden = false; $('#qsErr').textContent = x.message; busy(b, false); } });
+};
 A.tgjoin = async btn => { window.open(CFG.telegram.url, '_blank', 'noopener'); busy(btn, true, '…'); try { const r = await POST('/api/perks/telegram', {}); await refreshMe(); sfx('coin'); toast(L(`+${r.amount} PLT — спасибо, что с нами!`, `+${r.amount} PLT — thanks for joining!`)); render(false); } catch (x) { toast(x.message, true); busy(btn, false); } };
 let installEvt = null; addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
 A.install = async () => {
@@ -189,7 +204,7 @@ document.addEventListener('submit', async e => {
   if (Object.keys(local).length) return showErr('', local);
   busy(b, true, '…');
   try {
-    if (kind === 'register') { const r = await POST('/api/auth/register', { email: v('email').trim(), nickname: v('nickname').trim(), password: v('password'), terms: true }); await refreshMe(); refreshPerks(); sfx('confirm'); toast(L(`Добро пожаловать, ${ME.nickname}! +${r.bonus} PLT`, `Welcome, ${ME.nickname}! +${r.bonus} PLT`)); go(/next=admin/.test(location.hash) ? '#/admin' : '#/cases'); }
+    if (kind === 'register') { const r = await POST('/api/auth/register', { email: v('email').trim(), nickname: v('nickname').trim(), password: v('password'), terms: true, ref: store.get('ref', '') || undefined }); store.set('ref', ''); await refreshMe(); refreshPerks(); sfx('confirm'); toast(L(`Добро пожаловать, ${ME.nickname}! +${r.bonus} PLT`, `Welcome, ${ME.nickname}! +${r.bonus} PLT`)); go(/next=admin/.test(location.hash) ? '#/admin' : '#/cases'); }
     else if (kind === 'login') { await POST('/api/auth/login', { email: v('email').trim(), password: v('password') }); await refreshMe(); refreshPerks(); toast(L(`Вы вошли как ${ME.nickname}.`, `Signed in as ${ME.nickname}.`)); const nx = v('next'); go(nx && nx.startsWith('#/') && !nx.startsWith('#/login') ? nx : '#/'); }
     else if (kind === 'forgot') { await POST('/api/auth/forgot', { email: v('email').trim() }); busy(b, false); b.disabled = true; $('#formOk').innerHTML = `<div class="notice"><b>${L('Проверьте почту', 'Check your email')}</b>${L('Если аккаунт с этим email есть, ссылка уже в пути.', 'If an account with this email exists, the link is on its way.')}</div>`; return; }
     else if (kind === 'reset') { await POST('/api/auth/reset', { token: v('token'), password: v('password') }); await refreshMe(); toast(L('Пароль сохранён, вы вошли.', 'Password saved, you are signed in.')); history.replaceState(null, '', location.pathname); go('#/'); }
@@ -222,6 +237,9 @@ async function boot() {
   set(100, L('Готово', 'Ready'));
   if (params.get('verify')) { try { await POST('/api/auth/verify', { token: params.get('verify') }); await refreshMe(); toast(L('Email подтверждён.', 'Email verified.')); } catch (e) { toast(e.message, true); } history.replaceState(null, '', location.pathname + (location.hash || '#/profile')); }
   if (params.get('reset')) history.replaceState(null, '', location.pathname + '#/reset?token=' + encodeURIComponent(params.get('reset')));
+  // invite link: remember the code and send a new visitor straight to sign-up
+  const refCode = (params.get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', location.pathname + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
   await refreshPerks();
   await render(false);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);

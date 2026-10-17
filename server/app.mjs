@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -18,6 +18,7 @@ class HttpError extends Error { constructor(status, message, extra) { super(mess
 const bad = (m, e) => new HttpError(400, m, e);
 
 const hex = n => randomBytes(n).toString('hex').toUpperCase();
+const fmtInt = v => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const newId = p => `${p}-${hex(2)}-${hex(2)}`;
 const sha256 = s => createHash('sha256').update(s).digest('hex');
 const n = v => (v === null || v === undefined ? v : Number(v));
@@ -124,6 +125,35 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return res;
   }
 
+  // ---- referrals ----
+  const REF_ALPHABET = 'ACDEFGHJKLMNPQRTUVWXY34679';
+  const refCode = () => Array.from({ length: 6 }, () => REF_ALPHABET[randomInt(0, REF_ALPHABET.length)]).join('');
+  async function ensureRefCode(Q, userId) {
+    const [u] = await Q('SELECT ref_code FROM users WHERE id=$1', [userId]);
+    if (u && u.ref_code) return u.ref_code;
+    for (let i = 0; i < 8; i++) {
+      const code = refCode();
+      try { await Q('UPDATE users SET ref_code=$1 WHERE id=$2', [code, userId]); return code; } catch (e) { if (e.code !== '23505') throw e; }
+    }
+    return null;
+  }
+  // Pays both sides once the invited friend has really started playing (opened a few cases).
+  async function payReferral(Q, friendId) {
+    const [f] = await Q('SELECT id,nickname,referred_by FROM users WHERE id=$1 FOR UPDATE', [friendId]);
+    if (!f || !f.referred_by) return;
+    const inviterId = n(f.referred_by);
+    const [done] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['ref:' + friendId]);
+    if (done) return;
+    const [{ c }] = await Q(`SELECT count(*)::int AS c FROM ledger WHERE user_id=$1 AND kind='case_open'`, [friendId]);
+    if (n(c) < REFERRAL.needOpens) return;
+    const [{ d }] = await Q(`SELECT count(*)::int AS d FROM ledger WHERE user_id=$1 AND kind='referral' AND created_at > now() - interval '24 hours'`, [inviterId]);
+    if (n(d) >= REFERRAL.maxPerDay) return;
+    const [inv] = await Q('SELECT nickname FROM users WHERE id=$1 AND blocked_at IS NULL', [inviterId]);
+    if (!inv) return;
+    await ledger(Q, inviterId, 'referral', REFERRAL.inviter, `Друг ${f.nickname} начал играть`, 'ref:' + friendId);
+    await ledger(Q, friendId, 'referral', REFERRAL.friend, `Приглашение от ${inv.nickname}`, 'ref:' + friendId + ':f');
+  }
+
   // ---------------- routes ----------------
   const routes = [];
   const R = (method, path, handler, opts = {}) => routes.push({ method, re: new RegExp('^' + path.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), handler, ...opts });
@@ -157,7 +187,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       (SELECT coalesce(max(CASE tier WHEN 'common' THEN 0 WHEN 'fine' THEN 1 WHEN 'rare' THEN 2 WHEN 'elite' THEN 3 ELSE 4 END),-1) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS maxtier,
       (SELECT coalesce(-sum(amount),0) FROM ledger WHERE user_id=$1 AND kind='case_open')::bigint AS xp`, [user.id]);
     const stats = Object.fromEntries(Object.entries(s).map(([k, v]) => [k, n(v)]));
-    const [t] = await q(`SELECT (SELECT count(*) FROM tickets WHERE user_id=$1 AND user_unread)::int AS unread, CASE WHEN $2 THEN (SELECT count(*) FROM tickets WHERE admin_unread AND status<>'CLOSED')::int ELSE 0 END AS inbox, (SELECT count(*) FROM swaps WHERE to_id=$1 AND status='PENDING')::int AS swaps`, [user.id, user.role === 'admin']);
+    const [t] = await q(`SELECT (SELECT count(*) FROM tickets WHERE user_id=$1 AND user_unread)::int AS unread, CASE WHEN $2 THEN (SELECT count(*) FROM tickets WHERE admin_unread AND status<>'CLOSED')::int + (SELECT count(*) FROM quests WHERE status='PENDING')::int ELSE 0 END AS inbox, (SELECT count(*) FROM swaps WHERE to_id=$1 AND status='PENDING')::int AS swaps`, [user.id, user.role === 'admin']);
     return { user: { ...user, stats, level: levelOf(stats.xp), unread: n(t.unread), inbox: n(t.inbox), swaps: n(t.swaps), medals: (await medalsMap())[user.id] || [] } };
   });
 
@@ -204,6 +234,14 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         throw new HttpError(409, 'Аккаунт с этим email уже есть. Войдите или восстановите пароль.', { fields: { email: 'Этот email уже зарегистрирован.' } });
       }
       throw e;
+    }
+    // who invited them (the code comes from the invite link)
+    const inviteCode = String(body.ref || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    if (inviteCode) {
+      try {
+        const [inv] = await q(`SELECT id FROM users WHERE ref_code=$1 AND blocked_at IS NULL AND role <> 'bot'`, [inviteCode]);
+        if (inv && n(inv.id) !== user.id) await q('UPDATE users SET referred_by=$1 WHERE id=$2 AND referred_by IS NULL', [n(inv.id), user.id]);
+      } catch {}
     }
     const cookie = await newSession(user.id);
     const mailed = await sendVerify(req, user).catch(() => false);
@@ -319,6 +357,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       if (!plate) throw new HttpError(503, 'Не удалось выпустить уникальный номер. Деньги не списаны, попробуйте ещё раз.');
       await Q('UPDATE ledger SET ref=$1 WHERE id=$2', [plate.id, led.id]);
       await addEvent(Q, { plate_id: plate.id, kind: 'MINTED', to_user: user.id, tx_id: led.id });
+      await payReferral(Q, user.id);
       const { seal: _s, mintTx: _m, combo: _c, ...pub } = plate;
       return { plate: { ...pub, status: 'OWNED', origin: `Кейс ${c.id} · ${c.ru}`, lastTx: led.id }, balance: led.balance, txId: led.id, price };
     }));
@@ -781,6 +820,71 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const led = await ledger(Q, user.id, 'reward', TELEGRAM.reward, 'Вступление в Telegram-чат игроков', 'tg-join');
     return { ok: true, amount: TELEGRAM.reward, balance: led.balance };
   }), { auth: true });
+  // ---- invite a friend ----
+  R('GET', '/api/referral', async ({ user, req }) => {
+    const code = await tx(Q => ensureRefCode(Q, user.id));
+    const rows = await q(`SELECT u.nickname,(extract(epoch from u.created_at)*1000)::bigint AS at,
+        (SELECT count(*) FROM ledger WHERE user_id=u.id AND kind='case_open')::int AS opens,
+        EXISTS(SELECT 1 FROM ledger WHERE kind='referral' AND ref='ref:' || u.id) AS paid
+      FROM users u WHERE u.referred_by=$1 ORDER BY u.created_at DESC LIMIT 100`, [user.id]);
+    const [e] = await q(`SELECT coalesce(sum(amount),0)::bigint AS s FROM ledger WHERE user_id=$1 AND kind='referral'`, [user.id]);
+    const friends = rows.map(r => ({ nickname: r.nickname, at: n(r.at), opens: n(r.opens), paid: r.paid === true || r.paid === 't' }));
+    return { code, link: `${siteUrl(req)}/?ref=${code}`, friends, earned: n(e.s), joined: friends.length, active: friends.filter(f => f.paid).length, reward: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, needOpens: REFERRAL.needOpens } };
+  }, { auth: true });
+
+  // ---- social quests (story / TikTok), checked by an admin ----
+  const cleanUrl = v => { const u = String(v || '').trim().slice(0, 400); return /^https:\/\/[^\s]+\.[^\s]{2,}/i.test(u) ? u : ''; };
+  R('GET', '/api/quests', async ({ user }) => {
+    const rows = await q(`SELECT id,kind,url,handle,status,views,amount,reason,(extract(epoch from created_at)*1000)::bigint AS at FROM quests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, [user.id]);
+    return { quests: rows.map(r => ({ id: r.id, kind: r.kind, url: r.url, handle: r.handle, status: r.status, views: r.views == null ? null : n(r.views), amount: r.amount == null ? null : n(r.amount), reason: r.reason, at: n(r.at) })), rules: { story: QUESTS.story.reward, perView: QUESTS.tiktok.perView, maxPerVideo: QUESTS.tiktok.maxPerVideo } };
+  }, { auth: true });
+  R('POST', '/api/quests', async ({ user, body }) => {
+    const kind = body.kind === 'tiktok' ? 'tiktok' : body.kind === 'story' ? 'story' : null;
+    if (!kind) throw bad('Выберите задание.');
+    const url = cleanUrl(body.url); if (!url) throw bad('Пришлите ссылку целиком, она должна начинаться с https://', { fields: { url: 'Нужна ссылка вида https://…' } });
+    const handle = cleanText(body.handle, 80);
+    if (!handle) throw bad('Укажите свой аккаунт — он должен быть открытым, чтобы мы увидели публикацию.', { fields: { handle: 'Укажите ваш аккаунт.' } });
+    await throttle('quest:' + user.id, 10, 1440); await attempt('quest:' + user.id);
+    const [dup] = await q(`SELECT 1 FROM quests WHERE user_id=$1 AND url=$2 AND status<>'REJECTED'`, [user.id, url]);
+    if (dup) throw new HttpError(409, 'Эта ссылка уже отправлена на проверку.');
+    if (kind === 'story') {
+      const [recent] = await q(`SELECT 1 FROM quests WHERE user_id=$1 AND kind='story' AND status='PAID' AND created_at > now() - ($2 || ' days')::interval`, [user.id, String(QUESTS.story.cooldownDays)]);
+      if (recent) throw new HttpError(409, `Награду за сторис можно получать раз в ${QUESTS.story.cooldownDays} дней.`);
+    }
+    const id = newId('QS');
+    await q('INSERT INTO quests(id,user_id,kind,url,handle,note) VALUES($1,$2,$3,$4,$5,$6)', [id, user.id, kind, url, handle, cleanText(body.note, 500)]);
+    return { ok: true, id };
+  }, { auth: true });
+
+  R('GET', '/api/admin/quests', async ({ url }) => {
+    const st = ['PENDING', 'PAID', 'REJECTED'].includes(url.searchParams.get('status')) ? url.searchParams.get('status') : 'PENDING';
+    const rows = await q(`SELECT q.*, u.nickname,(extract(epoch from q.created_at)*1000)::bigint AS at FROM quests q JOIN users u ON u.id=q.user_id WHERE q.status=$1 ORDER BY q.created_at DESC LIMIT 100`, [st]);
+    const [p] = await q(`SELECT count(*)::int AS c FROM quests WHERE status='PENDING'`);
+    return { status: st, pending: n(p.c), quests: rows.map(r => ({ id: r.id, userId: n(r.user_id), nickname: r.nickname, kind: r.kind, url: r.url, handle: r.handle, note: r.note, status: r.status, views: r.views == null ? null : n(r.views), amount: r.amount == null ? null : n(r.amount), reason: r.reason, at: n(r.at) })) };
+  }, { admin: true });
+  R('POST', '/api/admin/quests/:id', async ({ user, params, body }) => {
+    const approve = !!body.approve;
+    const reason = cleanText(body.reason, 200);
+    if (!approve && !reason) throw bad('Укажите причину — игрок её увидит.');
+    const views = Math.max(0, Math.min(100_000_000, parseInt(body.views, 10) || 0));
+    return tx(async Q => {
+      const [qs] = await Q(`SELECT * FROM quests WHERE id=$1 FOR UPDATE`, [params.id]);
+      if (!qs) throw new HttpError(404, 'Заявка не найдена.');
+      if (qs.status !== 'PENDING') throw new HttpError(409, 'Эта заявка уже рассмотрена.');
+      if (!approve) {
+        await Q(`UPDATE quests SET status='REJECTED', reason=$1, reviewed_by=$2, updated_at=now() WHERE id=$3`, [reason, user.id, qs.id]);
+        await adminLog(Q, user.id, 'quest_reject', String(qs.user_id), null, reason);
+        return { ok: true, status: 'REJECTED' };
+      }
+      const amount = qs.kind === 'story' ? QUESTS.story.reward : Math.min(QUESTS.tiktok.maxPerVideo, views * QUESTS.tiktok.perView);
+      if (amount < 1) throw bad('Укажите количество просмотров.');
+      await ledger(Q, n(qs.user_id), 'quest', amount, qs.kind === 'story' ? 'Задание: сторис с отметкой Plate Club' : `Задание: TikTok · ${fmtInt(views)} просмотров`, 'quest:' + qs.id);
+      await Q(`UPDATE quests SET status='PAID', views=$1, amount=$2, reason=$3, reviewed_by=$4, updated_at=now() WHERE id=$5`, [qs.kind === 'tiktok' ? views : null, amount, reason || null, user.id, qs.id]);
+      await adminLog(Q, user.id, 'quest_pay', String(qs.user_id), amount, qs.kind);
+      return { ok: true, status: 'PAID', amount };
+    });
+  }, { admin: true });
+
   R('POST', '/api/perks/level/claim', async ({ user }) => tx(async Q => {
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
     const [x] = await Q(`SELECT coalesce(-sum(amount),0)::bigint AS xp FROM ledger WHERE user_id=$1 AND kind='case_open'`, [user.id]);
@@ -1149,7 +1253,8 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       (SELECT count(*) FROM users WHERE role='user' AND created_at > now() - interval '24 hours')::int AS new24,
       (SELECT count(DISTINCT user_id) FROM ledger WHERE created_at > now() - interval '24 hours')::int AS active24,
       (SELECT count(*) FROM users WHERE blocked_at IS NOT NULL)::int AS blocked,
-      (SELECT count(*) FROM tickets WHERE status<>'CLOSED')::int AS open_tickets`);
+      (SELECT count(*) FROM tickets WHERE status<>'CLOSED')::int AS open_tickets,
+      (SELECT count(*) FROM quests WHERE status='PENDING')::int AS open_quests`);
     const cases = await q(`SELECT substring(label from 'Открыт кейс ([0-9]+)') AS id, count(*)::int AS n, coalesce(sum(-amount),0)::bigint AS spent FROM ledger WHERE kind='case_open' GROUP BY 1 ORDER BY 2 DESC`);
     return { economy: Object.fromEntries(Object.entries(e).map(([k, v]) => [k, n(v)])), cases: cases.filter(c => c.id).map(c => ({ id: c.id, opens: n(c.n), spent: n(c.spent) })) };
   }, { admin: true });

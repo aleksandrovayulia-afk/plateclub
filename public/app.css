@@ -1135,3 +1135,10 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .lvl-tag.lt-star{color:#c9a8ff;border-color:rgba(201,168,255,.5)}.lvl-tag.lt-tycoon{color:#ffcf7a;border-color:rgba(255,207,122,.5)}
 .lvl-tag.lt-legend{color:#ffd36b;border-color:#ffd36b;box-shadow:0 0 14px rgba(255,211,107,.35)}
 .medals{display:inline-flex;flex-wrap:wrap;gap:4px}
+.ref-row{display:flex;gap:8px;flex-wrap:wrap}.ref-row .field{flex:1 1 220px;min-width:0;font-size:13px}
+@media(max-width:600px){.ref-row .btn{flex:1 1 auto}}
+/* admin: quest review */
+.qlist{display:grid;gap:10px}
+.qrow{display:grid;gap:12px;align-items:start}
+@media(min-width:760px){.qrow{grid-template-columns:minmax(0,1fr) auto}}
+.qacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}

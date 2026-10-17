@@ -380,6 +380,7 @@ function after(name) {
   if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 12000); }
   if (name === 'wallet' || name === 'transactions') walletHooks();
   if (name === 'register') regHooks();
+  if (name === 'bonus') { loadRef(); loadQuests(); }
   if (name === 'admin') adminHooks();
   if (name === 'support') supportHooks();
   if (name === 'battle') { btSkip = false; battleHooks(); }
@@ -627,8 +628,37 @@ VIEWS.bonus = async () => {
       ${lv.unclaimed ? `<button class="btn btn-chrome" data-act="lvlclaim">${L(`Забрать ${lv.unclaimed * lv.reward} PLT за уровни`, `Claim ${lv.unclaimed * lv.reward} PLT for levels`)}</button>` : ''}</section>
     <section class="panel bonus-card" style="--bc:rgba(168,124,255,.22)"><p class="eyebrow">${L('Промокод', 'Promo code')}</p><h2 class="h3">${L('Есть промокод?', 'Got a code?')}</h2><p class="small" style="margin:0">${L('Каждый код — один раз на аккаунт.', 'Each code works once per account.')}</p>${promoForm()}</section>
   </div>
+  <section class="sec">${SH(L('Пригласи друга', 'Invite a friend'), L('Своя ссылка у каждого', 'Everyone has their own link'))}<div id="refBox" class="panel">${Spin()}</div></section>
+  <section class="sec">${SH(L('Задания за PLT', 'Quests for PLT'), L('Проверяет админ', 'Reviewed by an admin'))}<div id="questBox">${Spin()}</div></section>
   <section class="sec" style="padding-bottom:80px">${SH(L('Достижения', 'Achievements'), `${ach.filter(a => a.done).length} / ${ach.length}`)}${AchGrid(ach)}</section></div>`;
 };
+
+const Spin = () => `<p class="small" style="padding:10px">${L('Загрузка…', 'Loading…')}</p>`;
+const QSTAT = () => ({ PENDING: L('На проверке', 'In review'), PAID: L('Начислено', 'Paid'), REJECTED: L('Отклонено', 'Rejected') });
+async function loadRef() {
+  const box = $('#refBox'); if (!box) return;
+  try {
+    const d = await GET('/api/referral'); REF = d;
+    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L(`Друг получает ${fmt(d.reward.friend)} PLT, вы — ${fmt(d.reward.inviter)} PLT, как только он откроет ${d.reward.needOpens} кейса. Друзей можно звать сколько угодно.`, `Your friend gets ${fmt(d.reward.friend)} PLT and you get ${fmt(d.reward.inviter)} PLT once they open ${d.reward.needOpens} cases. Invite as many as you like.`)}</p>
+      <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button>${navigator.share ? `<button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button>` : ''}</div>
+      <div class="stats s4" style="margin-top:12px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
+      ${d.friends.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.friends.slice(0, 10).map(f => `<div class="tx"><span class="lbl">${esc(f.nickname)}</span><span class="when">${day(f.at)} · ${L('кейсов', 'cases')}: ${f.opens}</span><span class="amt${f.paid ? ' plus' : ''}">${f.paid ? '+' + fmt(d.reward.inviter) : L('ждём', 'waiting')}</span></div>`).join('')}</div>` : ''}`;
+  } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+}
+async function loadQuests() {
+  const box = $('#questBox'); if (!box) return;
+  try {
+    const d = await GET('/api/quests');
+    const card = (kind, title, reward, text) => `<section class="panel bonus-card" style="--bc:${kind === 'story' ? 'rgba(255,122,217,.22)' : 'rgba(0,242,234,.22)'}"><p class="eyebrow">${kind === 'story' ? 'Instagram / Stories' : 'TikTok'}</p><div class="bonus-big">${reward}</div><h3 class="h3" style="margin:0">${title}</h3><p class="small" style="margin:0">${text}</p><button class="btn btn-chrome btn-lg" data-act="qsend" data-k="${kind}">${L('Отправить на проверку', 'Send for review')}</button></section>`;
+    box.innerHTML = `<div class="bonus-grid">
+      ${card('story', L('Сторис с отметкой сайта', 'A story tagging the site'), `+${fmt(d.rules.story)} <span class="small">PLT</span>`, L('Выложите сторис со ссылкой на Plate Club. Аккаунт должен быть открытым, чтобы мы увидели публикацию.', 'Post a story linking to Plate Club. Your account must be public so we can see it.'))}
+      ${card('tiktok', L('TikTok с упоминанием', 'A TikTok mentioning us'), `1 ${L('просмотр', 'view')} = ${fmt(d.rules.perView)} <span class="small">PLT</span>`, L(`Снимите ролик с нашим упоминанием. Максимум ${fmt(d.rules.maxPerVideo)} PLT за ролик. Готовые баннеры — в разделе «Материалы».`, `Make a video mentioning us. Up to ${fmt(d.rules.maxPerVideo)} PLT per video. Ready-made banners are in “Media kit”.`))}
+    </div>
+    ${d.quests.length ? `<div class="panel" style="margin-top:12px;padding:8px">${d.quests.map(x => `<div class="tx"><span class="lbl">${x.kind === 'story' ? 'Stories' : 'TikTok'} · <a href="${esc(x.url)}" target="_blank" rel="noopener">${L('ссылка', 'link')}</a>${x.reason ? ` — ${esc(x.reason)}` : ''}</span><span class="when">${day(x.at)} · ${QSTAT()[x.status]}${x.views ? ' · ' + fmt(x.views) + ' ' + L('просм.', 'views') : ''}</span><span class="amt${x.status === 'PAID' ? ' plus' : ''}">${x.amount ? '+' + fmt(x.amount) : '—'}</span></div>`).join('')}</div>` : ''}
+    <p class="small" style="margin-top:10px;opacity:.75">${L('Проверка обычно занимает до суток. PLT приходят после подтверждения админом.', 'Review usually takes up to a day. PLT arrive after an admin confirms it.')}</p>`;
+  } catch (e) { box.innerHTML = `<p class="small">${esc(e.message)}</p>`; }
+}
+let REF = null;
 VIEWS.bonus.auth = true;
 VIEWS.achievements = VIEWS.bonus;
 
@@ -841,9 +871,9 @@ function supportHooks() {
 }
 
 /* ---------- admin control panel ---------- */
-const AD = { q: '', status: 'ACTIVE', tk: 'OPEN' }; const ADMIN_ACTS = {};
-const ADMIN_TABS = () => [['overview', L('Обзор', 'Overview'), 'chart'], ['users', L('Участники', 'Players'), 'users'], ['support', L('Сообщения', 'Messages'), 'chat'], ['market', L('Рынок', 'Market'), 'market'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['promos', L('Промокоды', 'Promo codes'), 'gift'], ['settings', L('Настройки', 'Settings'), 'sliders'], ['log', L('Журнал', 'Log'), 'list']];
-const ACT_NAMES = () => ({ claim_admin: L('Админ активирован', 'Admin claimed'), make_admin: L('Назначен админ', 'Admin appointed'), remove_admin: L('Снят админ', 'Admin removed'), grant_plt: L('Начислено', 'Granted'), deduct_plt: L('Списано', 'Deducted'), remove_listing: L('Снято объявление', 'Listing removed'), create_promo: L('Создан промокод', 'Promo created'), enable_promo: L('Промокод включён', 'Promo enabled'), disable_promo: L('Промокод выключен', 'Promo disabled'), message: L('Сообщение', 'Message'), block_user: L('Блокировка', 'Blocked'), unblock_user: L('Разблокировка', 'Unblocked'), gift_plate: L('Подарен номер', 'Plate gifted'), grant_all: L('Бонус всем', 'Bonus to all'), settings: L('Настройки', 'Settings') });
+const AD = { q: '', status: 'ACTIVE', tk: 'OPEN', qs: 'PENDING' }; const ADMIN_ACTS = {};
+const ADMIN_TABS = () => [['overview', L('Обзор', 'Overview'), 'chart'], ['users', L('Участники', 'Players'), 'users'], ['support', L('Сообщения', 'Messages'), 'chat'], ['quests', L('Задания', 'Quests'), 'gift'], ['market', L('Рынок', 'Market'), 'market'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['promos', L('Промокоды', 'Promo codes'), 'gift'], ['settings', L('Настройки', 'Settings'), 'sliders'], ['log', L('Журнал', 'Log'), 'list']];
+const ACT_NAMES = () => ({ claim_admin: L('Админ активирован', 'Admin claimed'), quest_pay: L('Задание оплачено', 'Quest paid'), quest_reject: L('Задание отклонено', 'Quest rejected'), make_admin: L('Назначен админ', 'Admin appointed'), remove_admin: L('Снят админ', 'Admin removed'), grant_plt: L('Начислено', 'Granted'), deduct_plt: L('Списано', 'Deducted'), remove_listing: L('Снято объявление', 'Listing removed'), create_promo: L('Создан промокод', 'Promo created'), enable_promo: L('Промокод включён', 'Promo enabled'), disable_promo: L('Промокод выключен', 'Promo disabled'), message: L('Сообщение', 'Message'), block_user: L('Блокировка', 'Blocked'), unblock_user: L('Разблокировка', 'Unblocked'), gift_plate: L('Подарен номер', 'Plate gifted'), grant_all: L('Бонус всем', 'Bonus to all'), settings: L('Настройки', 'Settings') });
 const LogRow = e => `<div class="tx"><span class="lbl">${ACT_NAMES()[e.action] || e.action} · ${esc(e.target || '')}${e.reason ? ' — ' + esc(e.reason) : ''}</span><span class="when">${date(e.at)} · ${esc(e.admin)}</span><span class="amt">${e.amount ? (e.amount > 0 ? '+' : '−') + fmt(Math.abs(e.amount)) : ''}</span></div>`;
 const KV = (rows) => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
@@ -862,7 +892,7 @@ ADMIN_VIEWS.overview = async () => {
   const [o, e] = await Promise.all([GET('/api/admin/overview'), GET('/api/admin/economy')]); const O = o.overview, E = e.economy;
   const st = (k, v, cls = '') => `<div class="stat"><span>${k}</span><b class="${cls}">${v}</b></div>`;
   const qa = (h, ic, t, sub, hot) => `<a class="qa${hot ? ' hot' : ''}" href="#/admin/${h}">${IC[ic] || ''}<b>${t}</b><span>${sub}</span></a>`;
-  return `<div class="qa-row">${qa('users', 'users', L('Игроки', 'Players'), L('найти, начислить, заблокировать', 'find, grant, block'))}${qa('support', 'chat', L('Сообщения', 'Messages'), E.open_tickets ? L(`ждут ответа: ${E.open_tickets}`, `waiting: ${E.open_tickets}`) : L('новых нет', 'nothing new'), E.open_tickets)}${qa('promos', 'gift', L('Промокоды', 'Promo codes'), L('создать код с PLT', 'create a PLT code'))}${qa('settings', 'sliders', L('Настройки', 'Settings'), L('бонусы, цены, объявление', 'bonuses, prices, banner'))}</div>
+  return `<div class="qa-row">${qa('users', 'users', L('Игроки', 'Players'), L('найти, начислить, заблокировать', 'find, grant, block'))}${qa('support', 'chat', L('Сообщения', 'Messages'), E.open_tickets ? L(`ждут ответа: ${E.open_tickets}`, `waiting: ${E.open_tickets}`) : L('новых нет', 'nothing new'), E.open_tickets)}${qa('quests', 'gift', L('Задания', 'Quests'), E.open_quests ? L(`на проверке: ${E.open_quests}`, `in review: ${E.open_quests}`) : L('новых нет', 'nothing new'), E.open_quests)}${qa('settings', 'sliders', L('Настройки', 'Settings'), L('бонусы, цены, объявление', 'bonuses, prices, banner'))}</div>
     <div class="stats s4">${st(L('Игроков', 'Players'), fmt(O.users))}${st(L('Новых за сутки', 'New, 24h'), fmt(E.new24))}${st(L('Активных за сутки', 'Active, 24h'), fmt(E.active24))}${st(L('Открытых обращений', 'Open requests'), `<a href="#/admin/support">${fmt(E.open_tickets)}</a>`, E.open_tickets ? 'up' : '')}
       ${st(L('Открыто кейсов', 'Cases opened'), fmt(O.opens))}${st(L('Потрачено на кейсы', 'Spent on cases'), fmt(E.case_spent))}${st(L('Продаж · оборот', 'Sales · volume'), fmt(O.sold) + ' · ' + fmt(O.volume))}${st(L('Ваша комиссия', 'Your fees'), fmt(O.fees), 'up')}
       ${st(L('PLT у игроков', 'PLT with players'), fmt(O.user_plt))}${st(L('Выплачено банком', 'Paid by the bank'), fmt(E.bank_paid))}${st(L('Выплачено скупщиком', 'Paid by the dealer'), fmt(E.dealer_paid))}${st(L('Бонусы и награды', 'Bonuses & rewards'), fmt(E.bonuses))}</div>
@@ -994,6 +1024,33 @@ ADMIN_ACTS.sreset = async () => { const ok = await confirmDialog({ title: L('В�
 ADMIN_ACTS.umsg = btn => {
   openDialog(`<form class="dlg" id="umForm" novalidate><h2 class="h3" id="dlgTitle">${L('Сообщение для', 'Message to')} ${esc(btn.dataset.n)}</h2><div class="fld"><label for="umsubj">${L('Тема', 'Subject')}</label><input class="field" id="umsubj" maxlength="120" value="${L('Сообщение от Plate Club', 'Message from Plate Club')}"></div><div class="fld"><label for="umbody">${L('Текст', 'Text')}</label><textarea class="field" id="umbody" rows="4" maxlength="4000" required autofocus></textarea></div><p class="err" id="umerr" hidden></p><div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отправить', 'Send')}</button></div></form>`);
   $('#umForm').addEventListener('submit', async e => { e.preventDefault(); const sb = e.target.querySelector('[type=submit]'); busy(sb, true, '…'); try { await POST('/api/admin/message', { userId: Number(btn.dataset.id), subject: $('#umsubj').value, body: $('#umbody').value }); dlg.close(); toast(L('Отправлено', 'Sent')); render(false); } catch (x) { $('#umerr').hidden = false; $('#umerr').textContent = x.message; busy(sb, false); } });
+};
+ADMIN_VIEWS.quests = async () => {
+  const d = await GET('/api/admin/quests?status=' + AD.qs);
+  const seg = `<div class="seg" role="group">${[['PENDING', L('На проверке', 'In review')], ['PAID', L('Начислено', 'Paid')], ['REJECTED', L('Отклонено', 'Rejected')]].map(([v, t]) => `<button data-act="aqs" data-s="${v}" aria-pressed="${AD.qs === v}">${t}${v === 'PENDING' && d.pending ? ` (${d.pending})` : ''}</button>`).join('')}</div>`;
+  const row = x => `<div class="panel qrow"><div><p class="eyebrow">${x.kind === 'story' ? 'Instagram / Stories' : 'TikTok'} · ${date(x.at)}</p>
+      <h3 class="h3" style="margin:6px 0"><a href="#/u/${esc(x.nickname)}">${esc(x.nickname)}</a> · <span class="mono small">${esc(x.handle)}</span></h3>
+      <p class="small" style="margin:0"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url.slice(0, 70))}</a></p>
+      ${x.note ? `<p class="small" style="margin:6px 0 0;opacity:.8">${esc(x.note)}</p>` : ''}
+      ${x.status !== 'PENDING' ? `<p class="small" style="margin:6px 0 0">${QSTAT()[x.status]}${x.amount ? ' · +' + fmt(x.amount) + ' PLT' : ''}${x.views ? ' · ' + fmt(x.views) + ' ' + L('просмотров', 'views') : ''}${x.reason ? ' · ' + esc(x.reason) : ''}</p>` : ''}</div>
+    ${x.status === 'PENDING' ? `<div class="qacts">${x.kind === 'tiktok' ? `<input class="field mono" id="qv-${x.id}" type="number" min="0" max="100000000" placeholder="${L('просмотров', 'views')}" style="max-width:130px">` : ''}
+      <button class="btn btn-sm btn-chrome" data-act="aqok" data-id="${x.id}" data-k="${x.kind}">${L('Начислить', 'Pay')}</button>
+      <button class="btn btn-sm btn-ghost danger" data-act="aqno" data-id="${x.id}">${L('Отклонить', 'Reject')}</button></div>` : ''}</div>`;
+  return `<p class="small" style="margin:0 0 10px">${L('Проверьте публикацию по ссылке: аккаунт открыт, есть отметка Plate Club. Для TikTok впишите просмотры — начислится 1 PLT за просмотр.', 'Open the link and check: public account, Plate Club mentioned. For TikTok type the view count — 1 PLT per view.')}</p>
+    <div class="tools-row" style="margin-bottom:12px">${seg}</div>
+    <div class="qlist">${d.quests.length ? d.quests.map(row).join('') : `<p class="small">${L('Пусто.', 'Empty.')}</p>`}</div>`;
+};
+ADMIN_ACTS.aqs = btn => { AD.qs = btn.dataset.s; render(false); };
+ADMIN_ACTS.aqok = async btn => {
+  const id = btn.dataset.id, views = btn.dataset.k === 'tiktok' ? Number(($('#qv-' + id) || {}).value || 0) : 0;
+  if (btn.dataset.k === 'tiktok' && !(views > 0)) return toast(L('Впишите количество просмотров.', 'Enter the view count.'), true);
+  busy(btn, true, '…');
+  try { const r = await POST(`/api/admin/quests/${id}`, { approve: true, views }); toast(`+${fmt(r.amount)} PLT`); render(false); } catch (e) { toast(e.message, true); busy(btn, false); }
+};
+ADMIN_ACTS.aqno = btn => {
+  openDialog(`<form class="dlg" id="qnForm"><h2 class="h3" id="dlgTitle">${L('Отклонить заявку', 'Reject the request')}</h2><div class="fld"><label for="qnr">${L('Причина — игрок её увидит', 'Reason — the player sees it')}</label><input class="field" id="qnr" maxlength="200" required autofocus></div><p class="err" id="qnerr" hidden></p><div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отклонить', 'Reject')}</button></div></form>`);
+  $('#qnForm').addEventListener('submit', async e => { e.preventDefault(); const b = e.target.querySelector('[type=submit]'); busy(b, true, '…');
+    try { await POST(`/api/admin/quests/${btn.dataset.id}`, { approve: false, reason: $('#qnr').value }); dlg.close(); toast(L('Отклонено', 'Rejected')); render(false); } catch (x) { $('#qnerr').hidden = false; $('#qnerr').textContent = x.message; busy(b, false); } });
 };
 ADMIN_ACTS.urole = btn => {
   const mk = btn.dataset.a === '1';
@@ -1487,6 +1544,21 @@ A.editlisting = btn => {
 };
 A.dlgclose = () => dlg.close();
 A.reload = () => location.reload();
+A.refcopy = async btn => { const i = $('#refLink'); try { await navigator.clipboard.writeText(i.value); } catch { i.select(); document.execCommand('copy'); } toast(L('Ссылка скопирована', 'Link copied')); busy(btn, false); };
+A.refshare = () => { const i = $('#refLink'); navigator.share({ title: 'PLATE CLUB', text: L('Собирай коллекционные автономера — лови стартовые PLT по моей ссылке.', 'Collect license plates — grab starting PLT with my link.'), url: i.value }).catch(() => {}); };
+A.qsend = btn => {
+  const kind = btn.dataset.k, story = kind === 'story';
+  openDialog(`<form class="dlg" id="qsForm" novalidate><h2 class="h3" id="dlgTitle">${story ? L('Сторис с отметкой сайта', 'Story tagging the site') : L('TikTok с упоминанием', 'TikTok mentioning us')}</h2>
+    <p class="small" style="margin:0">${story ? L('Выложите сторис со ссылкой на Plate Club, затем пришлите ссылку на неё или на профиль. Аккаунт должен быть открытым.', 'Post a story linking to Plate Club, then send the link to it or to your profile. Your account must be public.') : L('Пришлите ссылку на ролик. Начислим 1 PLT за просмотр после проверки.', 'Send the link to your video. We pay 1 PLT per view after review.')}</p>
+    <div class="fld"><label for="qsHandle">${L('Ваш аккаунт (открытый)', 'Your account (public)')}</label><input class="field" id="qsHandle" maxlength="80" required autofocus placeholder="@nickname"></div>
+    <div class="fld"><label for="qsUrl">${L('Ссылка на публикацию', 'Link to the post')}</label><input class="field" id="qsUrl" type="url" maxlength="400" required placeholder="https://…"></div>
+    <div class="fld"><label for="qsNote">${L('Комментарий (не обязательно)', 'Comment (optional)')}</label><input class="field" id="qsNote" maxlength="500"></div>
+    <p class="err" id="qsErr" hidden></p>
+    <div class="dlg-acts"><button type="button" class="btn btn-ghost" data-act="dlgclose">${L('Отмена', 'Cancel')}</button><button class="btn btn-chrome" type="submit">${L('Отправить', 'Send')}</button></div></form>`);
+  $('#qsForm').addEventListener('submit', async e => { e.preventDefault(); const b = e.target.querySelector('[type=submit]'); busy(b, true, '…');
+    try { await POST('/api/quests', { kind, url: $('#qsUrl').value, handle: $('#qsHandle').value, note: $('#qsNote').value }); dlg.close(); toast(L('Отправлено на проверку. PLT придут после подтверждения.', 'Sent for review. PLT arrive once it is confirmed.')); loadQuests(); }
+    catch (x) { $('#qsErr').hidden = false; $('#qsErr').textContent = x.message; busy(b, false); } });
+};
 A.tgjoin = async btn => { window.open(CFG.telegram.url, '_blank', 'noopener'); busy(btn, true, '…'); try { const r = await POST('/api/perks/telegram', {}); await refreshMe(); sfx('coin'); toast(L(`+${r.amount} PLT — спасибо, что с нами!`, `+${r.amount} PLT — thanks for joining!`)); render(false); } catch (x) { toast(x.message, true); busy(btn, false); } };
 let installEvt = null; addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
 A.install = async () => {
@@ -1603,7 +1675,7 @@ document.addEventListener('submit', async e => {
   if (Object.keys(local).length) return showErr('', local);
   busy(b, true, '…');
   try {
-    if (kind === 'register') { const r = await POST('/api/auth/register', { email: v('email').trim(), nickname: v('nickname').trim(), password: v('password'), terms: true }); await refreshMe(); refreshPerks(); sfx('confirm'); toast(L(`Добро пожаловать, ${ME.nickname}! +${r.bonus} PLT`, `Welcome, ${ME.nickname}! +${r.bonus} PLT`)); go(/next=admin/.test(location.hash) ? '#/admin' : '#/cases'); }
+    if (kind === 'register') { const r = await POST('/api/auth/register', { email: v('email').trim(), nickname: v('nickname').trim(), password: v('password'), terms: true, ref: store.get('ref', '') || undefined }); store.set('ref', ''); await refreshMe(); refreshPerks(); sfx('confirm'); toast(L(`Добро пожаловать, ${ME.nickname}! +${r.bonus} PLT`, `Welcome, ${ME.nickname}! +${r.bonus} PLT`)); go(/next=admin/.test(location.hash) ? '#/admin' : '#/cases'); }
     else if (kind === 'login') { await POST('/api/auth/login', { email: v('email').trim(), password: v('password') }); await refreshMe(); refreshPerks(); toast(L(`Вы вошли как ${ME.nickname}.`, `Signed in as ${ME.nickname}.`)); const nx = v('next'); go(nx && nx.startsWith('#/') && !nx.startsWith('#/login') ? nx : '#/'); }
     else if (kind === 'forgot') { await POST('/api/auth/forgot', { email: v('email').trim() }); busy(b, false); b.disabled = true; $('#formOk').innerHTML = `<div class="notice"><b>${L('Проверьте почту', 'Check your email')}</b>${L('Если аккаунт с этим email есть, ссылка уже в пути.', 'If an account with this email exists, the link is on its way.')}</div>`; return; }
     else if (kind === 'reset') { await POST('/api/auth/reset', { token: v('token'), password: v('password') }); await refreshMe(); toast(L('Пароль сохранён, вы вошли.', 'Password saved, you are signed in.')); history.replaceState(null, '', location.pathname); go('#/'); }
@@ -1636,6 +1708,9 @@ async function boot() {
   set(100, L('Готово', 'Ready'));
   if (params.get('verify')) { try { await POST('/api/auth/verify', { token: params.get('verify') }); await refreshMe(); toast(L('Email подтверждён.', 'Email verified.')); } catch (e) { toast(e.message, true); } history.replaceState(null, '', location.pathname + (location.hash || '#/profile')); }
   if (params.get('reset')) history.replaceState(null, '', location.pathname + '#/reset?token=' + encodeURIComponent(params.get('reset')));
+  // invite link: remember the code and send a new visitor straight to sign-up
+  const refCode = (params.get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (refCode) { store.set('ref', refCode); history.replaceState(null, '', location.pathname + (location.hash || '')); if (!ME && !location.hash) location.hash = '#/register'; }
   await refreshPerks();
   await render(false);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);
