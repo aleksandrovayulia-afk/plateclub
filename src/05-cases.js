@@ -40,7 +40,8 @@ VIEWS.case = async ({ arg }) => {
 function openAction(c) {
   if (!ME) return `<a class="btn btn-chrome btn-lg" href="#/login?next=${encodeURIComponent('#/case/' + c.id)}">${L('Войти, чтобы открыть', 'Sign in to open')}</a>`;
   const short = priceOf(c) - ME.balance;
-  return `<button class="btn btn-chrome btn-xl" id="openBtn" data-act="open" data-case="${c.id}" ${short > 0 ? 'disabled' : ''}>${L('Открыть за', 'Open for')} ${fmt(priceOf(c))} PLT</button>${short > 0 ? `<span class="small">${L(`Не хватает ${fmt(short)} PLT.`, `${fmt(short)} PLT short.`)} <a class="btn-text" href="#/wallet">${L('Пополнить', 'Top up')}</a> · <a class="btn-text" href="#/bonus">${L('Бонусы', 'Bonuses')}</a></span>` : ''}`;
+  const multi = [2, 3].map(k => `<button class="btn btn-glass btn-lg open-x" data-act="open" data-case="${c.id}" data-n="${k}" ${priceOf(c) * k > ME.balance ? 'disabled' : ''}><b>×${k}</b><span>${fmt(priceOf(c) * k)}</span></button>`).join('');
+  return `<div class="open-row"><button class="btn btn-chrome btn-xl" id="openBtn" data-act="open" data-case="${c.id}" ${short > 0 ? 'disabled' : ''}>${L('Открыть за', 'Open for')} ${fmt(priceOf(c))} PLT</button>${multi}</div>${short > 0 ? `<span class="small">${L(`Не хватает ${fmt(short)} PLT.`, `${fmt(short)} PLT short.`)} <a class="btn-text" href="#/wallet">${L('Пополнить', 'Top up')}</a> · <a class="btn-text" href="#/bonus">${L('Бонусы', 'Bonuses')}</a></span>` : ''}`;
 }
 function buyBox(c) {
   const p = priceOf(c);

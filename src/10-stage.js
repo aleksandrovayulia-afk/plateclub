@@ -140,9 +140,20 @@ async function burstCase(st) {
 }
 function resultHtml(c, p) {
   const word = tierName(p.tier); const canMore = ME && ME.balance >= priceOf(c);
-  return `<div class="result t-${p.tier}"><p class="eyebrow">${esc(caseName(c))} · <span class="iri-t">${p.id}</span></p>${Plate(p, { holo: true })}<p class="tier" aria-label="${esc(word)}">${[...word].map((ch, i) => `<span style="--i:${i}" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</p>
+  return `<div class="result t-${p.tier}"><p class="eyebrow">${esc(caseName(c))} · <span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></p>${Plate(p, { holo: true })}<p class="tier" aria-label="${esc(word)}">${[...word].map((ch, i) => `<span style="--i:${i}" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</p>
     <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}</div>
     <dl class="kv"><dt>${L('Номер', 'Plate')}</dt><dd>${esc(plateStr(p))}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd></dl>
     <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать', 'Collect')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}">${L('Ещё раз', 'Again')} · ${fmt(priceOf(c))}</button>` : ''}</div>
-    <div class="row" style="justify-content:center"><a class="btn btn-sm btn-ghost" href="#/upgrade?p=${p.id}">${L('Апгрейд', 'Upgrade')}</a><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button><button class="btn btn-sm btn-ghost" data-act="bank" data-id="${p.id}" data-v="${p.value}" data-s="${esc(plateStr(p))}" data-after="stage">${L('Банку за', 'Bank for')} ${fmt(p.value * CFG.bankRate)}</button></div></div>`;
+    <div class="row" style="justify-content:center"><a class="btn btn-sm btn-ghost" href="#/upgrade?p=${p.id}">${L('Апгрейд', 'Upgrade')}</a><button class="btn btn-sm btn-ghost" data-act="shareplate" data-id="${p.id}">📤 ${L('Похвастаться', 'Share')}</button><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button><button class="btn btn-sm btn-ghost" data-act="bank" data-id="${p.id}" data-v="${p.value}" data-s="${esc(plateStr(p))}" data-after="stage">${L('Банку за', 'Bank for')} ${fmt(p.value * CFG.bankRate)}</button></div></div>`;
+}
+
+// several cases at once: the strip lands on the best plate, then every plate is shown
+function resultMulti(c, plates, n) {
+  const best = plates.reduce((a, x) => (x.value > a.value ? x : a), plates[0]); const total = plates.reduce((a, x) => a + x.value, 0);
+  const canMore = ME && ME.balance >= priceOf(c) * n;
+  return `<div class="result multi t-${best.tier}"><p class="eyebrow">${esc(caseName(c))} · ×${n}</p>
+    <div class="mres">${plates.map(p => `<div class="mres-i t-${p.tier}${p === best ? ' best' : ''}">${Plate(p, { holo: true })}${Rarity(p.tier)}<span class="small"><span class="pidv">${p.id}${VB()}</span> · ${fmt(p.value)} PLT</span>
+      <div class="row" style="justify-content:center;gap:6px"><button class="btn btn-sm btn-ghost" data-act="shareplate" data-id="${p.id}">📤</button><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button></div></div>`).join('')}</div>
+    <p class="small" style="margin:0">${L('Всего на', 'Total value')} <b>${fmt(total)} PLT</b></p>
+    <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать всё', 'Collect all')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}" data-n="${n}">${L('Ещё', 'Again')} ×${n} · ${fmt(priceOf(c) * n)}</button>` : ''}</div></div>`;
 }

@@ -63,14 +63,14 @@ VIEWS.plate = async ({ arg }) => {
   return `<div class="wrap"><a class="back" href="javascript:history.back()">← ${L('Назад', 'Back')}</a>
     <section class="vf"><p class="eyebrow">${L('Запись номера', 'Plate record')} · ${Rarity(p.tier)}</p>
       <div class="vf-frame t-${p.tier}" id="vfFrame"><div class="vf-scan"></div>${Plate(p, { holo: !gone })}</div>
-      <div class="vf-id iri-t" id="vfId">${p.id}</div>
+      <div class="vf-id iri-t" id="vfId">${p.id} ${VB()}</div>
       <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}${gone ? `<span class="tag">${p.status === 'BURNED' ? L('Сожжён', 'Burned') : L('У банка', 'With the bank')}</span>` : ''}</div>
       <button class="btn btn-chrome btn-lg" data-act="verify" data-id="${p.id}">${IC.shield.replace('<svg', '<svg width="20" height="20"')}${L('Проверить подлинность', 'Verify authenticity')}</button>
       <div class="vf-res" id="vfRes" aria-live="polite"></div>
       <button class="btn btn-ghost" data-act="shareplate" data-id="${p.id}">${L('Поделиться номером', 'Share this plate')}</button></section>
     <section class="split" style="padding-bottom:80px">
       <div class="panel"><h1 class="h2">${esc(plateStr(p))}</h1>
-        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd>${p.id}</dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.copy || 1} ${L('из', 'of')} 2</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
+        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd><span class="pidv">${p.id}${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.copy || 1} ${L('из', 'of')} 2</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
           <dt>${L('Создан', 'Created')}</dt><dd>${date(p.created)}</dd><dt>${L('Происхождение', 'Origin')}</dt><dd>${esc(srv(p.origin))}</dd><dt>${L('Владелец', 'Owner')}</dt><dd>${p.owner ? `<a href="#/u/${esc(p.owner)}">${esc(p.owner)}</a>` : '—'}</dd></dl>
         ${l ? `<div class="row" style="margin-top:22px;justify-content:space-between"><div><p class="eyebrow">${L('В продаже', 'For sale')} · ${l.id}</p>${Price(l.price)}<p class="small" style="margin:4px 0 0">${L('Продавец', 'Seller')}: <a href="#/u/${esc(l.seller)}">${esc(l.seller)}</a></p></div>${mine ? `<span class="small">${L('Это ваше объявление', 'This is your listing')}</span>` : `<button class="btn btn-chrome btn-lg" data-act="detail" data-id="${p.id}">${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button>`}</div>` : ''}
         ${ME && !mine && !l && p.owner && p.status === 'OWNED' ? `<div class="row" style="margin-top:22px"><a class="btn btn-ghost" href="#/swap/new?to=${encodeURIComponent(p.owner)}&want=${p.id}">${IC.swap}${L('Предложить обмен владельцу', 'Offer the owner a swap')}</a></div>` : ''}
@@ -80,10 +80,22 @@ VIEWS.plate = async ({ arg }) => {
 };
 VIEWS.verify = VIEWS.plate;
 
+const UF = { tier: '' };
 VIEWS.u = async ({ arg }) => {
-  const [{ profile: u }, mk] = await Promise.all([GET('/api/users/' + encodeURIComponent(arg)), GET('/api/market?seller=' + encodeURIComponent(arg))]);
-  return `<div class="wrap"><section class="page-head"><div class="row" style="gap:16px">${Ava(u.nickname).replace('class="ava"', 'class="ava" style="width:64px;height:64px;font-size:28px;border-radius:20px"')}<div><p class="eyebrow">${L('Коллекционер · с ', 'Collector · since ')}${day(u.joined)}</p><h1 class="h1" style="margin-top:8px">${esc(u.nickname)}</h1>${Medals(u.medals)}${u.sets && u.sets.length ? `<div class="pbadges">${u.sets.map(id => { const st = CFG.sets.find(x => x.id === id); return st ? `<span class="pbadge" style="--sc:${st.color}" title="${esc(L(st.ru, st.en))}">${esc(st.badge)}</span>` : ''; }).join('')}</div>` : ''}</div></div>${ME && ME.nickname !== u.nickname ? `<a class="btn btn-chrome" href="#/swap/new?to=${encodeURIComponent(u.nickname)}">${IC.swap}${L('Предложить обмен', 'Offer a swap')}</a>` : ''}</section>
+  const [{ profile: u }, mk] = await Promise.all([GET('/api/users/' + encodeURIComponent(arg)), GET('/api/market?seller=' + encodeURIComponent(arg)).catch(() => ({ listings: [] }))]);
+  const sets = u.sets && u.sets.length ? `<div class="pbadges">${u.sets.map(id => { const st = CFG.sets.find(x => x.id === id); return st ? `<span class="pbadge" style="--sc:${st.color}" title="${esc(L(st.ru, st.en))}">${esc(st.badge)}</span>` : ''; }).join('')}</div>` : '';
+  const listed = new Set(mk.listings.map(l => l.plate.id));
+  const own = u.top.filter(p => !listed.has(p.id));
+  const tiers = CFG.tiers.map(t => t.id).filter(t => own.some(p => p.tier === t));
+  const shown = own.filter(p => !UF.tier || p.tier === UF.tier);
+  const isMe = ME && ME.nickname === u.nickname;
+  return `<div class="wrap"><section class="page-head"><div class="row" style="gap:18px;align-items:center">${Ava(u.nickname, { av: u.av, lv: u.level }).replace('class="ava', 'style="width:84px;height:84px;font-size:34px;border-radius:24px" class="ava')}
+      <div style="min-width:0"><p class="eyebrow">${u.online ? `<span class="on-dot"></span>${L('В сети', 'Online')} · ` : ''}${L('Коллекционер · с ', 'Collector · since ')}${day(u.joined)}</p><h1 class="h1" style="margin-top:8px">${Nick(u.nickname, u.level)}</h1>
+      <p class="small" style="margin-top:6px"><span class="lvl-tag">LV ${u.level}</span> ${Medals(u.medals)}</p>${sets}</div>
+      ${ME && !isMe ? `<div class="row" style="margin-left:auto"><a class="btn btn-chrome" href="#/swap/new?to=${encodeURIComponent(u.nickname)}">${IC.swap}${L('Предложить обмен', 'Offer a swap')}</a></div>` : ''}${isMe ? `<a class="btn btn-ghost" style="margin-left:auto" href="#/profile">${L('Настройки профиля', 'Profile settings')}</a>` : ''}</div></section>
     <div class="stats s4"><div class="stat"><span>${L('Номеров', 'Plates')}</span><b>${u.plates}</b></div><div class="stat"><span>${L('Оценка', 'Value')}</span><b>${fmt(u.value)}</b></div><div class="stat"><span>${L('Регионов', 'Regions')}</span><b>${u.regions}</b></div><div class="stat"><span>${L('Продано', 'Sold')}</span><b>${u.sold}</b></div></div>
-    <section class="sec">${SH(L('В продаже', 'For sale'))}${mk.listings.length ? `<div class="pgrid">${mk.listings.map(l => PlateCard(l.plate, { listing: l, actions: l.mine ? `<span class="small">${L('Ваше', 'Yours')}</span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>` : Empty(L('Ничего не выставлено', 'Nothing listed'), L(`У ${esc(u.nickname)} сейчас нет номеров на рынке.`, `${esc(u.nickname)} has no plates on the market right now.`))}</section>
-    <section class="sec" style="padding-bottom:80px">${SH(L('Лучшее в коллекции', 'Collection highlights'))}${u.top.length ? `<div class="pgrid">${u.top.map(p => PlateCard(p)).join('')}</div>` : Empty(L('Пока пусто', 'Empty for now'), L('В этой коллекции нет номеров.', 'This collection has no plates.'))}</section></div>`;
+    ${mk.listings.length ? `<section class="sec">${SH(L('Продаёт сейчас', 'Selling now'), String(mk.listings.length))}<div class="pgrid">${mk.listings.map(l => PlateCard(l.plate, { listing: l, actions: l.mine ? `<span class="small">${L('Ваше', 'Yours')}</span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div></section>` : ''}
+    <section class="sec" style="padding-bottom:80px">${SH(L('Коллекция', 'Collection'), `${own.length}${u.plates > u.top.length ? ' / ' + u.plates : ''}`)}
+      ${tiers.length > 1 ? `<div class="row" style="margin-bottom:14px;flex-wrap:wrap">${['', ...tiers].map(t => `<button class="chip${t ? ' t-' + t : ''}" data-act="ufilter" data-t="${t}" aria-pressed="${UF.tier === t}">${t ? `<i></i>${tierName(t)} · ${own.filter(p => p.tier === t).length}` : L('Все', 'All')}</button>`).join('')}</div>` : ''}
+      ${shown.length ? `<div class="pgrid">${shown.map(p => PlateCard(p, { actions: ME && !isMe ? `<a class="btn btn-sm btn-ghost" href="#/swap/new?to=${encodeURIComponent(u.nickname)}&want=${p.id}">${L('Обмен', 'Swap')}</a>` : '' })).join('')}</div>` : Empty(L('Пока пусто', 'Empty for now'), L('В этой коллекции нет номеров.', 'This collection has no plates.'))}</section></div>`;
 };

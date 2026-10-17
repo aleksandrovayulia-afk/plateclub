@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES, DAILY_TASKS, dailyTasksFor, WHEEL, HILO,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -83,10 +83,10 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
 
   async function sessionUser(req) {
     const t = parseCookies(req.headers.get('cookie')).pc_session; if (!t) return null;
-    const [u] = await q(`SELECT u.id,u.email,u.nickname,u.balance,u.role,u.email_verified_at IS NOT NULL AS verified,(extract(epoch from u.created_at)*1000)::bigint AS created_ms,(extract(epoch from u.seen_at)*1000)::bigint AS seen_ms
+    const [u] = await q(`SELECT u.id,u.email,u.nickname,u.balance,u.role,CASE WHEN u.avatar IS NULL THEN NULL ELSE left(md5(u.avatar),8) END AS av,u.seen_tips,u.email_verified_at IS NOT NULL AS verified,(extract(epoch from u.created_at)*1000)::bigint AS created_ms,(extract(epoch from u.seen_at)*1000)::bigint AS seen_ms
       FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.blocked_at IS NULL`, [sha256(t)]);
     if (u && !(u.seen_ms && now() - n(u.seen_ms) < 60000)) await q(`UPDATE users SET seen_at=now() WHERE id=$1`, [u.id]).catch(() => {});
-    return u ? { id: n(u.id), email: u.email, nickname: u.nickname, role: u.role, balance: n(u.balance), verified: u.verified === true || u.verified === 't', created: n(u.created_ms) } : null;
+    return u ? { id: n(u.id), email: u.email, nickname: u.nickname, role: u.role, av: u.av || null, tips: String(u.seen_tips || '').split(',').filter(Boolean), balance: n(u.balance), verified: u.verified === true || u.verified === 't', created: n(u.created_ms) } : null;
   }
   async function newSession(userId) {
     const token = randomBytes(32).toString('base64url');
@@ -364,34 +364,41 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   });
 
   // ---- cases ----
-  R('POST', '/api/cases/:id/open', async ({ user, params, req }) => {
+  R('POST', '/api/cases/:id/open', async ({ user, params, req, body }) => {
     needSecret();
     const c = caseById(params.id); if (!c) throw new HttpError(404, 'Такого кейса нет.');
     if (ST.cases[c.id] && ST.cases[c.id].hidden) throw new HttpError(409, 'Этот кейс временно недоступен.');
+    if (c.until && now() > c.until) throw new HttpError(409, 'Сезон закончился — этот кейс больше не продаётся.');
+    const count = Math.max(1, Math.min(3, Math.floor(Number(body && body.count) || 1)));
     return withIdem(user, req, () => tx(async Q => {
       const [u] = await Q('SELECT balance FROM users WHERE id=$1 FOR UPDATE', [user.id]);
       const price = casePrice(c, ST, now());
-      if (n(u.balance) < price) throw new HttpError(402, `Не хватает PLT: кейс ${c.id} стоит ${price} PLT, на балансе ${n(u.balance)} PLT.`);
-      const tier = drawTier(c.odds);
-      const led = await ledger(Q, user.id, 'case_open', -price, `Открыт кейс ${c.id} ${c.ru}${price < c.price ? ' (скидка)' : ''}`, 'case:' + c.id);
-      let plate;
-      for (let i = 0; i < 40 && !plate; i++) {
-        const g = genPlate(tier, poolRegions(c), c.focus);
-        const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: led.id };
-        p.seal = seal(p);
-        // At most two copies of a combination: copy 1, then copy 2. The unique (combo, copy) index settles races.
-        const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy,paid)
-          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1, $14 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
-          ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
-          [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, user.id, `Кейс ${c.id} · ${c.ru}`, led.id, p.seal, p.country, price]);
-        if (rows.length) plate = { ...p, copy: n(rows[0].copy), created: n(rows[0].created_ms), paid: price, traits: plateTraits(p) };
+      if (n(u.balance) < price * count) throw new HttpError(402, count > 1 ? `Не хватает PLT: ${count} кейса стоят ${price * count} PLT, на балансе ${n(u.balance)} PLT.` : `Не хватает PLT: кейс ${c.id} стоит ${price} PLT, на балансе ${n(u.balance)} PLT.`);
+      const plates = []; let led;
+      for (let k = 0; k < count; k++) {
+        const tier = drawTier(c.odds);
+        led = await ledger(Q, user.id, 'case_open', -price, `Открыт кейс ${c.id} ${c.ru}${price < c.price ? ' (скидка)' : ''}${count > 1 ? ` (×${count})` : ''}`, 'case:' + c.id);
+        let plate;
+        for (let i = 0; i < 40 && !plate; i++) {
+          const g = genPlate(tier, poolRegions(c), c.focus);
+          const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: led.id };
+          p.seal = seal(p);
+          // At most two copies of a combination: copy 1, then copy 2. The unique (combo, copy) index settles races.
+          const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy,paid)
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1, $14 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
+            [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, user.id, `Кейс ${c.id} · ${c.ru}`, led.id, p.seal, p.country, price]);
+          if (rows.length) plate = { ...p, copy: n(rows[0].copy), created: n(rows[0].created_ms), paid: price, traits: plateTraits(p) };
+        }
+        if (!plate) throw new HttpError(503, 'Не удалось выпустить уникальный номер. Деньги не списаны, попробуйте ещё раз.');
+        await Q('UPDATE ledger SET ref=$1 WHERE id=$2', [plate.id, led.id]);
+        await addEvent(Q, { plate_id: plate.id, kind: 'MINTED', to_user: user.id, tx_id: led.id });
+        const { seal: _s, mintTx: _m, combo: _c, ...pub } = plate;
+        plates.push({ ...pub, status: 'OWNED', origin: `Кейс ${c.id} · ${c.ru}`, lastTx: led.id });
       }
-      if (!plate) throw new HttpError(503, 'Не удалось выпустить уникальный номер. Деньги не списаны, попробуйте ещё раз.');
-      await Q('UPDATE ledger SET ref=$1 WHERE id=$2', [plate.id, led.id]);
-      await addEvent(Q, { plate_id: plate.id, kind: 'MINTED', to_user: user.id, tx_id: led.id });
       await payReferral(Q, user.id);
-      const { seal: _s, mintTx: _m, combo: _c, ...pub } = plate;
-      return { plate: { ...pub, status: 'OWNED', origin: `Кейс ${c.id} · ${c.ru}`, lastTx: led.id }, balance: led.balance, txId: led.id, price };
+      const best = plates.reduce((a, x) => (x.value > a.value ? x : a), plates[0]);
+      return { plate: best, plates, balance: led.balance, txId: led.id, price, count };
     }));
   }, { auth: true });
 
@@ -680,19 +687,46 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   }, { auth: true });
 
   // ---- people ----
+  // ---- profile photo: stored as a small data: URL, served as an image ----
+  R('GET', '/api/avatar/:nick', async ({ params }) => {
+    const [u] = await q('SELECT avatar FROM users WHERE nick_norm=$1 AND blocked_at IS NULL', [String(params.nick).toLowerCase()]);
+    const m = u && u.avatar && /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(u.avatar);
+    if (!m) return new Response('', { status: 404, headers: { 'cache-control': 'no-store' } });
+    return new Response(Buffer.from(m[2], 'base64'), { status: 200, headers: { 'content-type': m[1], 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' } });
+  });
+  R('POST', '/api/me/avatar', async ({ user, body }) => {
+    await throttle('ava:' + user.id, 10, 60);
+    if (body.image == null || body.image === '') { await q('UPDATE users SET avatar=NULL WHERE id=$1', [user.id]); return { ok: true, av: null }; }
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image));
+    if (!m) throw bad('Нужна картинка JPG, PNG или WebP.');
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > 120000) throw bad('Фото слишком большое — до 120 КБ.');
+    const sig = buf.subarray(0, 12).toString('hex');
+    const okSig = (m[1] === 'image/jpeg' && sig.startsWith('ffd8ff')) || (m[1] === 'image/png' && sig.startsWith('89504e47')) || (m[1] === 'image/webp' && sig.startsWith('52494646') && sig.slice(16, 24) === '57454250');
+    if (!okSig) throw bad('Файл не похож на картинку.');
+    const [r] = await q('UPDATE users SET avatar=$1 WHERE id=$2 RETURNING left(md5(avatar),8) AS av', [String(body.image), user.id]);
+    return { ok: true, av: r.av };
+  }, { auth: true });
+  R('POST', '/api/admin/users/:id/avatar-remove', async ({ user, params }) => {
+    await q('UPDATE users SET avatar=NULL WHERE id=$1', [Number(params.id)]);
+    await adminLog(q, user.id, 'avatar_remove', String(params.id));
+    return { ok: true };
+  }, { admin: true });
   R('GET', '/api/users/:nick', async ({ params }) => {
-    const [u] = await q(`SELECT id,nickname,(extract(epoch from created_at)*1000)::bigint AS ms FROM users WHERE nick_norm=$1`, [String(params.nick).toLowerCase()]);
-    if (!u) throw new HttpError(404, 'Коллекционер с таким ником не найден.');
-    const [s] = await q(`SELECT count(*)::int AS plates, coalesce(sum(value),0)::bigint AS value, count(DISTINCT region)::int AS regions FROM plates WHERE owner_id=$1 AND status<>'BANKED'`, [u.id]);
+    const [u] = await q(`SELECT id,nickname,role,CASE WHEN avatar IS NULL THEN NULL ELSE left(md5(avatar),8) END AS av,(extract(epoch from created_at)*1000)::bigint AS ms,
+        (SELECT coalesce(-sum(amount),0) FROM ledger WHERE user_id=users.id AND kind='case_open')::bigint AS xp,
+        (extract(epoch from seen_at)*1000)::bigint AS seen FROM users WHERE nick_norm=$1 AND blocked_at IS NULL`, [String(params.nick).toLowerCase()]);
+    if (!u || u.role === 'bot') throw new HttpError(404, 'Коллекционер с таким ником не найден.');
+    const [s] = await q(`SELECT count(*)::int AS plates, coalesce(sum(value),0)::bigint AS value, count(DISTINCT region)::int AS regions FROM plates WHERE owner_id=$1 AND status IN ('OWNED','LISTED')`, [u.id]);
     const [t] = await q(`SELECT count(*)::int AS sold FROM listings WHERE seller_id=$1 AND status='SOLD'`, [u.id]);
-    const top = await q(`SELECT ${PLATE_COLS} FROM plates p WHERE owner_id=$1 AND status<>'BANKED' ORDER BY value DESC LIMIT 8`, [u.id]);
+    const top = await q(`SELECT ${PLATE_COLS} FROM plates p WHERE owner_id=$1 AND status IN ('OWNED','LISTED') ORDER BY value DESC LIMIT 120`, [u.id]);
     const sets = (await q(`SELECT ref FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE 'set:%'`, [u.id])).map(r => r.ref.slice(4));
     const medals = (await medalsMap())[n(u.id)] || [];
-    return { profile: { nickname: u.nickname, joined: n(u.ms), plates: n(s.plates), value: n(s.value), regions: n(s.regions), sold: n(t.sold), top: top.map(plateRow), sets, medals } };
+    return { profile: { nickname: u.nickname, av: u.av || null, level: levelOf(n(u.xp)).level, online: !!u.seen && now() - n(u.seen) < 5 * 60000, joined: n(u.ms), plates: n(s.plates), value: n(s.value), regions: n(s.regions), sold: n(t.sold), top: top.map(plateRow), sets, medals } };
   });
   // ---- rankings: several boards; medals (top-10, top-3) come from the main board (account value) ----
   async function rankStats() {
-    return q(`SELECT u.id,u.nickname,
+    return q(`SELECT u.id,u.nickname,CASE WHEN u.avatar IS NULL THEN NULL ELSE left(md5(u.avatar),8) END AS av,
         CASE WHEN u.role='admin' THEN GREATEST(0, u.balance - coalesce((SELECT sum(amount) FROM ledger WHERE user_id=u.id AND kind='admin_grant'),0)) ELSE u.balance END::bigint AS balance,
         coalesce((SELECT sum(value) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED')),0)::bigint AS pvalue,
         (SELECT count(*) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED'))::int AS plates,
@@ -726,9 +760,10 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     medalCache = { at: now(), map }; return map;
   }
   R('GET', '/api/rankings', async ({ url }) => {
-    const by = ['total', 'collection', 'level', 'battles', 'sets', 'best'].includes(url.searchParams.get('by')) ? url.searchParams.get('by') : 'total';
-    const rows = (await rankStats()).map(r => ({ id: n(r.id), nickname: r.nickname, balance: n(r.balance), value: n(r.pvalue), plates: n(r.plates), total: n(r.balance) + n(r.pvalue), xp: n(r.xp), level: levelOf(n(r.xp)).level, wins: n(r.wins), sets: n(r.sets), bestValue: n(r.bestv), best: r.best }));
-    const key = { total: 'total', collection: 'value', level: 'xp', battles: 'wins', sets: 'sets', best: 'bestValue' }[by];
+    const alias = { collection: 'plates', best: 'plates', level: 'total', battles: 'total', sets: 'total' };
+    const raw = url.searchParams.get('by'); const by = ['total', 'coins', 'plates'].includes(raw) ? raw : (alias[raw] || 'total');
+    const rows = (await rankStats()).map(r => ({ id: n(r.id), nickname: r.nickname, av: r.av || null, balance: n(r.balance), value: n(r.pvalue), plates: n(r.plates), total: n(r.balance) + n(r.pvalue), xp: n(r.xp), level: levelOf(n(r.xp)).level, wins: n(r.wins), sets: n(r.sets), bestValue: n(r.bestv), best: r.best }));
+    const key = { total: 'total', coins: 'balance', plates: 'value' }[by];
     const medals = await medalsMap();
     const top = rows.filter(r => r[key] > 0 || by === 'total').sort((a, b) => b[key] - a[key] || b.total - a.total).slice(0, 50);
     const bestIds = top.map(r => r.best).filter(Boolean);
@@ -845,6 +880,121 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const led = await ledger(Q, user.id, 'daily_bonus', amount, `Ежедневный бонус · день ${streak}`, dayKey(now()));
     return { ok: true, amount, streak, balance: led.balance };
   }), { auth: true });
+  // ---- daily tasks (two a day) ----
+  async function taskState(Q, uid) {
+    const day = Math.floor(now() / 86400000); const since = new Date(day * 86400000).toISOString();
+    const [c] = await Q(`SELECT
+        (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='case_open' AND created_at >= $2)::int AS open,
+        (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='market_sale' AND created_at >= $2)::int AS sell,
+        (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='market_buy' AND created_at >= $2)::int AS buy,
+        (SELECT count(*) FROM ledger WHERE user_id=$1 AND kind='battle_entry' AND created_at >= $2)::int AS battle,
+        (SELECT count(*) FROM upgrades WHERE user_id=$1 AND created_at >= $2)::int AS upgrade,
+        (SELECT count(*) FROM listings WHERE seller_id=$1 AND created_at >= $2)::int AS list`, [uid, since]);
+    const got = new Set((await Q(`SELECT ref FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE $2`, [uid, 'task:D' + day + ':%'])).map(r => r.ref));
+    return { day, nextAt: (day + 1) * 86400000, tasks: dailyTasksFor(uid, day).map(t => ({ id: t.id, ru: t.ru, en: t.en, need: t.need, reward: t.reward, have: Math.min(t.need, n(c[t.src])), done: n(c[t.src]) >= t.need, claimed: got.has('task:D' + day + ':' + t.id) })) };
+  }
+  R('GET', '/api/tasks', async ({ user }) => taskState(q, user.id), { auth: true });
+  R('POST', '/api/tasks/:id/claim', async ({ user, params }) => tx(async Q => {
+    await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
+    const st = await taskState(Q, user.id); const t = st.tasks.find(x => x.id === params.id);
+    if (!t) throw new HttpError(404, 'Такого задания сегодня нет.');
+    if (t.claimed) throw new HttpError(409, 'Награда за задание уже получена.');
+    if (!t.done) throw new HttpError(409, 'Задание ещё не выполнено.');
+    const led = await ledger(Q, user.id, 'reward', t.reward, `Задание дня: ${t.ru}`, 'task:D' + st.day + ':' + t.id);
+    return { ok: true, amount: t.reward, balance: led.balance };
+  }), { auth: true });
+
+  // ---- wheel of fortune: one free spin per day ----
+  async function wheelState(Q, uid) {
+    const day = Math.floor(now() / 86400000);
+    const [w] = await Q(`SELECT label FROM ledger WHERE user_id=$1 AND ref=$2`, [uid, 'wheel:D' + day]);
+    return { day, spun: !!w, nextAt: (day + 1) * 86400000 };
+  }
+  R('GET', '/api/wheel', async ({ user }) => wheelState(q, user.id), { auth: true });
+  R('POST', '/api/wheel/spin', async ({ user }) => {
+    needSecret();
+    return tx(async Q => {
+      await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
+      const st = await wheelState(Q, user.id);
+      if (st.spun) throw new HttpError(409, 'Колесо уже крутили сегодня. Следующий спин — завтра в 03:00 по Москве.');
+      const total = WHEEL.reduce((a, x) => a + x.w, 0); let r = randomInt(0, Math.round(total * 1000)) / 1000, idx = 0;
+      for (; idx < WHEEL.length - 1; idx++) { r -= WHEEL[idx].w; if (r < 0) break; }
+      const prize = WHEEL[idx]; let plate = null, led;
+      if (prize.kind === 'plt') led = await ledger(Q, user.id, 'reward', prize.amount, `Колесо удачи: +${prize.amount} PLT`, 'wheel:D' + st.day);
+      else {
+        led = await ledger(Q, user.id, 'reward', 0, `Колесо удачи: номер`, 'wheel:D' + st.day);
+        const pool = poolRegions(caseById('01'));
+        for (let i = 0; i < 40 && !plate; i++) {
+          const g = genPlate(prize.tier, pool); const np = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: led.id }; np.seal = seal(np);
+          const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy)
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
+            [np.id, np.letters, np.digits, np.region, np.combo, np.tier, np.pattern, np.value, user.id, 'Колесо удачи', led.id, np.seal, np.country]);
+          if (rows.length) plate = { ...np, copy: n(rows[0].copy), created: n(rows[0].created_ms) };
+        }
+        if (!plate) throw new HttpError(503, 'Не удалось выпустить номер. Попробуйте ещё раз.');
+        await Q('UPDATE ledger SET label=$1 WHERE id=$2', [`Колесо удачи: номер ${plateStr(plate)}`, led.id]);
+        await addEvent(Q, { plate_id: plate.id, kind: 'MINTED', to_user: user.id, tx_id: led.id });
+      }
+      const out = plate ? (({ seal: _s, mintTx: _m, combo: _c, ...pub }) => ({ ...pub, status: 'OWNED', origin: 'Колесо удачи', traits: plateTraits(pub) }))(plate) : null;
+      return { ok: true, index: idx, prize: { id: prize.id, kind: prize.kind, amount: prize.amount || 0, tier: prize.tier || null }, plate: out, balance: led.balance, nextAt: st.nextAt };
+    });
+  }, { auth: true });
+
+  // ---- game: higher or lower ----
+  const hiloPlate = () => {
+    const tot = HILO.tierOdds.reduce((a, b) => a + b, 0); let r = randomInt(0, tot * 100) / 100, i = 0;
+    for (; i < HILO.tierOdds.length - 1; i++) { r -= HILO.tierOdds[i]; if (r < 0) break; }
+    const pool = poolRegions(caseById(randomInt(0, 3) === 0 ? '02' : '01'));
+    const g = genPlate(TIERS[i].id, pool); return { ...g, value: plateValue(g), traits: plateTraits(g) };
+  };
+  async function hiloToday(Q, uid) { const [c] = await Q(`SELECT count(*)::int AS c FROM hilo_runs WHERE user_id=$1 AND created_at >= $2`, [uid, new Date(Math.floor(now() / 86400000) * 86400000).toISOString()]); return n(c.c); }
+  const hiloOut = (r, extra = {}) => ({ id: r.id, step: n(r.step), bank: n(r.bank), status: r.status, cur: typeof r.cur === 'string' ? JSON.parse(r.cur) : r.cur, next: HILO.steps[n(r.step)] || 0, steps: HILO.steps, ...extra });
+  R('GET', '/api/hilo', async ({ user }) => {
+    const [open] = await q(`SELECT * FROM hilo_runs WHERE user_id=$1 AND status='OPEN' ORDER BY created_at DESC LIMIT 1`, [user.id]);
+    const played = await hiloToday(q, user.id);
+    const best = await q(`SELECT u.nickname, h.bank, h.step FROM hilo_runs h JOIN users u ON u.id=h.user_id WHERE h.status IN ('CASHED','DONE') AND h.created_at > now() - interval '7 days' ORDER BY h.bank DESC, h.step DESC LIMIT 5`);
+    return { run: open ? hiloOut(open) : null, left: Math.max(0, HILO.runsPerDay - played), perDay: HILO.runsPerDay, steps: HILO.steps, best: best.map(b => ({ nickname: b.nickname, bank: n(b.bank), step: n(b.step) })) };
+  }, { auth: true });
+  R('POST', '/api/hilo/start', async ({ user }) => tx(async Q => {
+    await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
+    const [open] = await Q(`SELECT * FROM hilo_runs WHERE user_id=$1 AND status='OPEN' LIMIT 1`, [user.id]);
+    if (open) return hiloOut(open);
+    if (await hiloToday(Q, user.id) >= HILO.runsPerDay) throw new HttpError(409, `Сегодня все ${HILO.runsPerDay} игр сыграны. Новые — завтра в 03:00 по Москве.`);
+    const [r] = await Q(`INSERT INTO hilo_runs(id,user_id,cur) VALUES($1,$2,$3) RETURNING *`, [newId('HL'), user.id, JSON.stringify(hiloPlate())]);
+    return hiloOut(r);
+  }), { auth: true });
+  R('POST', '/api/hilo/:id/guess', async ({ user, params, body }) => tx(async Q => {
+    const dir = body.dir === 'up' ? 'up' : body.dir === 'down' ? 'down' : null; if (!dir) throw bad('Выберите: дороже или дешевле.');
+    const [r] = await Q(`SELECT * FROM hilo_runs WHERE id=$1 AND user_id=$2 FOR UPDATE`, [String(params.id), user.id]);
+    if (!r) throw new HttpError(404, 'Игра не найдена.'); if (r.status !== 'OPEN') throw new HttpError(409, 'Эта игра уже закончилась.');
+    const cur = typeof r.cur === 'string' ? JSON.parse(r.cur) : r.cur;
+    let nx = hiloPlate(); for (let i = 0; i < 6 && nx.value === cur.value; i++) nx = hiloPlate();
+    const win = nx.value === cur.value || (dir === 'up' ? nx.value > cur.value : nx.value < cur.value);
+    const step = n(r.step) + (win ? 1 : 0); let bank = n(r.bank) + (win ? HILO.steps[n(r.step)] : 0);
+    let status = win ? (step >= HILO.steps.length ? 'DONE' : 'OPEN') : 'LOST'; let balance = null;
+    if (!win) bank = 0;
+    if (status === 'DONE') { const led = await ledger(Q, user.id, 'reward', bank, `«Дороже или дешевле»: ${step} из ${step}`, 'hilo:' + r.id); balance = led.balance; }
+    const hist = [...(typeof r.history === 'string' ? JSON.parse(r.history) : r.history), { v: cur.value, dir, nv: nx.value, win }];
+    const [u] = await Q(`UPDATE hilo_runs SET step=$1, bank=$2, status=$3, cur=$4, history=$5, updated_at=now() WHERE id=$6 RETURNING *`, [step, bank, status, JSON.stringify(nx), JSON.stringify(hist), r.id]);
+    return hiloOut(u, { win, prev: cur, lost: !win ? n(r.bank) : 0, balance });
+  }), { auth: true });
+  R('POST', '/api/hilo/:id/cash', async ({ user, params }) => tx(async Q => {
+    const [r] = await Q(`SELECT * FROM hilo_runs WHERE id=$1 AND user_id=$2 FOR UPDATE`, [String(params.id), user.id]);
+    if (!r) throw new HttpError(404, 'Игра не найдена.'); if (r.status !== 'OPEN') throw new HttpError(409, 'Эта игра уже закончилась.');
+    if (n(r.bank) <= 0) throw new HttpError(409, 'Пока нечего забирать — угадайте хотя бы один номер.');
+    const led = await ledger(Q, user.id, 'reward', n(r.bank), `«Дороже или дешевле»: ${n(r.step)} угадано`, 'hilo:' + r.id);
+    const [u] = await Q(`UPDATE hilo_runs SET status='CASHED', updated_at=now() WHERE id=$1 RETURNING *`, [r.id]);
+    return hiloOut(u, { balance: led.balance, amount: n(r.bank) });
+  }), { auth: true });
+
+  // ---- which game tutorials a player has already seen ----
+  R('POST', '/api/me/tips', async ({ user, body }) => {
+    const id = String(body.id || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 24); if (!id) throw bad('Нет подсказки.');
+    await q(`UPDATE users SET seen_tips = CASE WHEN (',' || seen_tips || ',') LIKE $2 THEN seen_tips WHEN seen_tips = '' THEN $1 ELSE seen_tips || ',' || $1 END WHERE id=$3`, [id, '%,' + id + ',%', user.id]);
+    return { ok: true };
+  }, { auth: true });
+
   // one-time reward for joining the players' Telegram chat (can't be verified — once per account)
   R('POST', '/api/perks/telegram', async ({ user }) => tx(async Q => {
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
@@ -1612,6 +1762,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       if (route.admin && user.role !== 'admin') throw new HttpError(403, 'Это может сделать только администратор Plate Club.');
       const ip = ctx.ip || req.headers.get('x-nf-client-connection-ip') || 'local';
       const out = await route.handler({ req, url, params: route.re.exec(url.pathname).groups || {}, body, raw, user, ip });
+      if (out instanceof Response) return out;
       if (out && out.body !== undefined && (out.headers || out.status)) return json(out.body, out.status || 200, out.headers || {});
       return json(out);
     } catch (e) {

@@ -50,7 +50,7 @@ async function topUp(c, pkg = 'plt3000') {
 
 console.log('\n1. Config');
 const cfg = (await client().call('GET', '/api/config')).data;
-ok(cfg.cases.length === 48, '48 cases'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward >= 10 && a.reward <= 250) && Math.max(...cfg.achievements.map(a => a.reward)) === 250 && new Set(cfg.cases.map(c => c.color)).size === 48, 'every case has its own colour and a rarity');
+ok(cfg.cases.length === 49 && cfg.cases.some(c => c.until), '48 cases + the seasonal one'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward >= 10 && a.reward <= 250) && Math.max(...cfg.achievements.map(a => a.reward)) === 250 && new Set(cfg.cases.map(c => c.color)).size === 49, 'every case has its own colour and a rarity');
 { const el = cfg.cases.filter(c => c.cat === 'elite'), rest = cfg.cases.filter(c => c.cat !== 'elite'); const maxRest = Math.max(...rest.map(c => c.price)); ok(el.length === 4 && el.every(c => c.odds[0] + c.odds[1] + c.odds[2] === 0) && el.filter(c => c.price >= 2 * maxRest).length >= 3, 'elite cases: only Elite/Grail, 2–3× the price of the rest', el.map(c => c.price)); } ok(cfg.payments.packages.length === 7 && cfg.payments.packages[0].plt === 100 && cfg.payments.packages.at(-1).plt === 20000, 'top-ups from 100 to 20 000 PLT');
 ok(cfg.cases[0].name === 'Starter' && cfg.cases[0].price === 100 && cfg.cases.every(c => c.price >= 100), 'STARTER costs 100 PLT');
 ok(cfg.cases.slice(1).every(c => c.price > 100), 'every other case costs more than STARTER', cfg.cases.map(c => c.price));
@@ -447,7 +447,7 @@ console.log('\n17. Market ecosystem: market maker, bargains, dealer, profit trac
   const dl = (await MB.call('GET', '/api/market?deals=1')).data.listings; ok(dl.every(l => l.price < l.plate.value), 'deals filter: only lots below the estimate');
   const st = (await MB.call('GET', '/api/market/stats')).data; ok(st.active >= 60 && typeof st.ratio === 'number', 'market stats', st);
   const pick = d[0]; let x = await MB.call('POST', '/api/market/listings/' + pick.id + '/buy', { expectedPrice: pick.price }, { 'idempotency-key': 'mb-key-0001' });
-  ok(x.status === 200, 'player buys a market-maker lot');
+  ok(x.status === 200, 'player buys a market-maker lot', x.data);
   let col = (await MB.call('GET', '/api/collection')).data.plates; const got = col.find(p => p.id === pick.plate.id);
   ok(got && got.paid === pick.price && Array.isArray(got.traits), 'collection remembers what was paid (for profit tracking)', got);
   await q1(`UPDATE listings SET updated_at = now() - interval '2 hours' WHERE seller_id=(SELECT id FROM users WHERE role='bot') AND status='ACTIVE'`);
@@ -473,7 +473,8 @@ console.log('\n17. Market ecosystem: market maker, bargains, dealer, profit trac
   const rk2 = (await client().call('GET', '/api/rankings')).data.rankings; ok(!rk2.some(r => r.nickname === 'PlateClubMarket'), 'market maker is not ranked');
   x = await client().call('POST', '/api/auth/login', { email: 'market@plateclub.invalid', password: 'locked' }); ok(x.status === 401, 'nobody can sign in as the market maker');
   const { CASES: C3, plateValue: pv3, plateTraits } = await import('../server/game.mjs');
-  ok(pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АМР' }) === 2 * pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АВЕ' }), 'VIP series АМР doubles the value');
+  ok(pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АМР', vv: 3 }) === 2 * pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АВЕ', vv: 3 }), 'v3: VIP series АМР doubles the value');
+  ok(pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АМР' }) >= 3.4 * pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АВЕ' }), 'v4: beautiful plates are worth much more (VIP ×3.5)');
   ok(plateTraits({ tier: 'common', region: '66', country: 'RU', digits: '057', letters: 'ААВ' }).join() === 'low,pairL', 'traits: low number + paired letters');
   const el = C3.filter(c => c.cat === 'elite'); ok(el.every(c => c.odds[4] >= 41), 'elite cases: +3 p.p. of Grail');
 }
@@ -564,7 +565,8 @@ console.log('\n19. Games: case battles, collections, swaps, auction of the day')
   // rankings boards and medals
   x = await ADG.call('POST', '/api/admin/demo-players', {}); ok(x.status === 200 && x.data.made === 15, 'admin adds 15 demo players', x.data);
   x = await ADG.call('POST', '/api/admin/demo-players', {}); ok(x.data.made === 0, 'demo players are added once');
-  for (const by of ['total', 'collection', 'level', 'battles', 'sets', 'best']) { const r = (await client().call('GET', '/api/rankings?by=' + by)).data; ok(r.by === by && r.rankings.length > 0, 'ranking board: ' + by); }
+  for (const by of ['total', 'coins', 'plates']) { const r = (await client().call('GET', '/api/rankings?by=' + by)).data; ok(r.by === by && r.rankings.length > 0, 'ranking board: ' + by); }
+  ok((await client().call('GET', '/api/rankings?by=level')).data.by === 'total', 'old board names fall back to the overall top');
   const rt = (await client(appG).call('GET', '/api/rankings')).data.rankings;
   ok(rt.slice(0, 3).every(r => r.medals.includes('top3') && r.medals.includes('top10')) && rt.slice(3, 10).every(r => r.medals.join() === 'top10') && rt.slice(10).every(r => !r.medals.length), 'medals: top-3 get two, top-10 get one');
   const p0 = (await client(appG).call('GET', '/api/users/' + rt[0].nickname)).data.profile; ok(p0.medals.includes('top3'), 'medals on the profile');
@@ -600,6 +602,49 @@ console.log('\n19. Games: case battles, collections, swaps, auction of the day')
   const pv2 = (await client().call('GET', '/api/verify/' + au.plate.id)).data;
   ok(pv2.verified === true && pv2.plate.owner === 'gamer1' && x.data.past.some(p => p.topUser === 'gamer1'), 'auction settles: plate goes to the top bidder', pv2.plate && pv2.plate.owner);
   ok(x.data.auction && x.data.auction.day > au.day, 'a new auction starts the next day');
+}
+
+console.log('\n20. Multi-open, daily tasks, wheel, higher-or-lower, profiles, photos');
+{
+  const P = client(); await P.call('POST', '/api/auth/register', { email: 'fun@example.com', nickname: 'FunGuy', password: 'fun-pass-123', terms: true });
+  await q1(`UPDATE users SET balance=20000 WHERE nick_norm='funguy'`);
+  const b0 = (await P.call('GET', '/api/me')).data.user.balance;
+  let r = await P.call('POST', '/api/cases/01/open', { count: 3 }, { 'idempotency-key': 'multi-open-0001' });
+  ok(r.status === 200 && r.data.plates.length === 3 && r.data.balance === b0 - 3 * r.data.price && r.data.plate.value === Math.max(...r.data.plates.map(p => p.value)), 'open ×3: three plates, triple price, best one returned', r.data.count);
+  r = await P.call('POST', '/api/cases/01/open', { count: 9 }, { 'idempotency-key': 'multi-open-0002' }); ok(r.status === 200 && r.data.plates.length === 3, 'no more than 3 at once');
+  await q1(`UPDATE users SET balance=50 WHERE nick_norm='funguy'`);
+  r = await P.call('POST', '/api/cases/01/open', { count: 2 }, { 'idempotency-key': 'multi-open-0003' }); ok(r.status === 402, 'multi-open needs money for all cases');
+  await q1(`UPDATE users SET balance=20000 WHERE nick_norm='funguy'`);
+  // tasks
+  let t = (await P.call('GET', '/api/tasks')).data; ok(t.tasks.length === 2 && t.tasks[0].id !== t.tasks[1].id, 'two daily tasks', t.tasks.map(x => x.id));
+  const openTask = t.tasks.find(x => x.id.startsWith('open'));
+  if (openTask) { ok(openTask.have === Math.min(openTask.need, 6), 'case opens count towards the task', openTask); }
+  const undone = t.tasks.find(x => !x.done); if (undone) { r = await P.call('POST', `/api/tasks/${undone.id}/claim`, {}); ok(r.status === 409, 'unfinished task cannot be claimed'); }
+  const doneT = t.tasks.find(x => x.done); if (doneT) { r = await P.call('POST', `/api/tasks/${doneT.id}/claim`, {}); ok(r.status === 200 && r.data.amount === doneT.reward, 'finished task pays'); r = await P.call('POST', `/api/tasks/${doneT.id}/claim`, {}); ok(r.status === 409, 'task pays once'); }
+  // wheel
+  r = await P.call('POST', '/api/wheel/spin', {}); ok(r.status === 200 && typeof r.data.index === 'number' && (r.data.prize.kind === 'plt' ? r.data.prize.amount > 0 : !!r.data.plate), 'wheel spin gives a prize', r.data.prize);
+  r = await P.call('POST', '/api/wheel/spin', {}); ok(r.status === 409, 'wheel: one spin a day');
+  ok((await P.call('GET', '/api/wheel')).data.spun === true, 'wheel remembers today');
+  // higher or lower
+  let h = (await P.call('POST', '/api/hilo/start', {})).data; ok(h.id && h.cur && h.cur.value > 0 && h.step === 0, 'hilo run starts with a plate', h);
+  ok((await P.call('POST', '/api/hilo/start', {})).data.id === h.id, 'start resumes the open run');
+  r = await P.call('POST', `/api/hilo/${h.id}/cash`, {}); ok(r.status === 409, 'nothing to cash before a correct guess');
+  let guard = 0; let g;
+  do { g = (await P.call('POST', `/api/hilo/${h.id}/guess`, { dir: Math.random() < 0.5 ? 'up' : 'down' })).data; guard++; } while (g.status === 'OPEN' && g.bank === 0 && guard < 30);
+  ok(['OPEN', 'LOST', 'DONE'].includes(g.status) && (g.win ? g.bank > 0 : g.bank === 0), 'guess moves the run on or burns the bank', g.status);
+  if (g.status === 'OPEN') { const bb = (await P.call('GET', '/api/me')).data.user.balance; r = await P.call('POST', `/api/hilo/${h.id}/cash`, {}); ok(r.status === 200 && r.data.balance === bb + g.bank, 'cash out pays the bank'); }
+  await q1(`UPDATE hilo_runs SET status='CASHED' WHERE user_id=(SELECT id FROM users WHERE nick_norm='funguy')`);
+  for (let i = 0; i < 6; i++) { const s2 = await P.call('POST', '/api/hilo/start', {}); if (s2.status !== 200) { ok(s2.status === 409 && i >= 3, 'hilo: 5 games a day', i); break; } await q1(`UPDATE hilo_runs SET status='CASHED' WHERE id=$1`, [s2.data.id]); }
+  // public profile, photo, tips
+  const prof = (await client().call('GET', '/api/users/FunGuy')).data.profile; ok(prof.top.length >= 6 && typeof prof.level === 'number' && prof.av === null, 'anyone can see a player’s plates and level', prof.top.length);
+  const png = 'data:image/png;base64,' + Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a4f60000000049454e44ae426082', 'hex').toString('base64');
+  r = await P.call('POST', '/api/me/avatar', { image: 'data:image/png;base64,' + Buffer.from('<svg/>').toString('base64') }); ok(r.status === 400, 'fake image is rejected');
+  r = await P.call('POST', '/api/me/avatar', { image: png }); ok(r.status === 200 && r.data.av, 'profile photo uploads');
+  const img = await app(new Request('http://localhost/api/avatar/funguy')); ok(img.status === 200 && img.headers.get('content-type') === 'image/png', 'photo is served as an image');
+  ok((await client().call('GET', '/api/users/FunGuy')).data.profile.av === r.data.av, 'profile shows the photo version');
+  r = await P.call('POST', '/api/me/tips', { id: 'battles' }); await P.call('POST', '/api/me/tips', { id: 'battles' }); ok((await P.call('GET', '/api/me')).data.user.tips.join() === 'battles', 'tutorials are remembered once');
+  // seasonal case is on sale and listed
+  ok(cfg.cases.find(c => c.id === 'S1' && c.until > Date.now()), 'seasonal case is in the catalogue with an end date');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

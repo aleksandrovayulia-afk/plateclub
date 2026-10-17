@@ -29,7 +29,7 @@ export const TIERS = [
 ];
 // Value versions. A plate keeps the version it was minted with (plates.vv), so a sealed value never changes.
 // v1 — launch; v2 (16 Oct 2026) — rare plates worth much more; v3 (16 Oct 2026) — higher common/fine bases + plate traits.
-export const VALUE_V = 3;
+export const VALUE_V = 4;
 const BASES = { 1: { common: 20, fine: 60, rare: 220, elite: 900, grail: 6000 }, 2: { common: 20, fine: 60, rare: 500, elite: 2500, grail: 15000 } };
 export const TI = Object.fromEntries(TIERS.map((t, i) => [t.id, i]));
 export const PATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'] };
@@ -59,7 +59,7 @@ const O = {
   by: [22, 46, 28, 3.6, 0.4], // Belarus: nice combinations show up more often, but each is worth less
 };
 // Share of the average plate value a case pays back. Cheap cases pay back the most, so small wins are frequent.
-export const RTP = { start: 0.93, region: 0.92, belarus: 0.92, pattern: 0.9, premium: 0.9, top: 0.88, legend: 0.87, elite: 0.85 };
+export const RTP = { season: 0.97, start: 0.93, region: 0.92, belarus: 0.92, pattern: 0.9, premium: 0.9, top: 0.88, legend: 0.87, elite: 0.85 };
 const RU = (g) => ({ country: 'RU', group: g });
 const BY = (regs) => ({ country: 'BY', regions: regs });
 const MIX = { country: 'MIX' };
@@ -121,8 +121,10 @@ const RAW = [
   { id: '46', ru: 'Элита Москвы', en: 'Moscow, Elite and Grail only.', name: 'Moscow Elite', cat: 'elite', color: '#FF4D8D', color2: '#3A0018', odds: O.elite, pool: RU('msk'), note: 'Москва, только элитные и Граали.', cover: P('ААА', '001', '777') },
   { id: '47', ru: 'Элита Беларуси', en: 'Belarus, Elite and Grail only.', name: 'Belarus Elite', cat: 'elite', color: '#7CFFB2', color2: '#003D1F', odds: O.elite, pool: BY(ALLBY), note: 'Беларусь, только элитные и Граали.', cover: P('AA', '7777', '7', 'BY') },
   { id: '48', ru: 'Элитная элита', en: 'The elite of elites: Grail drops more often than Elite.', name: 'Elite of Elites', cat: 'elite', color: '#E9D5FF', color2: '#2E1065', odds: O.crown, pool: MIX, note: 'Элита среди элиты: Грааль выпадает чаще элитного.', cover: P('ААА', '777', '777') },
+  // Сезон (до 1 ноября 2026)
+  { id: 'S1', en: 'Autumn season — better odds, only until Nov 1.', ru: 'Осенний сезон', name: 'Autumn Season', cat: 'season', color: '#FFB347', color2: '#B4361E', odds: [10, 40, 38, 10, 2], pool: RU(), note: 'Сезонный кейс: шансы на редкие выше обычного. Продаётся только до 1 ноября.', cover: P('ООО', '777', '77'), until: Date.UTC(2026, 10, 1) },
 ];
-export const CATS = { start: 'Старт', region: 'Регионы России', belarus: 'Беларусь', pattern: 'Узоры', premium: 'Премиум', top: 'Топ', legend: 'Легенды', elite: 'Элита' };
+export const CATS = { season: 'Сезон', start: 'Старт', region: 'Регионы России', belarus: 'Беларусь', pattern: 'Узоры', premium: 'Премиум', top: 'Топ', legend: 'Легенды', elite: 'Элита' };
 // Case rarity by price — every case gets its own badge besides its own colour.
 export const caseRank = price => (price <= 150 ? 'common' : price <= 400 ? 'fine' : price <= 1200 ? 'rare' : price <= 3000 ? 'elite' : 'grail');
 
@@ -190,12 +192,13 @@ export function genPlate(tier, pool, focus) {
 // ---- plate traits (value v3): small things collectors pay extra for ----
 export const BLAT = ['АМР', 'ЕКХ', 'ВОР', 'КМР', 'АКР', 'ХКХ', 'МОР', 'ОКО', 'СОС', 'ТОТ'];
 export const TRAITS = {
-  blat: { name: 'Блатная серия', en: 'VIP series', mult: 2 },
-  low: { name: 'Низкий номер', en: 'Low number', mult: 1.5 },
-  sevens: { name: 'Две семёрки', en: 'Double seven', mult: 1.3 },
-  pairL: { name: 'Парные буквы', en: 'Paired letters', mult: 1.3 },
-  allSeven: { name: 'Все семёрки', en: 'All sevens', mult: 1.5 },
-  first: { name: 'Номер один', en: 'Number one', mult: 1.4 },
+  // mult = values v1–v3 (kept so old plates still verify); m4 = v4: beautiful plates are worth much more
+  blat: { name: 'Блатная серия', en: 'VIP series', mult: 2, m4: 3.5 },
+  low: { name: 'Низкий номер', en: 'Low number', mult: 1.5, m4: 2.2 },
+  sevens: { name: 'Две семёрки', en: 'Double seven', mult: 1.3, m4: 1.8 },
+  pairL: { name: 'Парные буквы', en: 'Paired letters', mult: 1.3, m4: 1.7 },
+  allSeven: { name: 'Все семёрки', en: 'All sevens', mult: 1.5, m4: 3 },
+  first: { name: 'Номер один', en: 'Number one', mult: 1.4, m4: 3 },
 };
 const digitTraits = (d, country) => {
   const t = [];
@@ -215,11 +218,11 @@ export function plateTraits(p) {
   if (vv < 3) return [/^7+$/.test(p.digits) && 'allSeven', /^0+1$/.test(p.digits) && 'first'].filter(Boolean);
   return [...digitTraits(p.digits, country), ...letterTraits(p.letters, country)];
 }
-const traitMult = ts => ts.reduce((m, t) => m * TRAITS[t].mult, 1);
+const traitMult = (ts, vv = VALUE_V) => ts.reduce((m, t) => m * (vv >= 4 ? TRAITS[t].m4 : TRAITS[t].mult), 1);
 export function plateValue(p) {
   const vv = p.vv || VALUE_V;
   const base = BASES[vv] ? BASES[vv][p.tier] : TIERS[TI[p.tier]].base;
-  return Math.round(base * regMult(p.region, p.country || 'RU') * traitMult(plateTraits({ ...p, vv })));
+  return Math.round(base * regMult(p.region, p.country || 'RU') * traitMult(plateTraits({ ...p, vv }), vv));
 }
 // Exact average trait multiplier of a tier (enumerates every digit/letter combination the generator can produce).
 const DSETS = {};
@@ -241,25 +244,29 @@ function digitSet(kind, country) {
   }
   return (DSETS[k] = out);
 }
-const LMEAN = (() => { let s = 0, c = 0; for (const x of LETTERS) for (const y of LETTERS) for (const z of LETTERS) { const l = x + y + z; if (allSame(l)) continue; s += traitMult(letterTraits(l, 'RU')); c++; } return s / c; })();
+const LM = {};
+const lmean = vv => LM[vv] || (LM[vv] = (() => { let s = 0, c = 0; for (const x of LETTERS) for (const y of LETTERS) for (const z of LETTERS) { const l = x + y + z; if (allSame(l)) continue; s += traitMult(letterTraits(l, 'RU'), vv); c++; } return s / c; })());
 const TF = {};
-export function tierFactor(tier, country, focus) {
+export function tierFactor(tier, country, focus, vv = VALUE_V) {
   const pats = focus && focus[tier] ? [focus[tier]] : PATS[tier];
-  const key = tier + country + pats.join();
+  const key = tier + country + pats.join() + vv;
   if (TF[key]) return TF[key];
   const D = { random: 'random', seq: 'seq', pair: 'pair', mirror: 'mirror', round: 'round', triple: 'triple', zero: 'zero', letters: 'random', full: 'triple', zerofull: 'zero' };
   return (TF[key] = mean(pats.map(pat => {
-    const ds = digitSet(D[pat], country); const dm = mean(ds.map(d => traitMult(digitTraits(d, country))));
+    const ds = digitSet(D[pat], country); const dm = mean(ds.map(d => traitMult(digitTraits(d, country), vv)));
     const same = pat === 'letters' || pat === 'full' || pat === 'zerofull';
-    return dm * (same || country === 'BY' ? 1 : LMEAN);
+    return dm * (same || country === 'BY' ? 1 : lmean(vv));
   })));
 }
+// v4 bases: plain plates a little cheaper, beautiful ones much dearer — the average per tier (and case prices) stay as in v3
+BASES[4] = Object.fromEntries(TIERS.map(t => [t.id, Math.round(t.base * tierFactor(t.id, 'RU', null, 3) / tierFactor(t.id, 'RU', null, 4) * 10) / 10]));
+export const tierBase = id => (BASES[VALUE_V] ? BASES[VALUE_V][id] : TIERS[TI[id]].base);
 export const CASES = RAW.map(c => {
   const pr = poolRegions(c);
   const parts = [...(pr.RU.length ? [mean(pr.RU.map(r => regMult(r)))] : []), ...(pr.BY.length ? [BY_MULT] : [])];
   const mult = mean(parts);
   const countries = [...(pr.RU.length ? ['RU'] : []), ...(pr.BY.length ? ['BY'] : [])];
-  const ev = c.odds.reduce((a, o, i) => a + (o / 100) * TIERS[i].base * mean(countries.map(k => (k === 'BY' ? BY_MULT : mean(pr.RU.map(r => regMult(r)))) * tierFactor(TIERS[i].id, k, c.focus))), 0);
+  const ev = c.odds.reduce((a, o, i) => a + (o / 100) * tierBase(TIERS[i].id) * mean(countries.map(k => (k === 'BY' ? BY_MULT : mean(pr.RU.map(r => regMult(r)))) * tierFactor(TIERS[i].id, k, c.focus))), 0);
   const price = c.id === '01' ? STARTER_PRICE : Math.max(110, Math.round(ev / RTP[c.cat] / 10) * 10);
   const topIdx = c.odds.findLastIndex(o => o > 0);
   return { ...c, mult: Math.round(mult * 1000) / 1000, ev: Math.round(ev), price, rank: caseRank(price), cover: { ...c.cover, tier: TIERS[topIdx].id } };
@@ -336,10 +343,10 @@ export function casePrice(c, st = SETTINGS_DEFAULT, ts = Date.now()) {
 }
 export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
   const stripe = !!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  return { referral: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, signupInviter: REFERRAL.signupInviter, signupFriend: REFERRAL.signupFriend, needOpens: REFERRAL.needOpens, milestones: REFERRAL.milestones }, quests: { story: QUESTS.story.reward, tiktokPerView: QUESTS.tiktok.perView, tiktokMax: QUESTS.tiktok.maxPerVideo }, telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
+  return { wheel: WHEEL.map(({ id, kind, amount, tier }) => ({ id, kind, amount: amount || 0, tier: tier || null })), season: SEASON, referral: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, signupInviter: REFERRAL.signupInviter, signupFriend: REFERRAL.signupFriend, needOpens: REFERRAL.needOpens, milestones: REFERRAL.milestones }, quests: { story: QUESTS.story.reward, tiktokPerView: QUESTS.tiktok.perView, tiktokMax: QUESTS.tiktok.maxPerVideo }, telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
     announcement: st.announcement || '',
-    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN, maxPlates: UPGRADE_MAX_PLATES }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS, patNames: PAT_NAME, cats: CATS,
-    cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
+    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN, maxPlates: UPGRADE_MAX_PLATES }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS.map(t => ({ ...t, base: tierBase(t.id) })), patNames: PAT_NAME, cats: CATS,
+    cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden) && !(c.until && ts > c.until)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool, until }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, until: until || null, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
     deals: dealsFor(ts).filter(d => !(st.cases[d.id] && st.cases[d.id].hidden)).map(d => ({ ...d, was: caseBasePrice(caseById(d.id), st), price: casePrice(caseById(d.id), st, ts) })),
     fee: st.marketFee, bankRate: st.bankRate, signupBonus: st.signupBonus,
     mail: !!(env.RESEND_API_KEY && env.MAIL_FROM),
@@ -479,7 +486,7 @@ const BATTLE_RAW = [
 ];
 export const BATTLE_CASES = BATTLE_RAW.map(c => {
   const pr = poolRegions(c); const countries = [...(pr.RU.length ? ['RU'] : []), ...(pr.BY.length ? ['BY'] : [])];
-  const ev = c.odds.reduce((a, o, i) => a + (o / 100) * TIERS[i].base * mean(countries.map(k => (k === 'BY' ? BY_MULT : mean(pr.RU.map(r => regMult(r)))) * tierFactor(TIERS[i].id, k, c.focus))), 0);
+  const ev = c.odds.reduce((a, o, i) => a + (o / 100) * tierBase(TIERS[i].id) * mean(countries.map(k => (k === 'BY' ? BY_MULT : mean(pr.RU.map(r => regMult(r)))) * tierFactor(TIERS[i].id, k, c.focus))), 0);
   const price = Math.max(110, Math.round(ev / 0.9 / 10) * 10);
   return { ...c, mult: 1, ev: Math.round(ev), price, rank: caseRank(price), cover: { ...c.cover, tier: TIERS[c.odds.findLastIndex(o => o > 0)].id } };
 });
@@ -492,3 +499,40 @@ export const auctionDay = (ts = Date.now()) => Math.floor(ts / 86400000);
 export const auctionMin = (a) => (a.topBid ? a.topBid + a.step : a.start);
 // ---- swaps between players ----
 export const SWAP = { maxPlates: 6, maxPending: 10 };
+
+// ---- daily tasks: two per player per day, picked from this pool; progress is read from the ledger ----
+export const DAILY_TASKS = [
+  { id: 'open3', ru: 'Открой 3 кейса', en: 'Open 3 cases', need: 3, reward: 120, src: 'open' },
+  { id: 'open6', ru: 'Открой 6 кейсов', en: 'Open 6 cases', need: 6, reward: 250, src: 'open' },
+  { id: 'sell1', ru: 'Продай номер на рынке', en: 'Sell a plate on the market', need: 1, reward: 150, src: 'sell' },
+  { id: 'buy1', ru: 'Купи номер на рынке', en: 'Buy a plate on the market', need: 1, reward: 150, src: 'buy' },
+  { id: 'battle1', ru: 'Сыграй в кейс-баттл', en: 'Play a case battle', need: 1, reward: 200, src: 'battle' },
+  { id: 'upgrade1', ru: 'Сделай апгрейд номера', en: 'Upgrade a plate', need: 1, reward: 150, src: 'upgrade' },
+  { id: 'list1', ru: 'Выстави номер на продажу', en: 'List a plate for sale', need: 1, reward: 100, src: 'list' },
+];
+export function dailyTasksFor(userId, day) {
+  // deterministic per player and day, always two different tasks
+  let h = (Number(userId) * 2654435761 + day * 40503) >>> 0;
+  const a = h % DAILY_TASKS.length; h = (h ^ (h >>> 13)) * 1274126177 >>> 0;
+  const rest = DAILY_TASKS.filter(t => t.src !== DAILY_TASKS[a].src);
+  return [DAILY_TASKS[a], rest[h % rest.length]];
+}
+
+// ---- wheel of fortune: one free spin a day ----
+export const WHEEL = [
+  { id: 'c10', kind: 'plt', amount: 10, w: 26 },
+  { id: 'c25', kind: 'plt', amount: 25, w: 22 },
+  { id: 'c50', kind: 'plt', amount: 50, w: 17 },
+  { id: 'c100', kind: 'plt', amount: 100, w: 12 },
+  { id: 'pfine', kind: 'plate', tier: 'fine', w: 9 },
+  { id: 'c250', kind: 'plt', amount: 250, w: 7 },
+  { id: 'c500', kind: 'plt', amount: 500, w: 4 },
+  { id: 'prare', kind: 'plate', tier: 'rare', w: 2.4 },
+  { id: 'c2000', kind: 'plt', amount: 2000, w: 0.6 },
+];
+
+// ---- seasonal case: on sale only until the season ends ----
+export const SEASON = { id: 'S1', ru: 'Осенний сезон', en: 'Autumn season', until: Date.UTC(2026, 10, 1, 0, 0, 0) };
+
+// ---- game "Дороже или дешевле": guess whether the next plate is worth more or less ----
+export const HILO = { runsPerDay: 5, steps: [5, 10, 20, 35, 55, 80, 110, 150, 200, 260], tierOdds: [34, 36, 22, 7, 1] };

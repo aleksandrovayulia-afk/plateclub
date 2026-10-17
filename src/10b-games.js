@@ -11,14 +11,15 @@ VIEWS.games = async () => {
   const au = a.auction; const done = s.sets.filter(x => x.claimed).length;
   const pend = sw ? sw.incoming.filter(x => x.status === 'PENDING').length : 0;
   const card = (href, img, eyebrow, title, text, extra, cls = '') => `<a class="gcard rv ${cls}" href="${href}" style="--gimg:url(${IMG('head-' + img + '.jpg')})"><div class="gcard-bg"></div><div class="gcard-in"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p class="gtext">${text}</p>${extra || ''}</div><span class="gcard-go" aria-hidden="true">→</span></a>`;
-  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, аукцион, коллекции и обмены — все игры на одной странице.', 'Battles, auction, collections and swaps — everything in one place.')}</p></div></section>
+  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, «Дороже или дешевле», аукцион, коллекции и обмены — все игры на одной странице.', 'Battles, Higher or lower, auction, collections and swaps — everything in one place.')}</p></div></section>
     <div class="ggrid">
       ${card('#/battles', 5, L('Кейс-баттл', 'Case battle') + (b.open.length ? ` · <span class="live"></span>${b.open.length} ${L('ждут', 'open')}` : ''), L('Кто выбьет дороже?', 'Who pulls the priciest?'), L('2–4 игрока открывают одинаковые кейсы одновременно. Победитель забирает все номера.', '2–4 players open the same cases at once. The winner takes every plate.'), `<div class="gstat"><b>${b.open.length}</b><span>${L('открытых баттлов', 'open battles')}</span></div>`, 'big')}
       ${card('#/auction', 3, L('Аукцион дня', 'Auction of the day'), au ? esc(miniPlateTxt(au.plate)) : L('Номер дня', 'Plate of the day'), au ? L(`${tierName(au.plate.tier)} · оценка ${fmt(au.plate.value)} PLT. Ставка в последние 5 минут продлевает торги.`, `${tierName(au.plate.tier)} · value ${fmt(au.plate.value)} PLT. A bid in the last 5 minutes extends it.`) : L('Каждый день — один редкий номер.', 'One rare plate every day.'), au ? `<div class="gstat"><b>${fmt(au.topBid || au.start)}</b><span>${au.topBid ? L('текущая ставка', 'current bid') : L('стартовая цена', 'starting price')}</span></div>` : '')}
       ${card('#/sets', 1, L('Коллекции', 'Collections'), L(`${CFG.sets.length} сетов`, `${CFG.sets.length} sets`), L('Соберите регионы, узоры и редкие серии — получите PLT и значок в профиль.', 'Collect regions, patterns and rare series to earn PLT and a profile badge.'), `<div class="gstat"><b>${done}/${CFG.sets.length}</b><span>${L('собрано', 'completed')}</span></div>`)}
       ${card('#/swap', 2, L('Обмен', 'Swaps'), L('Меняйтесь номерами', 'Trade plates'), L('Номера плюс доплата в PLT — напрямую с другим игроком, без комиссии.', 'Plates plus PLT, directly with another player, no fee.'), pend ? `<div class="gstat"><b>${pend}</b><span>${L('новых предложений', 'new offers')}</span></div>` : '')}
       ${card('#/upgrade', 6, L('Апгрейд', 'Upgrade'), L('Рискни ради редкости', 'Risk it for rarity'), L('Поставьте номер и попробуйте превратить его в редкий.', 'Stake a plate and try to turn it into a rarer one.'), '')}
-      ${card('#/top', 4, L('Рейтинг', 'Ranking'), L('Топ коллекционеров', 'Top collectors'), L('Самые дорогие аккаунты Plate Club.', 'The most valuable Plate Club accounts.'), '')}
+      ${card('#/hilo', 4, L('Новая игра', 'New game') + ' · <span class="live"></span>', L('Дороже или дешевле?', 'Higher or lower?'), L('Угадай, дороже ли следующий номер. 10 угадал подряд — до 1 000 PLT. Бесплатно, 5 игр в день.', 'Guess if the next plate is worth more. Ten in a row pays up to 1,000 PLT. Free, 5 games a day.'), '', 'g-new')}
+      ${card('#/bonus', 1, L('Каждый день', 'Every day'), L('Колесо удачи', 'Wheel of fortune'), L('Один бесплатный спин в день: PLT или номер.', 'One free spin a day: PLT or a plate.'), '')}
     </div><div style="height:80px"></div></div>`;
 };
 
@@ -205,6 +206,7 @@ const SWB = { to: '', give: new Set(), want: new Set(), givePlt: 0, wantPlt: 0 }
 async function swapBuilder(query) {
   if (!ME) return VIEWS.login({ next: location.hash, query: new URLSearchParams() });
   const to = (query && query.get('to')) || SWB.to; if (to !== SWB.to) { SWB.to = to; SWB.give = new Set(); SWB.want = new Set(); SWB.givePlt = 0; SWB.wantPlt = 0; }
+  const wantId = query && query.get('want'); if (wantId) SWB.want.add(wantId);
   const w = query && query.get('want'); if (w) SWB.want.add(w);
   const mine = (await GET('/api/collection')).plates.filter(p => p.status === 'OWNED');
   let theirs = null, err = '';
@@ -270,3 +272,42 @@ function auctionHooks() {
   if ($('.auc')) { clearInterval(btPoll); const day = $('#aucTimer') && $('#aucTimer').dataset.t; btPoll = setInterval(async () => { if (!$('.auc')) return clearInterval(btPoll); if (document.visibilityState !== 'visible' || dlg.open || (document.activeElement && document.activeElement.id === 'bidAmt')) return; try { const d = await GET('/api/auction'); if (d.auction && (String(d.auction.ends) !== day || d.auction.bids !== Number(($('.auc-bid .small') || {}).textContent?.match(/\d+/)?.[0]))) render(false); } catch {} }, 8000); }
 }
 GA.aquick = btn => { const i = $('#bidAmt'); i.value = btn.dataset.v; i.focus(); };
+
+/* ---------- game: higher or lower ---------- */
+let HL = null;
+const HLStep = (steps, step) => `<div class="hl-steps">${steps.map((v, i) => `<span class="${i < step ? 'ok' : i === step ? 'now' : ''}">${fmt(steps.slice(0, i + 1).reduce((a, b) => a + b, 0))}</span>`).join('')}</div>`;
+function hlCard(p, hidden) {
+  if (hidden) return `<div class="hl-card hidden"><div class="hl-q">?</div><span class="small">${L('Следующий номер', 'Next plate')}</span></div>`;
+  return `<div class="hl-card t-${p.tier}">${Plate(p, { holo: true })}${Rarity(p.tier)}<div class="pc-tags" style="justify-content:center">${Perks(p)}</div><div class="hl-v"><b>${fmt(p.value)}</b> PLT</div><span class="small">${esc(regionLabel(p))}</span></div>`;
+}
+function hlBody() {
+  const d = HL; const r = d.run;
+  if (!r) return `<div class="hl-start panel"><p class="lede" style="margin:0">${L('Показываем номер и его оценку. Угадай, будет ли следующий номер <b>дороже</b> или <b>дешевле</b>. Каждый верный ответ добавляет PLT в банк. Ошибся — банк сгорает. Можно забрать банк в любой момент.', 'We show a plate and its value. Guess if the next one is <b>higher</b> or <b>lower</b>. Each correct guess adds PLT to the bank. Miss — the bank is lost. You can cash out any time.')}</p>
+    ${HLStep(d.steps, 0)}<div class="row" style="justify-content:center"><button class="btn btn-chrome btn-xl" data-act="hlstart" ${d.left ? '' : 'disabled'}>${d.left ? L('Играть', 'Play') : L('Игры на сегодня закончились', 'No games left today')}</button></div>
+    <p class="small" style="text-align:center;margin:0">${L(`Осталось игр сегодня: ${d.left} из ${d.perDay}. Бесплатно.`, `Games left today: ${d.left} of ${d.perDay}. Free.`)}</p></div>`;
+  return `<div class="hl-board">${HLStep(d.steps, r.step)}
+    <div class="hl-arena">${hlCard(r.cur)}<div class="hl-vs">VS</div>${hlCard(null, true)}</div>
+    <div class="hl-acts"><button class="btn btn-xl hl-up" data-act="hlguess" data-dir="up">▲ ${L('Дороже', 'Higher')}</button><button class="btn btn-xl hl-down" data-act="hlguess" data-dir="down">▼ ${L('Дешевле', 'Lower')}</button></div>
+    <div class="hl-bank"><span>${L('Банк', 'Bank')}: <b class="up">${fmt(r.bank)} PLT</b> · ${L('следующий верный ответ', 'next correct guess')} +${fmt(r.next)}</span>${r.bank ? `<button class="btn btn-chrome" data-act="hlcash">${L('Забрать', 'Cash out')} ${fmt(r.bank)} PLT</button>` : ''}</div></div>`;
+}
+VIEWS.hilo = async () => {
+  HL = await GET('/api/hilo');
+  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игра', 'Game')} · ${L('бесплатно', 'free')}</p><h1 class="h1" style="margin-top:12px">${L('Дороже или дешевле?', 'Higher or lower?')}</h1><p class="lede" style="margin-top:10px">${L('Красивые номера стоят дороже: блатные буквы, семёрки, низкие номера. Чем лучше знаешь цены — тем больше выиграешь.', 'Beautiful plates cost more: VIP letters, sevens, low numbers. The better you know prices, the more you win.')}</p></div></section>
+    <div id="hlBox">${hlBody()}</div>
+    ${HL.best.length ? `<section class="sec" style="padding-bottom:80px">${SH(L('Лучшие за неделю', 'Best this week'))}<div class="panel" style="padding:8px">${HL.best.map((b, i) => `<a class="rk" href="#/u/${encodeURIComponent(b.nickname)}" style="text-decoration:none"><span class="n">${i + 1}</span><span class="who"><b>${esc(b.nickname)}</b></span><span class="mono">${b.step}/10 · ${fmt(b.bank)} PLT</span></a>`).join('')}</div></section>` : '<div style="height:80px"></div>'}</div>`;
+};
+VIEWS.hilo.auth = true;
+const hlPaint = () => { const b = $('#hlBox'); if (b) b.innerHTML = hlBody(); };
+GA.hlstart = async btn => { busy(btn, true, '…'); try { HL.run = await POST('/api/hilo/start', {}); HL.left = Math.max(0, HL.left - 1); sfx('open'); hlPaint(); } catch (e) { toast(e.message, true); busy(btn, false); } };
+GA.hlguess = async btn => {
+  if (HL.busy) return; HL.busy = true; $$('[data-act="hlguess"]').forEach(b => b.disabled = true); sfx('click');
+  let r; try { r = await POST(`/api/hilo/${HL.run.id}/guess`, { dir: btn.dataset.dir }); } catch (e) { toast(e.message, true); HL.busy = false; hlPaint(); return; }
+  // reveal the next plate in the right slot first
+  const slot = $$('.hl-arena .hl-card')[1]; if (slot) { slot.outerHTML = hlCard(r.cur).replace('class="hl-card', `class="hl-card reveal ${r.win ? 'win' : 'lose'}`); }
+  sfx(r.win ? 'coin' : 'fail'); await wait(reduced() ? 300 : 1300);
+  HL.busy = false;
+  if (!r.win) { toast(L(`Мимо! ${r.lost ? `Банк ${fmt(r.lost)} PLT сгорел.` : ''}`, `Missed! ${r.lost ? `The ${fmt(r.lost)} PLT bank is gone.` : ''}`), true); HL.run = null; hlPaint(); return; }
+  if (r.status === 'DONE') { confetti($('#hlBox'), '#FFD25E', 80); toast(L(`10 из 10! +${fmt(r.bank)} PLT`, `10 of 10! +${fmt(r.bank)} PLT`)); HL.run = null; await refreshMe(); hlPaint(); return; }
+  HL.run = r; hlPaint();
+};
+GA.hlcash = async btn => { busy(btn, true, '…'); try { const r = await POST(`/api/hilo/${HL.run.id}/cash`, {}); coins(btn, 18); sfx('coin'); toast(`+${fmt(r.amount)} PLT`); HL.run = null; await refreshMe(); hlPaint(); } catch (e) { toast(e.message, true); busy(btn, false); } };

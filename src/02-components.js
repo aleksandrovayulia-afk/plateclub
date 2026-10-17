@@ -2,7 +2,7 @@
 /* ---------- components ---------- */
 function Plate(p, o = {}) {
   const iri = o.iri ?? (p.tier === 'elite' || p.tier === 'grail');
-  const badge = o.holo ? VB() : '';
+  const badge = '';
   const al = esc(L('Номер ', 'Plate ') + plateStr(p));
   if (p.country === 'BY') return `<span class="plate by${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="by-flag" aria-hidden="true"><i></i><b>BY</b></span><span class="pl-main" aria-hidden="true"><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters}</span><span class="pl-dash">-</span><span class="pl-d">${p.region}</span></span>${badge}</span>`;
   return `<span class="plate${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="pl-main" aria-hidden="true"><span class="pl-l">${p.letters[0]}</span><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters.slice(1)}</span></span><span class="pl-reg" aria-hidden="true"><span class="pl-rn${p.region.length > 2 ? ' r3' : ''}">${p.region}</span><span class="pl-rus">RUS<span class="flag"></span></span></span>${badge}</span>`;
@@ -29,12 +29,13 @@ function emblem(c) {
 }
 const glyph = (c, cls = '') => `<div class="cg ${cls}" style="--c:${c.color};--c2:${c.color2}"><span class="cg-glow"></span><span class="cg-handle"></span><span class="cg-lid"></span><div class="cg-body"><span class="cg-latch l"></span><span class="cg-latch r"></span><span class="cg-rib l"></span><span class="cg-rib r"></span>${emblem(c)}</div><span class="cg-shadow"></span></div>`;
 const nameCls = n => { const w = Math.max(...n.split(' ').map(x => x.length)); return w > 11 ? ' xlong' : w > 8 ? ' long' : ''; };
+const daysLeft = t => { const ms = Math.max(0, t - Date.now()), d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5); return d ? L(`${d} д ${h} ч`, `${d}d ${h}h`) : L(`${h} ч`, `${h}h`); };
 function CaseCard(c) {
   const d = dealOf(c);
   return `<div class="ccw rv"><a class="cc r-${c.rank} t-${c.rank}" href="#/case/${c.id}" data-fx="case" style="--c:${c.color};--c2:${c.color2}" aria-label="${esc(L('Кейс ', 'Case ') + caseName(c))}, ${rankName(c.rank)}, ${fmt(priceOf(c))} PLT">
     <div class="cc-bg"></div>
     <div class="cc-top"><span class="cc-rank">${rankName(c.rank)}</span><span class="cc-no">№${c.id}</span></div>
-    ${d ? `<span class="cc-deal">−${d.pct}%</span>` : ''}
+    ${d ? `<span class="cc-deal">−${d.pct}%</span>` : ''}${c.until ? `<span class="cc-season">🍂 ${L('Сезон', 'Season')} · ${daysLeft(c.until)}</span>` : ''}
     <div class="cc-art">${glyph(c)}</div>
     <div><div class="cc-name${nameCls(caseName(c))}">${esc(caseName(c))}</div><p class="cc-sub">${esc(caseNote(c).split('. ')[0].replace(/\.$/, ''))}</p></div>
     <span class="cc-open"><span>${L('Открыть', 'Open')}</span><b>${d ? `<span class="was">${fmt(d.was)}</span>` : ''}${fmt(priceOf(c))}<small>PLT</small></b></span></a>
@@ -52,7 +53,7 @@ function PlateCard(p, o = {}) {
   const l = o.listing;
   return `<article class="pc t-${p.tier} rv">${o.flag ? `<span class="tag flag-tl ${o.flagCls || ''}">${o.flag}</span>` : ''}
     <a class="pc-plate" href="#/plate/${p.id}" aria-label="${esc(L('Номер ', 'Plate ') + plateStr(p))}">${Plate(p, { holo: true })}</a>
-    <div class="pc-r">${Rarity(p.tier)}<a class="pid iri-t" href="#/plate/${p.id}">${p.id}</a></div>
+    <div class="pc-r">${Rarity(p.tier)}<a class="pid iri-t" href="#/plate/${p.id}">${p.id}${VB()}</a></div>
     <div class="pc-tags">${Perks(p)}${Copy(p)}</div>
     <div class="pc-sub">${esc(regionLabel(p))}${l && l.seller ? `<br>${L('Продавец', 'Seller')}: ${l.bot ? `<span class="mk-bot">Plate Club Market</span>` : `<a href="#/u/${esc(l.seller)}">${esc(l.seller)}</a>`}` : ''}</div>
     ${l ? DealLine(l.price, p.value) : o.pl && p.paid != null ? PLLine(p.paid, p.value) : ''}
@@ -75,7 +76,11 @@ const LLoad = (w = 220) => `<span class="lload" role="img" aria-label="${L('За
 const skel = () => `<div class="wrap page-load" role="status" aria-label="${L('Загрузка', 'Loading')}"><div>${LLoad(200)}</div></div>`;
 // personal avatar: first letter of the real name (without demo_) on a chrome gradient tinted by the nickname
 const avaHue = n => { let h = 0; for (const ch of String(n || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; };
-const Ava = n => { const nm = String(n || '?').replace(/^demo_/i, ''); const h = avaHue(n); return `<span class="ava" aria-hidden="true" style="background:linear-gradient(160deg,#fff 0%,hsl(${h} 90% 82%) 30%,hsl(${h} 75% 52%) 62%,hsl(${h} 85% 80%) 100%);color:hsl(${h} 80% 14%)">${esc(nm[0].toUpperCase())}</span>`; };
+// level frames and nickname colours: 10 bronze, 25 silver, 50 gold, 75 diamond, 100 legend
+const FRAME = lv => (lv >= 100 ? 'f-legend' : lv >= 75 ? 'f-diamond' : lv >= 50 ? 'f-gold' : lv >= 25 ? 'f-silver' : lv >= 10 ? 'f-bronze' : '');
+const Nick = (n, lv) => `<span class="nk ${FRAME(lv || 0)}">${esc(n)}</span>`;
+const Ava = (n, o = {}) => { const fr = FRAME(o.lv || 0); if (o.av) return `<span class="ava has-img ${fr}" aria-hidden="true"><img src="/api/avatar/${encodeURIComponent(n)}?v=${encodeURIComponent(o.av)}" alt="" loading="lazy" decoding="async"></span>`;
+  const nm = String(n || '?').replace(/^demo_/i, ''); const h = avaHue(n); return `<span class="ava ${fr}" aria-hidden="true" style="background:linear-gradient(160deg,#fff 0%,hsl(${h} 90% 82%) 30%,hsl(${h} 75% 52%) 62%,hsl(${h} 85% 80%) 100%);color:hsl(${h} 80% 14%)">${esc(nm[0].toUpperCase())}</span>`; };
 function LvlRing(lv, size = 42) {
   const r = (size - 6) / 2, C = 2 * Math.PI * r, k = lv.next > lv.cur ? (lv.xp - lv.cur) / (lv.next - lv.cur) : 1;
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true"><circle class="bgc" cx="${size / 2}" cy="${size / 2}" r="${r}"/><circle class="fgc" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - k)}"/></svg><b>${lv.level}</b>`;

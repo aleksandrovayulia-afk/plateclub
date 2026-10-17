@@ -2,7 +2,7 @@
 /* ---------- routing & chrome ---------- */
 const NAVS = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['top', L('Топ', 'Top'), 'trophy'], ['bonus', L('Бонусы', 'Bonuses'), 'gift']];
 const BNAV = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['collection', L('Номера', 'Plates'), 'coll']];
-const SECTION_OF = { battles: 'games', battle: 'games', sets: 'games', swap: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
+const SECTION_OF = { hilo: 'games', battles: 'games', battle: 'games', sets: 'games', swap: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
 let lastBal = null;
 function parseRoute() { const h = location.hash.replace(/^#\/?/, ''); const [path, qs] = h.split('?'); const seg = path.split('/').filter(Boolean).map(decodeURIComponent); return { name: seg[0] || '', arg: seg[1], query: new URLSearchParams(qs || '') }; }
 const go = h => { if (location.hash === h) render(); else location.hash = h; };
@@ -24,6 +24,7 @@ const hasBonus = () => PERKS && (!PERKS.daily.claimed || PERKS.achievements.some
 let renderSeq = 0, marketTimer = null;
 async function render(scroll = true) {
   const seq = ++renderSeq; const r = parseRoute(); const v = $('#view');
+  if (r.name !== '') $('#instBar')?.remove(); else if (typeof installBar === 'function') setTimeout(installBar, 1500);
   clearInterval(marketTimer); clearInterval(btPoll); btSkip = true; rollAbort(); closeStage(true); chrome();
   const view = VIEWS[r.name] || VIEWS[''];
   if (view.auth && !ME) { v.innerHTML = await VIEWS.login({ next: location.hash, query: new URLSearchParams() }); after('login'); return; }
@@ -36,7 +37,7 @@ async function render(scroll = true) {
   if (seq !== renderSeq) return;
   if (soft) v.classList.add('soft');
   v.innerHTML = (CFG && CFG.announcement && r.name !== 'admin' ? `<div class="wrap"><div class="announce">${IC.chat}<span>${esc(CFG.announcement)}</span></div></div>` : '') + html;
-  const HEADS = { games: 5, battles: 5, battle: 5, sets: 1, swap: 2, auction: 3, support: 4, cases: 1, market: 2, trades: 2, collection: 2, top: 3, rankings: 3, profile: 3, u: 3, bonus: 4, achievements: 4, upgrade: 5, wallet: 6, transactions: 6, admin: 6 };
+  const HEADS = { games: 5, battles: 5, battle: 5, sets: 1, swap: 2, auction: 3, support: 4, cases: 1, market: 2, trades: 2, collection: 2, top: 3, rankings: 3, profile: 3, u: 3, bonus: 4, achievements: 4, upgrade: 5, hilo: 4, wallet: 6, transactions: 6, admin: 6 };
   v.style.setProperty('--head', `url(${IMG('head-' + (HEADS[r.name] || 1) + '.jpg')})`);
   if (scroll) { v.classList.remove('enter'); void v.offsetWidth; v.classList.add('enter'); window.scrollTo(0, 0); }
   if (soft) {
@@ -72,7 +73,7 @@ function countUp(el) {
 }
 function countdown(el, ends, onEnd) {
   const set = () => { if (!document.body.contains(el)) return clearInterval(t); const ms = Math.max(0, ends - Date.now()); const p = [Math.floor(ms / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0'));
-    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; spans[i].classList.remove('tick'); void spans[i].offsetWidth; spans[i].classList.add('tick'); } }); } else el.textContent = p.join(':');
+    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; spans[i].classList.remove('tick'); void spans[i].offsetWidth; spans[i].classList.add('tick'); } }); } else { const dd = Math.floor(ms / 864e5); el.textContent = dd >= 2 ? `${dd} ${L('д', 'd')} ` + [Math.floor(ms % 864e5 / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0')).join(':') : p.join(':'); }
     if (!ms) { clearInterval(t); onEnd && onEnd(); } };
   const t = setInterval(set, 1000); set();
 }
@@ -87,9 +88,11 @@ function after(name) {
   if (name === 'swap') swapHooks();
   if (name === 'auction') auctionHooks();
   if (name === 'upgrade') upgradeHooks();
+  if (TIPS()[name === 'battle' ? 'battles' : name]) setTimeout(() => { if (parseRoute().name === name) showTip(name); }, 700);
   const dt = $('#dealTimer'); if (dt) countdown(dt, CFG.deals[0].ends, () => location.reload());
   const dcd = $('#dealerCd'); if (dcd) countdown(dcd, Number(dcd.dataset.t), () => render(false));
   const dc = $('#dailyCd'); if (dc) countdown(dc, Number(dc.dataset.t), () => render(false));
+  ['#wfCd', '#taskCd', '#seasonCd'].forEach(id => { const el = $(id); if (el) countdown(el, Number(el.dataset.t), () => render(false)); });
   fx($('#view'));
 }
 
@@ -100,7 +103,7 @@ async function liveFeed() {
   if (!box) { box = document.createElement('div'); box.id = 'live'; box.className = 'lstrip'; box.setAttribute('aria-label', L('Сейчас в игре', 'Live now')); $('#view').before(box); }
   try {
     const [d, on] = await Promise.all([GET('/api/drops'), GET('/api/online').catch(() => ({ count: 0 }))]);
-    const items = d.drops.slice(0, 12).map(x => `<span class="li t-${x.plate.tier}"><i></i><b>${esc(x.nickname)}</b> ${L('выбил', 'pulled')} <span class="mono">${esc(plateStr(x.plate))}</span> <em>${tierName(x.plate.tier)}</em></span>`);
+    const items = d.drops.slice(0, 12).map(x => `<span class="li t-${x.plate.tier}"><i></i>${x.nickname === CFG.botNick ? `<b>Plate Club Market</b>` : `<a href="#/u/${encodeURIComponent(x.nickname)}"><b>${esc(x.nickname)}</b></a>`} ${L('выбил', 'pulled')} <a class="mono" href="#/plate/${x.plate.id}">${esc(plateStr(x.plate))}</a> <em>${tierName(x.plate.tier)}</em></span>`);
     const sig = on.count + '|' + d.drops.map(x => x.plate.id).join(',');
     if (sig !== LIVE_SIG) {
       LIVE_SIG = sig;
@@ -109,4 +112,25 @@ async function liveFeed() {
     }
   } catch {}
   clearTimeout(liveFeed.t); liveFeed.t = setTimeout(() => { if (document.visibilityState === 'visible') liveFeed(); else liveFeed.t = setTimeout(liveFeed, 30000); }, 30000);
+}
+
+/* ---------- first-visit tutorials: one short card per game ---------- */
+const TIPS = () => ({
+  battles: { t: L('Кейс-баттл за 10 секунд', 'Case battle in 10 seconds'), s: [['⚔️', L('2–4 игрока покупают одни и те же кейсы.', '2–4 players buy the same cases.')], ['🎰', L('Кейсы открываются у всех одновременно, раунд за раундом.', 'Everyone opens them at the same time, round by round.')], ['🏆', L('У кого сумма номеров дороже — забирает ВСЕ номера.', 'The highest total value takes ALL the plates.')], ['🤖', L('Нет соперников? Добавьте ботов — игра начнётся сразу.', 'No rivals? Add bots and it starts right away.')]] },
+  upgrade: { t: L('Апгрейд за 10 секунд', 'Upgrade in 10 seconds'), s: [['🎯', L('Выберите 1–2 своих номера и редкость, которую хотите.', 'Pick 1–2 of your plates and the rarity you want.')], ['🟢', L('Зелёный сектор колеса — ваш шанс. Два номера — шанс выше.', 'The green sector is your chance. Two plates — bigger chance.')], ['🔥', L('Попали — получаете номер реже. Нет — выбранные номера сгорают.', 'Hit — you get a rarer plate. Miss — the chosen plates burn.')]] },
+  auction: { t: L('Аукцион за 10 секунд', 'Auction in 10 seconds'), s: [['🏷️', L('Каждый день один особый номер.', 'One special plate every day.')], ['⬆️', L('Делайте ставку выше текущей. Перебили — PLT вернутся.', 'Bid above the current one. Outbid — your PLT come back.')], ['⏱️', L('Ставка в последние 5 минут продлевает торги. Победитель забирает номер.', 'A bid in the last 5 minutes extends it. The winner takes the plate.')]] },
+  sets: { t: L('Коллекции за 10 секунд', 'Collections in 10 seconds'), s: [['🧩', L('Сет — это набор номеров: регионы, узоры, серии.', 'A set is a group of plates: regions, patterns, series.')], ['✅', L('Соберите все номера сета в коллекции.', 'Get every plate of the set in your collection.')], ['🎁', L('Нажмите «Забрать» — PLT и значок в профиль.', 'Press Claim — PLT and a profile badge.')]] },
+  swap: { t: L('Обмен за 10 секунд', 'Swaps in 10 seconds'), s: [['👤', L('Выберите игрока (или нажмите «Обмен» в его профиле).', 'Pick a player (or tap Swap on their profile).')], ['🔁', L('Отметьте, что отдаёте и что хотите. Можно добавить PLT.', 'Mark what you give and what you want. Add PLT if you like.')], ['🤝', L('Игрок принимает — номера меняются мгновенно, без комиссии.', 'They accept — plates swap instantly, no fee.')]] },
+  hilo: { t: L('«Дороже или дешевле» за 10 секунд', 'Higher or lower in 10 seconds'), s: [['👀', L('Смотрите на номер и его цену.', 'Look at the plate and its value.')], ['▲▼', L('Угадайте: следующий номер дороже или дешевле?', 'Guess: is the next plate worth more or less?')], ['💰', L('Каждый верный ответ — PLT в банк. Ошибка — банк сгорает. Забирайте вовремя!', 'Each right guess adds PLT. A miss burns the bank. Cash out in time!')]] },
+  market: { t: L('Рынок за 10 секунд', 'Market in 10 seconds'), s: [['🛒', L('Покупайте номера у игроков и у Plate Club Market.', 'Buy plates from players and from Plate Club Market.')], ['🏷️', L('Свой номер выставляйте кнопкой «Продать» — цену выбираете сами.', 'List your plate with Sell — you set the price.')], ['📉', L('Зелёная метка «выгодно» — цена ниже оценки.', 'A green “deal” tag means below value.')]] },
+});
+function showTip(name) {
+  const id = name === 'battle' ? 'battles' : name; const tip = TIPS()[id]; if (!tip || dlg.open) return;
+  let seen = []; try { seen = JSON.parse(localStorage.getItem('pc.tips') || '[]'); } catch {}
+  if (ME && ME.tips && ME.tips.includes(id)) return; if (seen.includes(id)) return;
+  const done = () => { try { localStorage.setItem('pc.tips', JSON.stringify([...new Set([...seen, id])])); } catch {} if (ME) { ME.tips = [...(ME.tips || []), id]; POST('/api/me/tips', { id }).catch(() => {}); } };
+  openDialog(`<div class="dlg tipdlg"><p class="eyebrow">${L('Как играть', 'How to play')}</p><h2 class="h3" id="dlgTitle" style="margin:6px 0 4px">${tip.t}</h2>
+    <ol class="tip-steps">${tip.s.map(([ic, tx]) => `<li><span class="tip-ic">${ic}</span><span>${tx}</span></li>`).join('')}</ol>
+    <div class="dlg-acts"><button class="btn btn-chrome btn-lg" data-act="dlgclose">${L('Понятно, играть!', 'Got it, let’s play!')}</button></div></div>`);
+  done();
 }
