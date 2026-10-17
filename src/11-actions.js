@@ -119,6 +119,7 @@ A.shareplate = async btn => {
     <p class="small" style="margin:0;text-align:center">${L('Сохраните картинку и выложите в сторис с ссылкой на сайт — за это дают 5 000 PLT в разделе «Бонусы».', 'Save the picture and post it to your story with a link to the site — that pays 5,000 PLT in Perks.')}</p>
     <div class="dlg-acts"><a class="btn btn-chrome" href="${url}" download="plate-${esc(p.id)}.png">${L('Скачать', 'Download')}</a><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
 };
+A.mlang = btn => { MEDIA_LANG = btn.dataset.l; render(false); };
 A.refqr = () => {
   const link = $('#refLink').value;
   openDialog(`<div class="dlg qrbox"><h2 class="h3" id="dlgTitle">${L('Ваша ссылка', 'Your link')}</h2>${qrSvg(link, { quiet: 2 })}<p class="small mono" style="margin:0;text-align:center;word-break:break-all">${esc(link)}</p><p class="small" style="margin:0;text-align:center;opacity:.75">${L('Покажите камере телефона — друг сразу попадёт на сайт по вашей ссылке.', 'Point a phone camera at it — your friend lands on the site through your link.')}</p><div class="dlg-acts"><button class="btn btn-chrome" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);

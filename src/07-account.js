@@ -148,27 +148,38 @@ VIEWS.settings = async () => `<div class="wrap"><section class="page-head"><div>
    <div class="set-row"><div><b>${L('Язык', 'Language')}</b><p>Русский / English</p></div><div class="lang"><button data-act="lang" data-l="ru" aria-pressed="${LANG === 'ru'}">RU</button><button data-act="lang" data-l="en" aria-pressed="${LANG === 'en'}">EN</button></div></div>
    <div class="set-row"><div><b>${L('Громкость', 'Volume')}</b><p id="volTxt">${Math.round(PREF.vol * 100)}%</p></div><input type="range" id="svol" min="0" max="1" step="0.05" value="${PREF.vol}" aria-label="${L('Громкость', 'Volume')}"></div>
    <div class="set-row" style="border:0"><div><b>${L('Анимации', 'Animations')}</b><p>${L('«Как в системе» следует настройке устройства.', '“System” follows your device setting.')}</p></div><select class="inline" id="smotion">${[['system', L('Как в системе', 'System')], ['reduced', L('Минимум', 'Reduced')], ['full', L('Все', 'All')]].map(([v, t]) => `<option value="${v}"${PREF.motion === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div></div></div>`;
+let MEDIA_LANG = null;
 VIEWS.media = async () => {
+  const ml = MEDIA_LANG || LANG;
   const B = [
-    ['pill', L('Плашка с логотипом', 'Logo pill'), L('Снизу кадра. Самый универсальный.', 'Bottom of the frame. The all-rounder.')],
+    ['pill', L('Плашка с логотипом', 'Logo pill'), L('Снизу кадра. Самая универсальная.', 'Bottom of the frame. The all-rounder.')],
     ['plate', L('Номер + плашка', 'Plate + pill'), L('Когда показываете номера.', 'When you show plates.')],
     ['cta', L('Призыв', 'Call to action'), L('С пульсирующей точкой.', 'With a pulsing dot.')],
+    ['start', L('100 PLT на старт', '100 PLT to start'), L('Сразу объясняет выгоду.', 'States the offer right away.')],
+    ['ticker', L('Строка сверху', 'Top ticker'), L('Не перекрывает лицо.', 'Stays clear of your face.')],
     ['badge', L('Уголок', 'Corner badge'), L('Справа сверху, почти не мешает.', 'Top-right, barely in the way.')],
     ['lower', L('Нижняя строка', 'Lower third'), L('Как в репортаже.', 'Broadcast style.')],
   ];
-  const card = ([id, name, note]) => `<article class="mcard"><div class="mprev"><img src="/media/banner-${id}.png" alt="${esc(name)}" loading="lazy"></div>
+  const F = [
+    ['promo', L('Полный ролик', 'Full promo'), '15 ' + L('сек', 'sec'), L('Логотип, редкость, кейс, рынок, призыв.', 'Logo, rarity, a case, the market, the call.')],
+    ['teaser', L('Тизер с кейсом', 'Case teaser'), '7 ' + L('сек', 'sec'), L('Только разлом кейса и рулетка.', 'Just the case breaking and the roulette.')],
+    ['drop', L('Про редкость', 'About rarity'), '8 ' + L('сек', 'sec'), L('Две копии номера на весь мир.', 'Two copies of a plate in the whole world.')],
+    ['invite', L('Про друзей', 'About invites'), '6 ' + L('сек', 'sec'), L('250 PLT другу, 500 PLT вам.', '250 PLT for a friend, 500 PLT for you.')],
+  ];
+  const bcard = ([id, name, note]) => `<article class="mcard"><div class="mprev"><img src="/media/banner-${id}-${ml}.png" alt="${esc(name)}" loading="lazy"></div>
     <div><h3 class="h3">${esc(name)}</h3><p class="small" style="margin:6px 0 10px">${esc(note)}</p>
-    <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/banner-${id}.webm" download>WebM</a><a class="btn btn-sm btn-ghost" href="/media/banner-${id}.gif" download>GIF</a><a class="btn btn-sm btn-ghost" href="/media/banner-${id}.png" download>PNG</a></div></div></article>`;
-  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Материалы', 'Media kit')}</p><h1 class="h1" style="margin-top:12px">${L('Баннеры для роликов', 'Banners for your videos')}</h1>
-    <p class="lede" style="margin-top:12px">${L('Небольшие анимированные плашки 1080×1920 с прозрачным фоном — положите поверх своего видео в любом редакторе. Они не закрывают кадр.', 'Small animated 1080×1920 overlays with a transparent background — drop one on top of your video in any editor. They don’t cover the frame.')}</p></div></section>
-    <div class="mgrid">${B.map(card).join('')}</div>
-    <section class="sec"><div class="panel" style="display:grid;gap:14px">${SH(L('Готовый ролик', 'Ready-made clip'), L('15 секунд, со звуком', '15 seconds, with sound'))}
-      <video class="promo-v" src="/media/plate-club-promo.mp4" poster="/media/promo-cover.jpg" controls playsinline preload="none"></video>
-      <p class="small" style="margin:0">${L('Можно выложить как есть или вставить кусок в свой ролик. Звук уже внутри.', 'Post it as is or cut a piece into your own video. The sound is already in it.')}</p>
-      <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/plate-club-promo.mp4" download>${L('Скачать видео', 'Download the video')}</a><a class="btn btn-sm btn-ghost" href="/media/promo-cover.jpg" download>${L('Обложка', 'Cover')}</a></div></div></section>
+    <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/banner-${id}-${ml}.webm" download>WebM</a><a class="btn btn-sm btn-ghost" href="/media/banner-${id}-${ml}.gif" download>GIF</a><a class="btn btn-sm btn-ghost" href="/media/banner-${id}-${ml}.png" download>PNG</a></div></div></article>`;
+  const fcard = ([id, name, len, note]) => `<article class="mcard"><video class="promo-v" src="/media/plate-club-${id}-${ml}.mp4" poster="/media/plate-club-${id}-${ml}-cover.jpg" controls playsinline preload="none"></video>
+    <div><h3 class="h3">${esc(name)} <span class="small">· ${esc(len)}</span></h3><p class="small" style="margin:6px 0 10px">${esc(note)}</p>
+    <div class="row" style="gap:8px"><a class="btn btn-sm btn-chrome" href="/media/plate-club-${id}-${ml}.mp4" download>${L('Скачать', 'Download')}</a><a class="btn btn-sm btn-ghost" href="/media/plate-club-${id}-${ml}-cover.jpg" download>${L('Обложка', 'Cover')}</a></div></div></article>`;
+  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Материалы', 'Media kit')}</p><h1 class="h1" style="margin-top:12px">${L('Ролики и баннеры', 'Clips and banners')}</h1>
+    <p class="lede" style="margin-top:12px">${L('Готовые вертикальные ролики и небольшие анимированные плашки с прозрачным фоном. Выкладывайте как есть или кладите поверх своего видео — кадр они не закрывают.', 'Ready vertical clips and small animated overlays with a transparent background. Post them as they are or drop one over your own video — they don’t cover the frame.')}</p>
+    <div class="lang" style="margin-top:14px;justify-self:start"><button data-act="mlang" data-l="ru" aria-pressed="${ml === 'ru'}">RU</button><button data-act="mlang" data-l="en" aria-pressed="${ml === 'en'}">EN</button></div></div></section>
+    <section class="sec">${SH(L('Ролики', 'Clips'), L('со звуком', 'with sound'))}<div class="mgrid">${F.map(fcard).join('')}</div></section>
+    <section class="sec">${SH(L('Баннеры-плашки', 'Overlay banners'), '1080×1920')}<div class="mgrid">${B.map(bcard).join('')}</div></section>
     <section class="sec" style="padding-bottom:80px"><div class="panel">${SH(L('Как пользоваться', 'How to use'))}
-      <ol class="steps-ol"><li>${L('Скачайте WebM — в нём прозрачный фон (CapCut, Premiere, DaVinci). Для Instagram-редактора удобнее GIF, для статичной обложки — PNG.', 'Download the WebM — it has a transparent background (CapCut, Premiere, DaVinci). For the Instagram editor a GIF is easier; for a still, take the PNG.')}</li>
-        <li>${L('Положите файл вторым слоем поверх своего видео.', 'Put the file as a second layer over your video.')}</li>
+      <ol class="steps-ol"><li>${L('Ролик можно выложить как есть. Баннер скачайте в WebM — в нём прозрачный фон (CapCut, Premiere, DaVinci). Для редактора Instagram удобнее GIF, для обложки — PNG.', 'A clip can be posted as is. For a banner take the WebM — it has a transparent background (CapCut, Premiere, DaVinci). For the Instagram editor a GIF is easier; for a still, the PNG.')}</li>
+        <li>${L('Положите баннер вторым слоем поверх своего видео.', 'Put the banner as a second layer over your video.')}</li>
         <li>${L('Выложите ролик и пришлите ссылку в «Бонусы» → задания. За TikTok платим 1 PLT за просмотр, за сторис — 5 000 PLT.', 'Post it and send the link in Perks → quests. TikTok pays 1 PLT per view, a story pays 5,000 PLT.')}</li></ol></div></section></div>`;
 };
 VIEWS.help = async () => `<div class="wrap"><section class="page-head"><div><h1 class="h1">${L('Помощь', 'Help')}</h1></div></section><div class="prose">${(LANG === 'en' ? [

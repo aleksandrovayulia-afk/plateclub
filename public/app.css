@@ -1223,3 +1223,5 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
   .sslot{min-height:44px}
   .tx .lbl a{padding-block:8px;margin-block:-8px;display:inline-block}
 }
+.mcard video.promo-v{width:100%;max-width:220px;height:auto;justify-self:center;background:#07090e}
+@media(min-width:900px){.mgrid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}}
