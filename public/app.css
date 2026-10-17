@@ -1215,3 +1215,11 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .msx.on{background:rgba(198,255,61,.1);border-color:rgba(198,255,61,.4)}.msx.on b,.msx.on span{color:#c6ff3d}
 .qrbox{display:grid;gap:14px;justify-items:center}
 .qrbox canvas,.qrbox svg{width:min(260px,70vw);height:auto;background:#fff;border-radius:16px;padding:12px}
+/* phones: bigger invisible tap areas for small links (Apple asks for ~44px) */
+@media(max-width:600px){
+  .pid,.sh-link,.back,.btn-text,.mk-bot,.pc-sub a{padding-block:10px;margin-block:-10px;display:inline-block}
+  .cc-info{width:32px!important;height:32px!important;font-size:13px!important}
+  .lang button{min-height:38px;min-width:48px}
+  .sslot{min-height:44px}
+  .tx .lbl a{padding-block:8px;margin-block:-8px;display:inline-block}
+}

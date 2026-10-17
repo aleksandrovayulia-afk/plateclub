@@ -65,6 +65,11 @@
   .lt .a{font-family:var(--fn);font-weight:700;font-size:40px;color:#fff}
   .lt .b{font-family:var(--fm);font-size:28px;color:var(--ice)}
 
+  .tick{display:inline-flex;align-items:center;gap:18px;padding:16px 32px;border-radius:999px;background:rgba(5,8,14,.78);backdrop-filter:blur(12px);
+    border:2px solid rgba(198,255,61,.35);box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .tick .dot{width:14px;height:14px;border-radius:50%;background:var(--acid);box-shadow:0 0 0 0 rgba(198,255,61,.65);animation:pulse 1.8s infinite}
+  .tick span{font-size:30px;font-weight:700;color:#DCE9F7}
+  .tick b{font-family:var(--fm);font-size:30px;background:var(--chrome);-webkit-background-clip:text;background-clip:text;color:transparent}
   /* reveal animation shared by all banners */
   .anim{opacity:0;transform:translateY(40px) scale(.94);animation:in .7s cubic-bezier(.16,1.1,.3,1) .15s forwards}
   @keyframes in{to{opacity:1;transform:none}}
@@ -76,7 +81,15 @@
 <script>
 const Q = new URLSearchParams(location.search);
 const V = Q.get('v') || 'pill';
+const LANG = Q.get('lang') === 'en' ? 'en' : 'ru';
 const HANDLE = Q.get('h') || 'plate-club.netlify.app';
+const TX = {
+  collect: ['Коллекционные номера', 'Collectible plates'],
+  start: ['100 PLT на старт', '100 PLT to start'],
+  play: ['Играй бесплатно', 'Play for free'],
+  rare: ['Лови редкий номер', 'Catch a rare plate'],
+};
+const t_ = k => TX[k][LANG === 'en' ? 1 : 0];
 const LOGO = '/brand/logo-chrome-900.png';
 const T = {
   pill: `<div class="slot bottom"><div class="anim" style="position:relative"><div class="glow"></div>
@@ -88,7 +101,10 @@ const T = {
   cta: `<div class="slot bottom"><div class="anim" style="position:relative"><div class="glow"></div>
       <div class="cta"><i class="dot"></i><span class="txt"><span class="t1">PLATE CLUB</span><span class="t2">${HANDLE}</span></span><img src="${LOGO}" alt="" style="height:60px"></div></div></div>`,
   badge: `<div class="badge anim"><img src="${LOGO}" alt=""><span>PLATE CLUB</span></div>`,
-  lower: `<div class="slot bottom" style="bottom:360px;justify-items:start"><div class="lt anim"><img src="${LOGO}" alt=""><span class="v"></span><span class="txt"><span class="a">Коллекционные номера</span><span class="b">${HANDLE}</span></span></div></div>`,
+  lower: `<div class="slot bottom" style="bottom:360px;justify-items:start"><div class="lt anim"><img src="${LOGO}" alt=""><span class="v"></span><span class="txt"><span class="a">${t_('collect')}</span><span class="b">${HANDLE}</span></span></div></div>`,
+  start: `<div class="slot bottom"><div class="anim" style="position:relative"><div class="glow"></div>
+      <div class="cta" style="padding:26px 44px"><img src="${LOGO}" alt="" style="height:64px"><span class="txt"><span class="t1">${t_('start')}</span><span class="t2">${HANDLE}</span></span></div></div></div>`,
+  ticker: `<div class="slot" style="top:300px"><div class="anim tick"><i class="dot"></i><span>${t_('play')}</span><b>${HANDLE}</b></div></div>`,
 };
 document.getElementById('stage').innerHTML = T[V] || T.pill;
 </script>
