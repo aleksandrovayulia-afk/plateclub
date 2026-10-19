@@ -6,6 +6,8 @@ cd "$(dirname "$0")/.."
 gcloud config set project $P >/dev/null 2>&1 || true
 echo "== 1/5 Firebase: проверка входа"
 firebase projects:list --non-interactive >/dev/null 2>&1 || firebase login --no-localhost
+echo "== Включаю нужные сервисы Google (1–2 минуты)"
+gcloud services enable secretmanager.googleapis.com cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com firebasehosting.googleapis.com --project $P
 echo "== 2/5 Библиотеки сервера"
 (cd functions && npm install --no-audit --no-fund --silent)
 echo "== 3/5 Секреты"
