@@ -96,7 +96,10 @@ const fmt = n => Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/[^A-Za-z0-9-]/g, '');
 const store = { get(k, d) { try { const v = localStorage.getItem('pc.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('pc.' + k, JSON.stringify(v)); } catch {} } };
 const BRAND = n => (window.__BRAND && window.__BRAND[n]) || `/brand/${n}`;
-const IMG = n => (window.__BRAND && window.__BRAND['img/' + n]) || `/img/${n}`;
+// pictures: WebP (4× lighter than JPEG); phones get the half-size version of wide backgrounds
+const WEBP = (() => { try { return document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp'); } catch { return false; } })();
+const IMG_S = new Set(['head-1', 'head-2', 'head-3', 'head-4', 'head-5', 'head-6', 'tex-1', 'hero-chrome']);
+const IMG = n => { if (window.__BRAND && window.__BRAND['img/' + n]) return window.__BRAND['img/' + n]; if (!WEBP || !n.endsWith('.jpg')) return `/img/${n}`; const b = n.slice(0, -4); return `/img/${b}${IMG_S.has(b) && innerWidth <= 820 ? '-s' : ''}.webp`; };
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------- language ---------- */
