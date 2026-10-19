@@ -36,7 +36,9 @@ function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 }
 function parseCookies(h) { const o = {}; (h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
-const sessionCookie = (token, maxAge) => `pc_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+// Firebase Hosting forwards only a cookie named __session, so the name is configurable
+const CK = (globalThis.process && process.env.SESSION_COOKIE) || 'pc_session';
+const sessionCookie = (token, maxAge) => `${CK}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
 export function createApp({ pool, env = process.env, fetchImpl = fetch, now = () => Date.now() }) {
   const SECRET = env.PLATE_SEAL_SECRET || '';
@@ -82,7 +84,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   const attempt = key => q('INSERT INTO auth_attempts(key) VALUES($1)', [key]);
 
   async function sessionUser(req) {
-    const t = parseCookies(req.headers.get('cookie')).pc_session; if (!t) return null;
+    const t = parseCookies(req.headers.get('cookie'))[CK]; if (!t) return null;
     const [u] = await q(`SELECT u.id,u.email,u.nickname,u.balance,u.role,CASE WHEN u.avatar IS NULL THEN NULL ELSE left(md5(u.avatar),8) END AS av,u.seen_tips,u.email_verified_at IS NOT NULL AS verified,(extract(epoch from u.created_at)*1000)::bigint AS created_ms,(extract(epoch from u.seen_at)*1000)::bigint AS seen_ms
       FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.blocked_at IS NULL`, [sha256(t)]);
     if (u && !(u.seen_ms && now() - n(u.seen_ms) < 60000)) await q(`UPDATE users SET seen_at=now() WHERE id=$1`, [u.id]).catch(() => {});
@@ -292,7 +294,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   });
 
   R('POST', '/api/auth/logout', async ({ req }) => {
-    const t = parseCookies(req.headers.get('cookie')).pc_session;
+    const t = parseCookies(req.headers.get('cookie'))[CK];
     if (t) await q('DELETE FROM sessions WHERE token_hash=$1', [sha256(t)]);
     return { body: { ok: true }, headers: { 'set-cookie': sessionCookie('', 0) } };
   });
@@ -332,7 +334,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return { active: n(r.c) };
   }, { auth: true });
   R('POST', '/api/auth/logout-others', async ({ user, req }) => {
-    const t = parseCookies(req.headers.get('cookie')).pc_session || '';
+    const t = parseCookies(req.headers.get('cookie'))[CK] || '';
     const r = await q('DELETE FROM sessions WHERE user_id=$1 AND token_hash<>$2 RETURNING 1', [user.id, sha256(t)]);
     return { ok: true, closed: r.length };
   }, { auth: true });
