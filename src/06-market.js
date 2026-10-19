@@ -1,6 +1,9 @@
 
 /* ---------- market ---------- */
-const M = { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '' };
+const M = { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '', fav: false };
+// watchlist: plate IDs starred on this device, with the price seen last time (to spot price drops)
+const FAV = { get: () => store.get('fav', {}) || {}, has: id => !!FAV.get()[id], toggle(id, price) { const f = FAV.get(); if (f[id]) delete f[id]; else f[id] = { p: price || 0 }; store.set('fav', f); return !!f[id]; } };
+const favBtn = (id, price) => `<button class="fav-b" data-act="fav" data-id="${id}" data-price="${price || 0}" aria-pressed="${FAV.has(id)}" aria-label="${L('В избранное', 'Watchlist')}">★</button>`;
 VIEWS.market = async () => {
   const [st, sales, dl, on] = await Promise.all([GET('/api/market/stats').catch(() => null), GET('/api/market/sales').catch(() => ({ sales: [] })), GET('/api/dealer').catch(() => null), GET('/api/online').catch(() => ({ count: 0 }))]);
   const seg = (k, opts) => `<div class="seg" role="group">${opts.map(([v, t]) => `<button data-act="mseg" data-k="${k}" data-v="${v}" aria-pressed="${M[k] === v}">${t}</button>`).join('')}</div>`;
@@ -13,6 +16,7 @@ VIEWS.market = async () => {
     <div class="tools-row">${seg('who', [['', L('Все продавцы', 'All sellers')], ['players', L('Игроки', 'Players')], ['market', L('Рынок', 'Market')]])}${seg('group', [['', L('Все', 'All')], ['ru', L('Россия', 'Russia')], ['by', L('Беларусь', 'Belarus')]])}
       ${CFG.tiers.map(t => `<button class="chip t-${t.id}" data-act="mtier" data-t="${t.id}" aria-pressed="${M.tiers.includes(t.id)}"><i></i>${tierName(t.id)}</button>`).join('')}
       <div class="range"><label class="sr-only" for="mmin">${L('Цена от', 'Min price')}</label><input class="field mono" id="mmin" type="number" inputmode="numeric" min="0" placeholder="${L('от', 'min')}" value="${esc(M.min)}"><label class="sr-only" for="mmax">${L('Цена до', 'Max price')}</label><input class="field mono" id="mmax" type="number" inputmode="numeric" min="0" placeholder="${L('до', 'max')}" value="${esc(M.max)}"></div>
+      <button class="chip fav-chip" data-act="mfav" aria-pressed="${M.fav}">★ ${L('Избранное', 'Watchlist')}</button>
       <button class="btn-text" data-act="mreset">${L('Сбросить', 'Reset')}</button></div>
   </section><div id="mres">${skel()}</div>
   ${dl ? `<div style="margin-top:22px">${dealerPanel(dl)}</div>` : ''}
@@ -36,12 +40,15 @@ async function loadMarket(silent = false) {
   if (seq !== mkSeq || !$('#mres')) return;
   // the silent refresh rewrites the grid only when something really changed — rebuilding 120 cards
   // every 12 s used to eat memory on phones and the tab would reload
-  const sig = d.listings.map(l => l.id + ':' + l.price).join(',');
+  favCheck(d.listings);
+  if (M.fav) { const f = FAV.get(); d.listings = d.listings.filter(l => f[l.plate.id]); }
+  const sig = (M.fav ? 'F' : '') + d.listings.map(l => l.id + ':' + l.price).join(',');
   if (silent && sig === mkSig) return;
   mkSig = sig;
-  const filtered = M.q || M.tiers.length || M.group || M.who || M.min !== '' || M.max !== '';
+  const filtered = M.fav || M.q || M.tiers.length || M.group || M.who || M.min !== '' || M.max !== '';
   box.innerHTML = `<div class="meta"><span>${d.listings.length} ${pl(d.listings.length, ['объявление', 'объявления', 'объявлений'], ['listing', 'listings'])}</span><span>${L('Поиск понимает русские и латинские буквы', 'Search understands Cyrillic and Latin letters')}</span></div>
-  ${d.listings.length ? `<div class="pgrid">${d.listings.slice(0, MK_SHOW).map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button>` })).join('')}</div>${d.listings.length > MK_SHOW ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-ghost" data-act="mkmore">${L('Показать ещё', 'Show more')} (${d.listings.length - MK_SHOW})</button></div>` : ''}`
+  ${d.listings.length ? `<div class="pgrid">${d.listings.slice(0, MK_SHOW).map(l => PlateCard(l.plate, { listing: l, flag: l.mine ? L('Ваше', 'Yours') : '', actions: l.mine ? `<span class="row"><button class="btn btn-sm btn-ghost" data-act="editlisting" data-id="${l.id}" data-price="${l.price}">${L('Цена', 'Price')}</button><button class="btn btn-sm btn-ghost" data-act="cancel" data-id="${l.id}">${L('Снять', 'Cancel')}</button></span>` : `<span class="row" style="gap:6px">${favBtn(l.plate.id, l.price)}<button class="btn btn-sm btn-chrome" data-act="detail" data-id="${l.plate.id}">${L('Купить', 'Buy')}</button></span>` })).join('')}</div>${d.listings.length > MK_SHOW ? `<div class="row" style="justify-content:center;margin-top:16px"><button class="btn btn-ghost" data-act="mkmore">${L('Показать ещё', 'Show more')} (${d.listings.length - MK_SHOW})</button></div>` : ''}`
+    : M.fav ? Empty(L('В избранном пока ничего не продаётся', 'Nothing from your watchlist is for sale'), L('Отмечайте номера звёздочкой ★ — здесь будут только они, а при снижении цены придёт уведомление.', 'Star plates with ★ — only they show here, and you get a notice when a price drops.'), `<button class="btn btn-ghost" data-act="mfav">${L('Показать все', 'Show all')}</button>`)
     : filtered ? Empty(L('Ничего не нашлось', 'Nothing found'), L('Уберите часть фильтров или сократите запрос.', 'Remove some filters or shorten the query.'), `<button class="btn btn-ghost" data-act="mreset">${L('Сбросить фильтры', 'Reset filters')}</button>`)
       : Empty(L('Станьте первым продавцом', 'Be the first seller'), L('На рынке пока нет номеров.', 'There are no plates on the market yet.'), ME ? `<button class="btn btn-chrome" data-act="listdlg">${L('Выставить номер', 'List a plate')}</button>` : `<a class="btn btn-chrome" href="#/register">${L('Создать аккаунт', 'Create an account')}</a>`, { letters: 'ААА', digits: '001', region: '77' })}`;
   if (!silent) fx(box);
@@ -99,3 +106,11 @@ VIEWS.u = async ({ arg }) => {
       ${tiers.length > 1 ? `<div class="row" style="margin-bottom:14px;flex-wrap:wrap">${['', ...tiers].map(t => `<button class="chip${t ? ' t-' + t : ''}" data-act="ufilter" data-t="${t}" aria-pressed="${UF.tier === t}">${t ? `<i></i>${tierName(t)} · ${own.filter(p => p.tier === t).length}` : L('Все', 'All')}</button>`).join('')}</div>` : ''}
       ${shown.length ? `<div class="pgrid">${shown.map(p => PlateCard(p, { actions: ME && !isMe ? `<a class="btn btn-sm btn-ghost" href="#/swap/new?to=${encodeURIComponent(u.nickname)}&want=${p.id}">${L('Обмен', 'Swap')}</a>` : '' })).join('')}</div>` : Empty(L('Пока пусто', 'Empty for now'), L('В этой коллекции нет номеров.', 'This collection has no plates.'))}</section></div>`;
 };
+
+// tells once when a starred plate on sale got cheaper than the price seen before
+function favCheck(listings) {
+  const f = FAV.get(); let changed = false; const drops = [];
+  for (const l of listings) { const x = f[l.plate.id]; if (!x) continue; if (x.p && l.price < x.p) drops.push([l, x.p]); if (x.p !== l.price) { x.p = l.price; changed = true; } }
+  if (changed) store.set('fav', f);
+  if (drops.length) { const [l, old] = drops[0]; toast(`★ ${plateStr(l.plate)}: ${L('цена снизилась', 'price dropped')} ${fmt(old)} → ${fmt(l.price)} PLT${drops.length > 1 ? L(` (и ещё ${drops.length - 1})`, ` (+${drops.length - 1} more)`) : ''}`); }
+}

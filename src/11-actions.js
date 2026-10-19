@@ -57,7 +57,7 @@ A.detail = async btn => {
     <dl class="kv"><dt>ID</dt><dd><span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Продавец', 'Seller')}</dt><dd>${esc(l.seller)}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
       <dt class="tot">${L('К оплате', 'To pay')}</dt><dd class="tot">${fmt(l.price)} PLT</dd><dt>${L('Баланс после', 'Balance after')}</dt><dd>${can ? fmt(ME.balance - l.price) + ' PLT' : '—'}</dd></dl>
     ${can ? '' : `<p class="err">${L(`Не хватает ${fmt(l.price - ME.balance)} PLT.`, `${fmt(l.price - ME.balance)} PLT short.`)}</p>`}
-    <div class="dlg-acts"><a class="btn btn-ghost" href="#/plate/${p.id}">${L('Сначала проверить', 'Verify first')}</a><button class="btn btn-chrome" data-act="buy" data-id="${l.id}" data-price="${l.price}" ${can ? '' : 'disabled'} autofocus>${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button></div></div>`);
+    <div class="dlg-acts">${favBtn(p.id, l.price)}<a class="btn btn-ghost" href="#/plate/${p.id}">${L('Сначала проверить', 'Verify first')}</a><button class="btn btn-chrome" data-act="buy" data-id="${l.id}" data-price="${l.price}" ${can ? '' : 'disabled'} autofocus>${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button></div></div>`);
 };
 A.buy = async btn => {
   busy(btn, true, '…');
@@ -294,7 +294,9 @@ A.verify = async btn => {
 };
 A.mtier = btn => { const t = btn.dataset.t; M.tiers = M.tiers.includes(t) ? M.tiers.filter(x => x !== t) : [...M.tiers, t]; btn.setAttribute('aria-pressed', M.tiers.includes(t)); mkReset(); loadMarket(); };
 A.mseg = btn => { M[btn.dataset.k] = btn.dataset.v; btn.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === btn)); mkReset(); loadMarket(); };
-A.mreset = () => { Object.assign(M, { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '' }); render(false); };
+A.mreset = () => { Object.assign(M, { q: '', tiers: [], group: '', min: '', max: '', sort: 'deal', who: '', fav: false }); render(false); };
+A.mfav = () => { M.fav = !M.fav; document.querySelectorAll('.fav-chip').forEach(b => b.setAttribute('aria-pressed', M.fav)); mkReset(); loadMarket(); };
+A.fav = btn => { const on = FAV.toggle(btn.dataset.id, Number(btn.dataset.price)); document.querySelectorAll(`.fav-b[data-id="${CSS.escape(btn.dataset.id)}"]`).forEach(b => b.setAttribute('aria-pressed', on)); sfx('click'); toast(on ? L('Добавлено в избранное ★', 'Added to watchlist ★') : L('Убрано из избранного', 'Removed from watchlist')); if (M.fav && !on && parseRoute().name === 'market') { mkReset(); loadMarket(); } };
 A.ctier = btn => { C.tier = btn.dataset.t; render(false); };
 A.pwshow = btn => { const i = btn.previousElementSibling; const s = i.type === 'password'; i.type = s ? 'text' : 'password'; btn.textContent = s ? L('Скрыть', 'Hide') : L('Показать', 'Show'); };
 A.logout = async () => { try { await POST('/api/auth/logout'); } catch {} ME = null; PERKS = null; toast(L('Вы вышли.', 'Signed out.')); go('#/'); };
