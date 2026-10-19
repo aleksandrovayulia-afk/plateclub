@@ -50,7 +50,7 @@ function upPaint() {
   const ti = TI(); const cur = sel ? pk.top : 5;
   if (sel && (!UP.target || ti[UP.target] <= cur)) UP.target = CFG.tiers[Math.min(4, cur + 1)].id;
   if (sel && cur >= 4) UP.target = null;
-  $('#upTargets').innerHTML = CFG.tiers.map(t => { const dis = !sel || ti[t.id] <= cur; const ch = sel && !dis ? upChance(sel, t.id, pk.extra) : 0; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
+  $('#upTargets').innerHTML = CFG.tiers.map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
   const ch = sel && UP.target ? upChance(sel, UP.target, pk.extra) : 0;
   $('#wArc').setAttribute('stroke-dasharray', `${WC * ch} ${WC}`);
   $('#wPct').textContent = sel && UP.target ? (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%' : '—';

@@ -31,7 +31,7 @@ export const TIERS = [
 // v1 — launch; v2 (16 Oct 2026) — rare plates worth much more; v3 (16 Oct 2026) — higher common/fine bases + plate traits.
 export const VALUE_V = 4;
 const BASES = { 1: { common: 20, fine: 60, rare: 220, elite: 900, grail: 6000 }, 2: { common: 20, fine: 60, rare: 500, elite: 2500, grail: 15000 } };
-export const TI = Object.fromEntries(TIERS.map((t, i) => [t.id, i]));
+export const TI = Object.assign(Object.create(null), Object.fromEntries(TIERS.map((t, i) => [t.id, i]))); // no prototype: 'constructor' is not a tier
 export const PATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'] };
 export const PAT_NAME = { random: 'Обычный', seq: 'Лесенка', pair: 'Пара', mirror: 'Зеркальный', round: 'Круглый', triple: 'Одинаковые цифры', zero: 'Нулевая серия', letters: 'Одинаковые буквы', full: 'Полное совпадение', zerofull: 'Ноль + буквы' };
 
@@ -370,7 +370,7 @@ export const TELEGRAM = { url: 'https://t.me/+pMbT6m8-iuM2YjFk', reward: 500 };
 // Invite a friend. The friend gets a welcome bonus, the inviter is paid once that friend
 // really starts playing. Milestones reward the people who bring a whole crowd.
 export const REFERRAL = {
-  signupInviter: 1000,   // paid to the inviter the moment the friend registers
+  signupInviter: 1000,   // paid to the inviter when the friend opens the first case
   signupFriend: 500,     // extra welcome for a friend who came by a link
   inviter: 2000,         // paid to the inviter once the friend really plays
   friend: 500,           // and to the friend at the same moment
@@ -388,7 +388,8 @@ export function levelOf(xp) { let l = 1; while (l < 999 && xpFor(l + 1) <= xp) l
 export const UPGRADE_EDGE = 0.9, UPGRADE_MAX = 0.75, UPGRADE_MIN = 0.01;
 export const targetValue = (p, tier) => plateValue({ tier, region: p.region, country: p.country, digits: '' });
 export const UPGRADE_MAX_PLATES = 2;
-export const upgradeChance = (valueIn, valueTarget) => Math.max(UPGRADE_MIN, Math.min(UPGRADE_MAX, Math.floor(UPGRADE_EDGE * valueIn / valueTarget * 10000) / 10000));
+// no floor: a 1% floor on a 0.1% jump would pay more than it costs. Jumps below UPGRADE_MIN are refused instead.
+export const upgradeChance = (valueIn, valueTarget) => Math.max(0, Math.min(UPGRADE_MAX, Math.floor(UPGRADE_EDGE * valueIn / valueTarget * 10000) / 10000));
 
 // ---- market ecosystem (v9) ----
 // Market maker: the "Plate Club Market" account keeps the market stocked with fresh everyday plates.

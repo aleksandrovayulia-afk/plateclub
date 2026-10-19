@@ -21,7 +21,7 @@ const fakeFetch = async (url, opts) => {
   if (url.includes('stripe')) return new Response(JSON.stringify({ id: 'cs_test_' + Math.random().toString(36).slice(2), url: 'https://checkout.stripe.test/x' }), { status: 200 });
   throw new Error('unexpected fetch ' + url);
 };
-const env = { PLATE_SEAL_SECRET: 'x'.repeat(48), URL: 'https://plateclub.test', RESEND_API_KEY: 're_test', MAIL_FROM: 'Plate Club <hi@plateclub.test>', STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec_test', ADMIN_SETUP_CODE: 'admin-code-for-tests-123', ADMIN_INITIAL_GRANT: '10000000', MARKET_BOT: 'off' };
+const env = { RANK_CACHE_MS: '0', PLATE_SEAL_SECRET: 'x'.repeat(48), URL: 'https://plateclub.test', RESEND_API_KEY: 're_test', MAIL_FROM: 'Plate Club <hi@plateclub.test>', STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec_test', ADMIN_SETUP_CODE: 'admin-code-for-tests-123', ADMIN_INITIAL_GRANT: '10000000', MARKET_BOT: 'off' };
 const app = createApp({ pool, env, fetchImpl: fakeFetch });
 const appNoMail = createApp({ pool, env: { PLATE_SEAL_SECRET: env.PLATE_SEAL_SECRET } });
 
@@ -261,18 +261,18 @@ console.log('\n12b. Referrals and quests');
   ok((await INV.call('GET', '/api/referral')).data.code === ref.code, 'the invite code never changes');
   const invSu = (await INV.call('GET', '/api/me')).data.user.balance;
   const FR = client(); await FR.call('POST', '/api/auth/register', { email: 'friend@example.com', nickname: 'Friend', password: 'friend-pass-1', terms: true, ref: ref.code });
-  ok((await INV.call('GET', '/api/me')).data.user.balance === invSu + 1000, 'inviter gets +1000 PLT the moment a friend registers', (await INV.call('GET', '/api/me')).data.user.balance - invSu);
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invSu, 'a bare registration pays the inviter nothing', (await INV.call('GET', '/api/me')).data.user.balance - invSu);
   ok((await FR.call('GET', '/api/me')).data.user.balance >= 500, 'invited friend gets an extra welcome bonus', (await FR.call('GET', '/api/me')).data.user.balance);
   await q1(`UPDATE users SET balance=100000 WHERE nick_norm IN ('friend','inviter')`);
   const invBefore = (await INV.call('GET', '/api/me')).data.user.balance;
   for (let i = 0; i < 2; i++) await FR.call('POST', '/api/cases/01/open', {});
-  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore, 'no referral pay-out until the friend really plays');
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 1000, 'inviter gets +1000 PLT when the friend opens the first case', (await INV.call('GET', '/api/me')).data.user.balance - invBefore);
   const frBefore = (await FR.call('GET', '/api/me')).data.user.balance;
   r = await FR.call('POST', '/api/cases/01/open', {});
-  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 2000, 'inviter gets 2000 PLT on the 3rd case', (await INV.call('GET', '/api/me')).data.user.balance - invBefore);
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 3000, 'inviter gets 2000 PLT more on the 3rd case', (await INV.call('GET', '/api/me')).data.user.balance - invBefore);
   ok((await FR.call('GET', '/api/me')).data.user.balance === frBefore - r.data.price + 500, 'friend gets 500 PLT too');
   for (let i = 0; i < 2; i++) await FR.call('POST', '/api/cases/01/open', {});
-  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 2000, 'referral is paid only once per friend');
+  ok((await INV.call('GET', '/api/me')).data.user.balance === invBefore + 3000, 'referral is paid only once per friend');
   const st = (await INV.call('GET', '/api/referral')).data;
   ok(st.joined === 1 && st.active === 1 && st.earned === 3000, 'invite page shows friends and earnings', st);
   ok(st.link.endsWith('/i/Inviter') && st.codeLink.includes('?ref=' + st.code), 'pretty invite link uses the nickname', st.link);
@@ -281,7 +281,7 @@ console.log('\n12b. Referrals and quests');
     await q1(`UPDATE users SET balance=100000 WHERE nick_norm='byname'`);
     const before = (await INV.call('GET', '/api/me')).data.user.balance;
     for (let i = 0; i < 3; i++) await F2.call('POST', '/api/cases/01/open', {});
-    ok((await INV.call('GET', '/api/me')).data.user.balance === before + 2000, 'a nickname works as an invite code too'); }
+    ok((await INV.call('GET', '/api/me')).data.user.balance === before + 3000, 'a nickname works as an invite code too'); }
 
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'not a link', handle: '@friend' }); ok(r.status === 400, 'quest needs a real link');
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '' }); ok(r.status === 400, 'quest needs the player account');
@@ -412,7 +412,7 @@ ok(chanceOk && uwins + ulosses === Math.min(8, up.length), `upgrades follow the 
 const again = await U.call('POST', '/api/upgrade', { plateId: up[0].id, target: 'rare' }); ok(again.status === 404, 'a burned plate cannot be upgraded again');
 ok(!(await U.call('GET', '/api/collection')).data.plates.some(p => p.id === up[0].id), 'burned plate leaves the collection');
 const { upgradeChance, targetValue: tv } = await import('../server/game.mjs');
-ok(upgradeChance(60, 220) > 0.2 && upgradeChance(60, 220) < 0.3 && upgradeChance(20, 6000) === 0.01 && upgradeChance(900, 220) === 0.75, 'chance = 90% × value ratio, between 1% and 75%');
+ok(upgradeChance(60, 220) > 0.2 && upgradeChance(60, 220) < 0.3 && upgradeChance(20, 6000) < 0.01 && upgradeChance(900, 220) === 0.75, 'chance = 90% × value ratio, between 1% and 75%');
 r = await client().call('GET', '/api/market?group=ru'); ok(r.status === 200 && r.data.listings.every(l => l.plate.country === 'RU'), 'market filter: Russia only');
 r = await client().call('GET', '/api/drops'); ok(r.status === 200 && r.data.drops.every(d => ['rare', 'elite', 'grail'].includes(d.plate.tier) && d.nickname), 'live drops: only rare+ plates with their owner', r.data.drops.length);
 r = await client().call('GET', '/api/upgrade/recent'); ok(r.status === 200 && r.data.upgrades.length >= 1 && r.data.upgrades.every(g => typeof g.success === 'boolean' && g.nickname === 'upgrader'), 'recent upgrades feed', r.data.upgrades[0]);
@@ -653,6 +653,20 @@ console.log('\n20. Multi-open, daily tasks, wheel, higher-or-lower, profiles, ph
   ok(!(await D.call('GET', '/api/me')).data.user, 'deleted player is signed out');
   r = await client().call('POST', '/api/auth/register', { email: 'gone@example.com', nickname: 'GoneUser', password: 'gone-pass-123', terms: true }); ok(r.data.ok === true, 'nickname and email are free again', r.data);
   r = await client().call('POST', `/api/admin/users/${id}/delete`, { confirm: 'DELETE' }); ok(r.status === 401 || r.status === 403, 'only admins can delete'); }
+
+// security: collections can't be farmed by passing the same plates between accounts; upgrade jumps under 1% are refused
+{ const SA = client(), SB = client();
+  await SA.call('POST', '/api/auth/register', { email: 'seta@example.com', nickname: 'SetFarmA', password: 'set-pass-123', terms: true });
+  await SB.call('POST', '/api/auth/register', { email: 'setb@example.com', nickname: 'SetFarmB', password: 'set-pass-123', terms: true });
+  const [{ id: ua }] = await q1(`SELECT id FROM users WHERE nick_norm='setfarma'`); const [{ id: ub }] = await q1(`SELECT id FROM users WHERE nick_norm='setfarmb'`);
+  for (let i = 1; i <= 3; i++) await q1(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,seal,country,copy) VALUES($1,'ААА',$2,'77',$3,'grail','full',9000,$4,'OWNED','test','x','RU',1)`, ['PC-SETF-000' + i, String(i).repeat(3), 'ААА' + String(i).repeat(3) + '77', ua]);
+  let r = await SA.call('POST', '/api/sets/grails/claim', {}); ok(r.status === 200 && r.data.amount === 30000, 'collection reward paid to the first owner', r.data);
+  await q1(`UPDATE plates SET owner_id=$1 WHERE id LIKE 'PC-SETF-%'`, [ub]);
+  r = await SB.call('GET', '/api/sets'); ok(r.data.sets.find(x => x.id === 'grails').have === 0, 'plates that already completed a collection do not count again');
+  r = await SB.call('POST', '/api/sets/grails/claim', {}); ok(r.status === 409, 'the same plates cannot complete the collection on another account', r.data);
+  const [{ id: cheap }] = await q1(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,seal,country,copy) VALUES('PC-SETF-0009','ВВВ','123','39','ВВВ12339','common','random',21,$1,'OWNED','test','x','RU',1) RETURNING id`, [ub]);
+  r = await SB.call('POST', '/api/upgrade', { plateIds: [cheap], target: 'grail' }); ok(r.status === 400 && /1%/.test(r.data.error), 'upgrade with a chance under 1% is refused (no floor)', r.data);
+  r = await SB.call('POST', '/api/upgrade', { plateIds: [cheap], target: 'constructor' }); ok(r.status === 400, 'prototype keys are not tiers', r.data); }
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

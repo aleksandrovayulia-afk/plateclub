@@ -129,7 +129,7 @@ A.shareplate = async btn => {
       <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://t.me/share/url?url=${enc(link)}&text=${enc(msg.replace(link, '').trim())}">Telegram</a>
       <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${enc(msg)}">WhatsApp</a>
       <button class="btn btn-ghost" data-act="sharecopy">${L('Копировать', 'Copy')}</button></div>
-    <p class="small" style="margin:0;text-align:center">${L('Друг зарегистрируется по ссылке — вам +1 000 PLT. Картинку можно выложить в сторис — за это ещё 5 000 PLT.', 'A friend signs up via the link — you get +1,000 PLT. Post the picture to your story for another 5,000 PLT.')}</p>
+    <p class="small" style="margin:0;text-align:center">${L('Друг зарегистрируется по ссылке и откроет кейс — вам +1 000 PLT. Картинку можно выложить в сторис — за это ещё 5 000 PLT.', 'A friend signs up via the link and opens a case — you get +1,000 PLT. Post the picture to your story for another 5,000 PLT.')}</p>
     <div class="dlg-acts"><a class="btn btn-ghost" href="${url}" download="plate-${esc(p.id)}.png">${L('Скачать картинку', 'Download picture')}</a><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
 };
 let SHARE = null;

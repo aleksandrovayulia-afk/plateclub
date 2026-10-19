@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES, DAILY_TASKS, dailyTasksFor, WHEEL, HILO,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES, UPGRADE_MIN, DAILY_TASKS, dailyTasksFor, WHEEL, HILO,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -35,7 +35,7 @@ async function checkPassword(pw, stored) {
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 }
-function parseCookies(h) { const o = {}; (h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
+function parseCookies(h) { const o = {}; (h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) { let v = p.slice(i + 1).trim(); try { v = decodeURIComponent(v); } catch {} o[p.slice(0, i).trim()] = v; } }); return o; }
 // Firebase Hosting forwards only a cookie named __session, so the name is configurable
 const CK = (globalThis.process && process.env.SESSION_COOKIE) || 'pc_session';
 const sessionCookie = (token, maxAge) => `${CK}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
@@ -148,17 +148,23 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const [{ d }] = await Q(`SELECT count(*)::int AS d FROM ledger WHERE user_id=$1 AND kind='referral' AND created_at > now() - interval '24 hours'`, [inviterId]);
     return { inv, same: false, capped: n(d) >= REFERRAL.maxPerDay * 2 };
   }
-  // Paid the moment a friend registers through the link: +1000 to the inviter, +500 extra to the friend.
-  async function paySignupReferral(Q, friendId) {
+  // Sign-up through a link: the friend gets +500 at once; the inviter's +1000 comes with the friend's first opened case
+  // (a bare registration pays nothing to the inviter, so mass-registered accounts are worthless).
+  async function paySignupReferral(Q, friendId, stage = 'signup') {
     const [f] = await Q('SELECT id,nickname,referred_by FROM users WHERE id=$1 FOR UPDATE', [friendId]);
     if (!f || !f.referred_by) return;
     const inviterId = n(f.referred_by);
-    const [done] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['refsu:' + friendId]);
-    if (done) return;
     const g = await refGuard(Q, inviterId, friendId);
-    if (!g || g.same || g.capped) return;
-    await ledger(Q, inviterId, 'referral', REFERRAL.signupInviter, `Друг ${f.nickname} зарегистрировался`, 'refsu:' + friendId);
-    await ledger(Q, friendId, 'referral', REFERRAL.signupFriend, `Бонус за приглашение от ${g.inv.nickname}`, 'refsu:' + friendId + ':f');
+    if (!g || g.same) return;
+    if (stage === 'signup') {
+      const [done] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['refsu:' + friendId + ':f']); if (done || g.capped) return;
+      await ledger(Q, friendId, 'referral', REFERRAL.signupFriend, `Бонус за приглашение от ${g.inv.nickname}`, 'refsu:' + friendId + ':f');
+      return;
+    }
+    const [paidF] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['refsu:' + friendId + ':f']); if (!paidF) return;
+    const [done] = await Q(`SELECT 1 FROM ledger WHERE kind='referral' AND ref=$1`, ['refsu:' + friendId]); if (done || g.capped) return;
+    const [{ c }] = await Q(`SELECT count(*)::int AS c FROM ledger WHERE user_id=$1 AND kind='case_open'`, [friendId]); if (n(c) < 1) return;
+    await ledger(Q, inviterId, 'referral', REFERRAL.signupInviter, `Друг ${f.nickname} зарегистрировался и открыл первый кейс`, 'refsu:' + friendId);
   }
   // Pays both sides once the invited friend has really started playing (opened a few cases).
   async function payReferral(Q, friendId) {
@@ -255,7 +261,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     let user;
     try {
       user = await tx(async Q => {
-        const [u] = await Q(`INSERT INTO users(email,email_norm,nickname,nick_norm,pass_hash,terms_version,terms_accepted_at,signup_ip) VALUES($1,$2,$3,$4,$5,$6,now(),$7) RETURNING id`, [email, email.toLowerCase(), nickname, nickname.toLowerCase(), pass, TERMS_VERSION, sha256(String(ip || '')).slice(0, 32)]);
+        const [u] = await Q(`INSERT INTO users(email,email_norm,nickname,nick_norm,pass_hash,terms_version,terms_accepted_at,signup_ip) VALUES($1,$2,$3,$4,$5,$6,now(),$7) RETURNING id`, [email, email.toLowerCase(), nickname, nickname.toLowerCase(), pass, TERMS_VERSION, createHmac('sha256', String(env.PLATE_SEAL_SECRET || 'ip')).update(String(ip || '')).digest('hex').slice(0, 32)]);
         if (ST.signupBonus > 0) await ledger(Q, u.id, 'signup_bonus', ST.signupBonus, 'Приветственный бонус');
         return { id: n(u.id), email, nickname };
       });
@@ -285,10 +291,11 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   R('POST', '/api/auth/login', async ({ body, ip }) => {
     const email = String(body.email || '').trim().toLowerCase(), password = String(body.password || '');
     if (!email || !password) throw bad('Введите email и пароль.');
-    await throttle('login:' + email, 8, 15); await throttle('loginip:' + ip, 40, 15);
+    // per email+address: a stranger guessing passwords from elsewhere can't lock the owner out; a looser per-email cap stops distributed guessing
+    await throttle('login:' + email + '|' + ip, 8, 15); await throttle('login:' + email, 60, 15); await throttle('loginip:' + ip, 40, 15);
     const [u] = await q('SELECT id,pass_hash,blocked_at,blocked_reason FROM users WHERE email_norm=$1', [email]);
     const ok = u ? await checkPassword(password, u.pass_hash) : (await hashPassword(password), false);
-    if (!ok) { await attempt('login:' + email); await attempt('loginip:' + ip); throw new HttpError(401, 'Неверный email или пароль.'); }
+    if (!ok) { await attempt('login:' + email + '|' + ip); await attempt('login:' + email); await attempt('loginip:' + ip); throw new HttpError(401, 'Неверный email или пароль.'); }
     if (u.blocked_at) throw new HttpError(403, 'Аккаунт заблокирован администратором' + (u.blocked_reason ? ': ' + u.blocked_reason : '.'));
     return { body: { ok: true }, headers: { 'set-cookie': await newSession(n(u.id)) } };
   });
@@ -326,7 +333,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const [u] = await q('SELECT pass_hash FROM users WHERE id=$1', [user.id]);
     if (!(await checkPassword(cur, u.pass_hash))) { await attempt('pw:' + user.id); throw new HttpError(403, 'Текущий пароль неверный.', { fields: { current: 'Неверный пароль.' } }); }
     await q('UPDATE users SET pass_hash=$1 WHERE id=$2', [await hashPassword(pw), user.id]);
-    await q('DELETE FROM sessions WHERE user_id=$1', [user.id]);
+    await q('DELETE FROM sessions WHERE user_id=$1', [user.id]); await q(`UPDATE auth_tokens SET used_at=now() WHERE user_id=$1 AND kind='reset' AND used_at IS NULL`, [user.id]);
     return { body: { ok: true }, headers: { 'set-cookie': await newSession(user.id) } };
   }, { auth: true });
   R('GET', '/api/auth/sessions', async ({ user }) => {
@@ -356,7 +363,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const uid = await tx(async Q => {
       const [k] = await Q(`SELECT user_id FROM auth_tokens WHERE token_hash=$1 AND kind='reset' AND used_at IS NULL AND expires_at>now() FOR UPDATE`, [sha256(t)]);
       if (!k) return null;
-      await Q('UPDATE auth_tokens SET used_at=now() WHERE token_hash=$1', [sha256(t)]);
+      await Q(`UPDATE auth_tokens SET used_at=now() WHERE user_id=$1 AND kind='reset' AND used_at IS NULL`, [k.user_id]);
       await Q('UPDATE users SET pass_hash=$1, email_verified_at=coalesce(email_verified_at,now()) WHERE id=$2', [pass, k.user_id]);
       await Q('DELETE FROM sessions WHERE user_id=$1', [k.user_id]);
       return n(k.user_id);
@@ -398,7 +405,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         const { seal: _s, mintTx: _m, combo: _c, ...pub } = plate;
         plates.push({ ...pub, status: 'OWNED', origin: `Кейс ${c.id} · ${c.ru}`, lastTx: led.id });
       }
-      await payReferral(Q, user.id);
+      await paySignupReferral(Q, user.id, 'open'); await payReferral(Q, user.id);
       const best = plates.reduce((a, x) => (x.value > a.value ? x : a), plates[0]);
       return { plate: best, plates, balance: led.balance, txId: led.id, price, count };
     }));
@@ -479,7 +486,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const add = (sql, v) => { P.push(v); where.push(sql.replace('?', '$' + P.length)); };
     const raw = String(sp.get('q') || '').toUpperCase().replace(/[^0-9A-ZА-Я]/g, ''); const s = translit(raw);
     if (raw) { P.push('%' + s + '%', '%' + raw + '%'); where.push(`(replace(replace(replace(p.combo,'|',''),'BY:',''),'-','') LIKE $${P.length - 1} OR replace(replace(replace(p.combo,'|',''),'BY:',''),'-','') LIKE $${P.length})`); }
-    const tiers = (sp.get('tiers') || '').split(',').filter(t => t in TI); if (tiers.length) add('p.tier = ANY(?::text[])', '{' + tiers.join(',') + '}');
+    const tiers = (sp.get('tiers') || '').split(',').filter(t => Object.hasOwn(TI, t)); if (tiers.length) add('p.tier = ANY(?::text[])', '{' + tiers.join(',') + '}');
     const g = sp.get('group'); if (g === 'by') where.push(`p.country='BY'`); else if (g === 'ru') where.push(`p.country='RU'`); else if (g) { add('p.region = ANY(?::text[])', '{' + Object.keys(REGIONS).filter(r => REGIONS[r][1] === g).join(',') + '}'); where.push(`p.country='RU'`); }
     const min = parseInt(sp.get('min')); if (min >= 0) add('l.price >= ?', min);
     const max = parseInt(sp.get('max')); if (max >= 0) add('l.price <= ?', max);
@@ -582,7 +589,8 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     let used = 0, plates = [];
     if (user) {
       used = await dealerUsed(q, user.id, d.day);
-      const rows = await q(`SELECT ${PLATE_COLS} FROM plates p WHERE p.owner_id=$1 AND p.status='OWNED' AND p.tier = ANY($2::text[]) ORDER BY p.value DESC`, [user.id, '{' + DEALER.tiers.join(',') + '}']);
+      // plates bought from Plate Club Market in the last 7 days are not bought back (no buy-cheap-sell-to-dealer loop)
+      const rows = await q(`SELECT ${PLATE_COLS} FROM plates p WHERE p.owner_id=$1 AND p.status='OWNED' AND p.tier = ANY($2::text[]) AND NOT EXISTS (SELECT 1 FROM plate_events e JOIN users b ON b.id=e.from_user AND b.role='bot' WHERE e.plate_id=p.id AND e.kind='TRANSFERRED' AND e.to_user=$1 AND e.created_at > now() - interval '7 days') ORDER BY p.value DESC`, [user.id, '{' + DEALER.tiers.join(',') + '}']);
       plates = rows.map(plateRow).map(p => ({ ...p, demand: (d.demands.find(x => matchesDemand(p, x)) || {}).id || null, offer: Math.round(p.value * ST.dealerRate) })).filter(p => p.demand);
     }
     return { demands: d.demands, ends: d.ends, rate: ST.dealerRate, perDay: ST.dealerPerDay, used, plates };
@@ -598,6 +606,8 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       if (p.status === 'LISTED') throw new HttpError(409, 'Сначала снимите номер с продажи на рынке.');
       const pl = { ...p, vv: n(p.vv) || 1, value: n(p.value) };
       if (!d.demands.some(x => matchesDemand(pl, x))) throw new HttpError(409, 'Скупщику сегодня такие номера не нужны.');
+      const [fromBot] = await Q(`SELECT 1 FROM plate_events e JOIN users b ON b.id=e.from_user AND b.role='bot' WHERE e.plate_id=$1 AND e.kind='TRANSFERRED' AND e.to_user=$2 AND e.created_at > now() - interval '7 days' LIMIT 1`, [p.id, user.id]);
+      if (fromBot) throw new HttpError(409, 'Номера, купленные у Plate Club Market, скупщик берёт только через неделю.');
       const amt = Math.round(pl.value * ST.dealerRate);
       const bot = await botUser(Q);
       const led = await ledger(Q, user.id, 'dealer_sell', amt, `Продан скупщику: ${plateStr(p)}`, p.id);
@@ -727,7 +737,14 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     return { profile: { nickname: u.nickname, av: u.av || null, level: levelOf(n(u.xp)).level, online: !!u.seen && now() - n(u.seen) < 5 * 60000, joined: n(u.ms), plates: n(s.plates), value: n(s.value), regions: n(s.regions), sold: n(t.sold), top: top.map(plateRow), sets, medals } };
   });
   // ---- rankings: several boards; medals (top-10, top-3) come from the main board (account value) ----
+  // the board is heavy (every player × several sums): computed at most every 30 s and shared by all requests
+  let rankCache = { at: 0, rows: null, p: null }; const RANK_TTL = Number(env.RANK_CACHE_MS ?? 30000);
   async function rankStats() {
+    if (rankCache.rows && now() - rankCache.at < RANK_TTL) return rankCache.rows;
+    if (!rankCache.p) rankCache.p = rankStatsRaw().then(rows => { rankCache = { at: now(), rows, p: null }; return rows; }, e => { rankCache.p = null; throw e; });
+    return rankCache.p;
+  }
+  async function rankStatsRaw() {
     return q(`SELECT u.id,u.nickname,CASE WHEN u.avatar IS NULL THEN NULL ELSE left(md5(u.avatar),8) END AS av,
         CASE WHEN u.role='admin' THEN GREATEST(0, u.balance - coalesce((SELECT sum(amount) FROM ledger WHERE user_id=u.id AND kind='admin_grant'),0)) ELSE u.balance END::bigint AS balance,
         coalesce((SELECT sum(value) FROM plates WHERE owner_id=u.id AND status IN ('OWNED','LISTED')),0)::bigint AS pvalue,
@@ -1093,7 +1110,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   // ---- upgrade: burn one plate for a chance at a higher tier; the roll is decided here ----
   R('POST', '/api/upgrade', async ({ user, body, req }) => {
     needSecret();
-    const tierIdx = TI[body.target]; if (tierIdx == null) throw bad('Выберите редкость, до которой улучшить.');
+    const tierIdx = Object.hasOwn(TI, String(body.target)) ? TI[body.target] : null; if (tierIdx == null) throw bad('Выберите редкость, до которой улучшить.');
     return withIdem(user, req, () => tx(async Q => {
       // one or two plates; the chance grows with their combined value
       const wantIds = [...new Set((Array.isArray(body.plateIds) ? body.plateIds : [body.plateId]).map(x => String(x || '')).filter(Boolean))];
@@ -1106,6 +1123,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       const burn = got.sort((a, b) => n(b.value) - n(a.value)); const p = burn[0];
       if (burn.some(x => tierIdx <= TI[x.tier])) throw bad('Цель должна быть редче каждого выбранного номера.');
       const tv = targetValue(p, body.target); const chance = upgradeChance(burn.reduce((a, x) => a + n(x.value), 0), tv);
+      if (!(chance >= UPGRADE_MIN)) throw bad('Слишком большой скачок: шанс меньше 1%. Выберите цель ближе или добавьте второй номер.');
       const roll = randomInt(0, 1_000_000) / 1_000_000; const success = roll < chance;
       for (const x of burn) {
         await Q(`UPDATE plates SET status='BURNED', owner_id=NULL WHERE id=$1`, [x.id]);
@@ -1366,6 +1384,17 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       return { ok: true, role: makeAdmin ? 'admin' : 'user' };
     });
   }, { admin: true });
+  // a blocked or deleted player leaves no live games behind: open battles are cancelled and refunded, a top auction bid is returned
+  async function retireGames(Q, uid) {
+    for (const b of await Q(`SELECT id FROM battles WHERE status='OPEN' AND id IN (SELECT battle_id FROM battle_seats WHERE user_id=$1) FOR UPDATE`, [uid])) {
+      for (const s of await Q('SELECT user_id,paid FROM battle_seats WHERE battle_id=$1 AND user_id IS NOT NULL', [b.id])) if (n(s.paid) > 0) await ledger(Q, n(s.user_id), 'battle_refund', n(s.paid), `Возврат за баттл ${b.id}`, b.id);
+      await Q(`UPDATE battles SET status='CANCELLED', finished_at=now() WHERE id=$1`, [b.id]);
+    }
+    for (const a of await Q(`SELECT day, top_bid FROM auctions WHERE status='LIVE' AND top_user=$1 FOR UPDATE`, [uid])) {
+      await ledger(Q, uid, 'auction_refund', n(a.top_bid), 'Аукцион дня: ставка снята', 'auction:' + a.day);
+      await Q('UPDATE auctions SET top_user=NULL, top_bid=NULL WHERE day=$1', [a.day]);
+    }
+  }
   R('POST', '/api/admin/users/:id/block', async ({ user, params, body }) => {
     const id = Number(params.id); const block = !!body.block; const reason = cleanText(body.reason, 200);
     if (id === user.id) throw new HttpError(409, 'Нельзя заблокировать самого себя.');
@@ -1374,7 +1403,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       const [t] = await Q('SELECT id,nickname,role FROM users WHERE id=$1 FOR UPDATE', [id]); if (!t) throw new HttpError(404, 'Игрок не найден.');
       if (t.role !== 'user') throw new HttpError(409, 'Заблокировать можно только игрока.');
       await Q(`UPDATE users SET blocked_at=${block ? 'now()' : 'NULL'}, blocked_reason=$2 WHERE id=$1`, [id, block ? reason : null]);
-      if (block) { await Q('DELETE FROM sessions WHERE user_id=$1', [id]); await Q(`UPDATE plates SET status='OWNED' WHERE id IN (SELECT plate_id FROM listings WHERE seller_id=$1 AND status='ACTIVE')`, [id]); await Q(`UPDATE listings SET status='CANCELLED', updated_at=now() WHERE seller_id=$1 AND status='ACTIVE'`, [id]); }
+      if (block) { await retireGames(Q, id); await Q('DELETE FROM sessions WHERE user_id=$1', [id]); await Q(`UPDATE plates SET status='OWNED' WHERE id IN (SELECT plate_id FROM listings WHERE seller_id=$1 AND status='ACTIVE')`, [id]); await Q(`UPDATE listings SET status='CANCELLED', updated_at=now() WHERE seller_id=$1 AND status='ACTIVE'`, [id]); }
       await adminLog(Q, user.id, block ? 'block_user' : 'unblock_user', t.nickname, null, reason || null);
       return { ok: true, blocked: block };
     });
@@ -1389,6 +1418,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       if (t.role !== 'user') throw new HttpError(409, 'Удалить можно только игрока (не админа и не бота).');
       await Q(`UPDATE plates SET status='OWNED' WHERE id IN (SELECT plate_id FROM listings WHERE seller_id=$1 AND status IN ('ACTIVE','RESERVED'))`, [id]);
       await Q(`UPDATE listings SET status='CANCELLED', updated_at=now() WHERE seller_id=$1 AND status IN ('ACTIVE','RESERVED')`, [id]);
+      await retireGames(Q, id);
       await Q(`UPDATE plates SET status='BANKED' WHERE owner_id=$1 AND status='OWNED'`, [id]);
       await Q('DELETE FROM sessions WHERE user_id=$1', [id]);
       const tag = 'deleted_' + id;
@@ -1399,7 +1429,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   }, { admin: true });
   R('POST', '/api/admin/users/:id/plate', async ({ user, params, body }) => {
     needSecret();
-    const id = Number(params.id); const tier = String(body.tier || ''); if (!(tier in TI)) throw bad('Выберите редкость.');
+    const id = Number(params.id); const tier = String(body.tier || ''); if (!Object.hasOwn(TI, tier)) throw bad('Выберите редкость.');
     const country = body.country === 'BY' ? 'BY' : 'RU'; const reason = cleanText(body.reason, 200) || 'Подарок';
     return tx(async Q => {
       const [t] = await Q('SELECT id,nickname FROM users WHERE id=$1', [id]); if (!t) throw new HttpError(404, 'Игрок не найден.');
@@ -1499,17 +1529,22 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
 
   // ---------- collections (sets) ----------
   async function ownedPlates(Q, uid) { return (await Q(`SELECT ${PLATE_COLS} FROM plates p WHERE p.owner_id=$1 AND p.status IN ('OWNED','LISTED')`, [uid])).map(plateRow); }
+  // plates that already completed this collection for someone don't count again
+  async function setPlates(Q, uid, setId) { return (await Q(`SELECT ${PLATE_COLS} FROM plates p WHERE p.owner_id=$1 AND p.status IN ('OWNED','LISTED') AND NOT EXISTS (SELECT 1 FROM set_claim_plates c WHERE c.plate_id=p.id AND c.set_id=$2)`, [uid, setId])).map(plateRow); }
   R('GET', '/api/sets', async ({ user }) => {
     const plates = user ? await ownedPlates(q, user.id) : [];
     const got = user ? new Set((await q(`SELECT ref FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE 'set:%'`, [user.id])).map(r => r.ref.slice(4))) : new Set();
     const byId = Object.fromEntries(plates.map(p => [p.id, p]));
-    return { sets: SETS.map(s => { const pr = setProgress(s, plates); return { id: s.id, have: pr.have, need: pr.need, done: pr.done, claimed: got.has(s.id), filled: pr.filled.map(id => (id ? { id, letters: byId[id].letters, digits: byId[id].digits, region: byId[id].region, country: byId[id].country, tier: byId[id].tier } : null)) }; }) };
+    const used = new Set(plates.length ? (await q(`SELECT plate_id, set_id FROM set_claim_plates WHERE plate_id = ANY($1::text[])`, ['{' + plates.map(p => p.id).join(',') + '}'])).map(r => r.set_id + '|' + r.plate_id) : []);
+    return { sets: SETS.map(s => { const pr = setProgress(s, got.has(s.id) ? plates : plates.filter(p => !used.has(s.id + '|' + p.id))); return { id: s.id, have: pr.have, need: pr.need, done: pr.done, claimed: got.has(s.id), filled: pr.filled.map(id => (id ? { id, letters: byId[id].letters, digits: byId[id].digits, region: byId[id].region, country: byId[id].country, tier: byId[id].tier } : null)) }; }) };
   });
   R('POST', '/api/sets/:id/claim', async ({ user, params }) => tx(async Q => {
     const s = SETS.find(x => x.id === params.id); if (!s) throw new HttpError(404, 'Такой коллекции нет.');
     await Q('SELECT id FROM users WHERE id=$1 FOR UPDATE', [user.id]);
     const [done] = await Q(`SELECT 1 FROM ledger WHERE user_id=$1 AND kind='reward' AND ref=$2`, [user.id, 'set:' + s.id]); if (done) throw new HttpError(409, 'Награда за эту коллекцию уже получена.');
-    const pr = setProgress(s, await ownedPlates(Q, user.id)); if (!pr.done) throw new HttpError(409, `Коллекция ещё не собрана: ${pr.have} из ${pr.need}.`);
+    const pr = setProgress(s, await setPlates(Q, user.id, s.id)); if (!pr.done) throw new HttpError(409, `Коллекция ещё не собрана: ${pr.have} из ${pr.need}. Номера, которые уже закрывали эту коллекцию, второй раз не считаются.`);
+    const ins = await Q(`INSERT INTO set_claim_plates (plate_id, set_id, user_id) SELECT unnest($1::text[]), $2, $3 ON CONFLICT DO NOTHING RETURNING plate_id`, ['{' + pr.filled.join(',') + '}', s.id, user.id]);
+    if (ins.length !== pr.filled.length) throw new HttpError(409, 'Эти номера уже закрывали коллекцию. Обновите страницу.');
     const led = await ledger(Q, user.id, 'reward', s.reward, `Коллекция «${s.ru}»`, 'set:' + s.id);
     return { ok: true, amount: s.reward, balance: led.balance };
   }), { auth: true });
@@ -1652,6 +1687,9 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       const P = await platesByIds(Q, [...give, ...want]);
       if (!give.every(i => P[i] && P[i].owner === user.id && P[i].status === 'OWNED')) throw new HttpError(409, 'Отдавать можно только свои номера, которые не выставлены на рынок.');
       if (!want.every(i => P[i] && P[i].owner === n(t.id) && P[i].status === 'OWNED')) throw new HttpError(409, `Некоторых номеров уже нет у ${t.nickname} или они выставлены на рынок.`);
+      // a top-up must look like a price, not a money transfer between accounts: at most 3× the plates it pays for (+500)
+      const val = list => list.reduce((a, i) => a + n(P[i].value), 0);
+      if (givePlt > 3 * val(want) + 500 || wantPlt > 3 * val(give) + 500) throw bad('Доплата слишком большая для этих номеров: не больше чем втрое дороже их оценки (+500 PLT).');
       if (givePlt) { const [u] = await Q('SELECT balance FROM users WHERE id=$1', [user.id]); if (n(u.balance) < givePlt) throw new HttpError(402, `Не хватает PLT для доплаты: на балансе ${n(u.balance)} PLT.`); }
       const id = newId('SW');
       await Q('INSERT INTO swaps(id,from_id,to_id,give_plates,want_plates,give_plt,want_plt,message) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [id, user.id, t.id, '{' + give.join(',') + '}', '{' + want.join(',') + '}', givePlt, wantPlt, String(body.message || '').trim().slice(0, 200) || null]);
@@ -1768,7 +1806,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         if (!ct.includes('application/json')) throw new HttpError(415, 'Send JSON.');
         // CSRF: a browser always sends Origin on cross-site writes; it must be this site.
         const origin = req.headers.get('origin');
-        if (origin && origin !== 'null') { let oh = ''; try { oh = new URL(origin).host; } catch {} const hosts = [url.host, req.headers.get('host'), req.headers.get('x-forwarded-host')].filter(Boolean); if (!hosts.includes(oh) && !(env.URL && origin === env.URL.replace(/\/$/, ''))) throw new HttpError(403, 'Запрос с чужого сайта отклонён.'); }
+        if (origin && origin !== 'null') { let oh = ''; try { oh = new URL(origin).host; } catch {} const hosts = env.ALLOWED_HOSTS ? String(env.ALLOWED_HOSTS).split(',') : [url.host, req.headers.get('host'), req.headers.get('x-forwarded-host')].filter(Boolean); if (!hosts.includes(oh) && !(env.URL && origin === env.URL.replace(/\/$/, ''))) throw new HttpError(403, 'Запрос с чужого сайта отклонён.'); }
         else if (origin === 'null') throw new HttpError(403, 'Запрос с чужого сайта отклонён.');
       }
       if (Number(req.headers.get('content-length') || 0) > 262144) throw new HttpError(413, 'Слишком большой запрос.');
@@ -1780,7 +1818,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       const user = await sessionUser(req);
       if ((route.auth || route.admin) && !user) throw new HttpError(401, 'Войдите, чтобы продолжить.');
       if (route.admin && user.role !== 'admin') throw new HttpError(403, 'Это может сделать только администратор Plate Club.');
-      const ip = ctx.ip || req.headers.get('x-nf-client-connection-ip') || 'local';
+      const ip = ctx.ip || (env.NETLIFY ? req.headers.get('x-nf-client-connection-ip') : null) || 'local';
       const out = await route.handler({ req, url, params: route.re.exec(url.pathname).groups || {}, body, raw, user, ip });
       if (out instanceof Response) return out;
       if (out && out.body !== undefined && (out.headers || out.status)) return json(out.body, out.status || 200, out.headers || {});

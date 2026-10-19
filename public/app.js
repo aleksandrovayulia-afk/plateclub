@@ -253,7 +253,7 @@ const achText = a => (LANG === 'en' && ACH_EN[a.id] ? ACH_EN[a.id][1] : a.text);
 // mirrors server/game.mjs: chance = 90% × value ratio, clamped
 const regMult = p => (p.country === 'BY' ? CFG.byMult : (CFG.groupMult[(CFG.regions[p.region] || [])[1]] || 1));
 const targetValue = (p, tier) => Math.round(CFG.tiers[TI()[tier]].base * regMult(p));
-const upChance = (p, tier, extra = 0) => { const u = CFG.upgrade; return Math.max(u.min, Math.min(u.max, Math.floor(u.edge * (p.value + extra) / targetValue(p, tier) * 10000) / 10000)); };
+const upChance = (p, tier, extra = 0) => { const u = CFG.upgrade; return Math.max(0, Math.min(u.max, Math.floor(u.edge * (p.value + extra) / targetValue(p, tier) * 10000) / 10000)); };
 async function refreshMe() { try { ME = (await GET('/api/me')).user; } catch (e) { if (e.status === 401) ME = null; } chrome(); return ME; }
 async function refreshPerks() { if (!ME) { PERKS = null; return null; } try { PERKS = await GET('/api/perks'); } catch {} chrome(); return PERKS; }
 
@@ -799,7 +799,7 @@ VIEWS.wallet = async ({ query }) => {
       ${methods.length ? '' : `<div class="panel" style="display:grid;gap:14px;align-content:start">${SH(L('Как получить PLT', 'How to get PLT'), L('пополнение баланса скоро будет', 'balance top-ups are coming soon'))}
         <div class="soon"><b>${L('Пополнение баланса — скоро!', 'Top-ups — coming soon!')}</b><span>${L('Мы подключаем оплату картой. А пока PLT можно получить бесплатно:', 'We are connecting card payments. Until then you can get PLT for free:')}</span></div>
         <a class="earn" href="#/bonus"><b>${L('Бонус каждый день', 'A bonus every day')}</b><span>${L('до 100 PLT, серия растёт', 'up to 100 PLT, the streak grows')}</span></a>
-        <a class="earn" href="#/bonus"><b>${L('Пригласить друга', 'Invite a friend')}</b><span>${L('+1 000 PLT сразу за регистрацию друга, +2 000 когда он начнёт играть', '+1,000 PLT the moment a friend signs up, +2,000 once they play')}</span></a>
+        <a class="earn" href="#/bonus"><b>${L('Пригласить друга', 'Invite a friend')}</b><span>${L('+1 000 PLT, когда друг откроет первый кейс, и ещё +2 000, когда он начнёт играть', '+1,000 PLT when a friend opens a first case, +2,000 more once they play')}</span></a>
         <a class="earn" href="#/bonus"><b>${L('Сторис с отметкой сайта', 'A story tagging the site')}</b><span>5 000 PLT</span></a>
         <a class="earn" href="#/bonus"><b>TikTok</b><span>${L('1 PLT за просмотр', '1 PLT per view')}</span></a>
         <a class="earn" href="#/market"><b>${L('Купить дешевле — продать дороже', 'Buy low, sell high')}</b><span>${L('рынок между игроками', 'the player market')}</span></a></div>`}
@@ -876,7 +876,7 @@ async function loadRef() {
     const d = await GET('/api/referral'); REF = d;
     const ms = d.milestones.map(m => `<div class="msx${m.done ? ' on' : ''}"><b>${m.need}</b><span>+${fmt(m.bonus)}</span></div>`).join('');
     const nx = d.next ? L(`Ещё ${d.next[0] - d.active} ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} — и бонус +${fmt(d.next[1])} PLT`, `${d.next[0] - d.active} more ${pl(d.next[0] - d.active, ['друг', 'друга', 'друзей'], ['friend', 'friends'])} and you get +${fmt(d.next[1])} PLT`) : L('Все награды за друзей собраны.', 'All friend rewards collected.');
-    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L('Друг зарегистрировался по ссылке', 'A friend signs up via your link')} — <b class="up">+${fmt(d.reward.signupInviter)} PLT</b> ${L('вам сразу', 'to you instantly')}. ${L(`Открыл ${d.reward.needOpens} кейса`, `Opens ${d.reward.needOpens} cases`)} — <b class="up">+${fmt(d.reward.inviter)} PLT</b> ${L('ещё', 'more')}. ${L(`Другу — ${fmt(d.reward.signupFriend + d.reward.friend)} PLT в подарок. Друзей — без ограничений.`, `Your friend gets ${fmt(d.reward.signupFriend + d.reward.friend)} PLT as a gift. No limit on friends.`)}</p>
+    box.innerHTML = `<p class="small" style="margin:0 0 10px">${L('Друг зарегистрировался по ссылке и открыл первый кейс', 'A friend signs up via your link and opens a first case')} — <b class="up">+${fmt(d.reward.signupInviter)} PLT</b> ${L('вам', 'to you')}. ${L(`Открыл ${d.reward.needOpens} кейса`, `Opens ${d.reward.needOpens} cases`)} — <b class="up">+${fmt(d.reward.inviter)} PLT</b> ${L('ещё', 'more')}. ${L(`Другу — ${fmt(d.reward.signupFriend + d.reward.friend)} PLT в подарок. Друзей — без ограничений.`, `Your friend gets ${fmt(d.reward.signupFriend + d.reward.friend)} PLT as a gift. No limit on friends.`)}</p>
       <div class="ref-row"><input class="field mono" id="refLink" readonly value="${esc(d.link)}"><button class="btn btn-chrome" data-act="refcopy">${L('Копировать', 'Copy')}</button><button class="btn btn-ghost" data-act="refshare">${L('Поделиться', 'Share')}</button><button class="btn btn-ghost" data-act="refqr">QR</button></div>
       <p class="small" style="margin:8px 0 0;opacity:.7">${L('Короткий вид', 'Short form')}: <span class="mono">${esc(d.codeLink.replace(/^https?:\/\//, ''))}</span></p>
       <div class="stats s4" style="margin-top:14px"><div class="stat"><span>${L('Перешли', 'Joined')}</span><b>${fmt(d.joined)}</b></div><div class="stat"><span>${L('Играют', 'Playing')}</span><b>${fmt(d.active)}</b></div><div class="stat"><span>${L('Заработано', 'Earned')}</span><b class="up">${fmt(d.earned)}</b></div><div class="stat"><span>${L('Ваш код', 'Your code')}</span><b class="mono">${esc(d.code)}</b></div></div>
@@ -964,7 +964,7 @@ VIEWS.media = async () => {
     ['promo', L('Полный ролик', 'Full promo'), '15 ' + L('сек', 'sec'), L('Логотип, редкость, кейс, рынок, призыв.', 'Logo, rarity, a case, the market, the call.')],
     ['teaser', L('Тизер с кейсом', 'Case teaser'), '7 ' + L('сек', 'sec'), L('Только разлом кейса и рулетка.', 'Just the case breaking and the roulette.')],
     ['drop', L('Про редкость', 'About rarity'), '8 ' + L('сек', 'sec'), L('Две копии номера на весь мир.', 'Two copies of a plate in the whole world.')],
-    ['invite', L('Про друзей', 'About invites'), '6 ' + L('сек', 'sec'), L('+1 000 PLT вам сразу за регистрацию друга.', '+1,000 PLT the moment a friend signs up.')],
+    ['invite', L('Про друзей', 'About invites'), '6 ' + L('сек', 'sec'), L('+1 000 PLT вам за друга, который начал играть.', '+1,000 PLT for each friend who starts playing.')],
   ];
   const bcard = ([id, name, note]) => `<article class="mcard"><div class="mprev"><img src="/media/banner-${id}-${ml}.png" alt="${esc(name)}" loading="lazy"></div>
     <div><h3 class="h3">${esc(name)}</h3><p class="small" style="margin:6px 0 10px">${esc(note)}</p>
@@ -1076,7 +1076,7 @@ function upPaint() {
   const ti = TI(); const cur = sel ? pk.top : 5;
   if (sel && (!UP.target || ti[UP.target] <= cur)) UP.target = CFG.tiers[Math.min(4, cur + 1)].id;
   if (sel && cur >= 4) UP.target = null;
-  $('#upTargets').innerHTML = CFG.tiers.map(t => { const dis = !sel || ti[t.id] <= cur; const ch = sel && !dis ? upChance(sel, t.id, pk.extra) : 0; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
+  $('#upTargets').innerHTML = CFG.tiers.map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
   const ch = sel && UP.target ? upChance(sel, UP.target, pk.extra) : 0;
   $('#wArc').setAttribute('stroke-dasharray', `${WC * ch} ${WC}`);
   $('#wPct').textContent = sel && UP.target ? (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%' : '—';
@@ -1994,7 +1994,7 @@ A.shareplate = async btn => {
       <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://t.me/share/url?url=${enc(link)}&text=${enc(msg.replace(link, '').trim())}">Telegram</a>
       <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/?text=${enc(msg)}">WhatsApp</a>
       <button class="btn btn-ghost" data-act="sharecopy">${L('Копировать', 'Copy')}</button></div>
-    <p class="small" style="margin:0;text-align:center">${L('Друг зарегистрируется по ссылке — вам +1 000 PLT. Картинку можно выложить в сторис — за это ещё 5 000 PLT.', 'A friend signs up via the link — you get +1,000 PLT. Post the picture to your story for another 5,000 PLT.')}</p>
+    <p class="small" style="margin:0;text-align:center">${L('Друг зарегистрируется по ссылке и откроет кейс — вам +1 000 PLT. Картинку можно выложить в сторис — за это ещё 5 000 PLT.', 'A friend signs up via the link and opens a case — you get +1,000 PLT. Post the picture to your story for another 5,000 PLT.')}</p>
     <div class="dlg-acts"><a class="btn btn-ghost" href="${url}" download="plate-${esc(p.id)}.png">${L('Скачать картинку', 'Download picture')}</a><button class="btn btn-ghost" data-act="dlgclose">${L('Закрыть', 'Close')}</button></div></div>`);
 };
 let SHARE = null;
