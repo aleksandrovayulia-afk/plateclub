@@ -1,7 +1,7 @@
 #!/bin/bash
 # One-command publish to Firebase (run in Google Cloud Shell from the repo folder): bash tools/firebase-deploy.sh
 set -e
-P=plate-club7
+P=plate-club; SITE=plate-club7
 cd "$(dirname "$0")/.."
 gcloud config set project $P >/dev/null 2>&1 || true
 echo "== 1/5 Firebase: проверка входа"
@@ -24,5 +24,5 @@ DATABASE_URL="$DBURL" node functions/migrate.js
 echo "== 5/5 Публикация"
 firebase deploy --only hosting,functions --project $P --non-interactive --force
 echo "== Проверка"
-sleep 5; curl -s -o /dev/null -w "API: %{http_code}\n" https://$P.web.app/api/config
-echo "ГОТОВО: https://$P.web.app"
+sleep 5; curl -s -o /dev/null -w "API: %{http_code}\n" https://$SITE.web.app/api/config
+echo "ГОТОВО: https://$SITE.web.app"
