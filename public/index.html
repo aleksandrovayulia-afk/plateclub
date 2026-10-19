@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Dela+Gothic+One&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css">
-<script>try{if(sessionStorage.getItem('pc_boot'))document.documentElement.classList.add('booted')}catch(e){}</script>
+<script>try{var h=document.documentElement;if(sessionStorage.getItem('pc_boot'))h.classList.add('booted');var g=JSON.parse(localStorage.getItem('pc.gfx')||'"auto"'),a=JSON.parse(localStorage.getItem('pc.gfxAuto')||'null'),n=navigator;if(g==='lite'||(g==='auto'&&((n.deviceMemory||8)<=4||(n.hardwareConcurrency||8)<=4||(n.connection&&n.connection.saveData)||(a&&a.v==='lite'&&Date.now()-a.t<6048e5))))h.classList.add('lite')}catch(e){}</script>
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div><div class="grain" aria-hidden="true"></div>

@@ -105,6 +105,6 @@ function coins(from, n = 14) {
   for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'coin-burst'; c.style.left = r.left + r.width / 2 + 'px'; c.style.top = r.top + r.height / 2 + 'px'; c.style.setProperty('--dx', (to.left + to.width / 2 - r.left - r.width / 2 + (Math.random() - 0.5) * 40) + 'px'); c.style.setProperty('--dy', (to.top - r.top + (Math.random() - 0.5) * 30) + 'px'); c.style.animationDelay = i * 35 + 'ms'; document.body.appendChild(c); setTimeout(() => c.remove(), 1400); }
 }
 function confetti(host, col, n = 40) {
-  if (reduced()) return; const box = host.getBoundingClientRect();
+  if (reduced()) return; if (isLite()) n = n >> 1; const box = host.getBoundingClientRect();
   for (let i = 0; i < n; i++) { const s = document.createElement('i'); s.className = 'particle'; s.style.position = 'fixed'; s.style.left = box.left + box.width / 2 + 'px'; s.style.top = box.top + box.height / 2 + 'px'; const a = Math.random() * Math.PI * 2, r = 80 + Math.random() * 260; s.style.setProperty('--dx', Math.cos(a) * r + 'px'); s.style.setProperty('--dy', Math.sin(a) * r * 0.7 + 'px'); s.style.setProperty('--rot', Math.random() * 720 + 'deg'); s.style.background = i % 3 ? col : '#fff'; s.style.zIndex = 500; document.body.appendChild(s); setTimeout(() => s.remove(), 1300); }
 }

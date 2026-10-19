@@ -262,6 +262,29 @@ const PREF = { vol: store.get('vol', 0.6), motion: store.get('motion', 'system')
 const savePref = () => { store.set('vol', PREF.vol); store.set('motion', PREF.motion); applyPrefs(); };
 const reduced = () => PREF.motion === 'reduced' || (PREF.motion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const finePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+/* ---------- graphics: "lite" for weak phones/tablets (same look, far less GPU/CPU work), "full" for the rest ---------- */
+// mode: auto | lite | full (Settings). Auto = device hints + a short frame-rate probe; a slow device is remembered for 7 days.
+const GFX = { mode: store.get('gfx', 'auto') };
+const isLite = () => document.documentElement.classList.contains('lite');
+function gfxWeakHint() { const n = navigator, c = n.hardwareConcurrency || 8, m = n.deviceMemory || 8, sd = n.connection && n.connection.saveData; return !!(sd || m <= 4 || c <= 4); }
+function gfxApply() {
+  const a = store.get('gfxAuto', null); const remembered = a && a.v === 'lite' && Date.now() - a.t < 7 * 864e5;
+  const lite = GFX.mode === 'lite' || (GFX.mode === 'auto' && (gfxWeakHint() || remembered));
+  document.documentElement.classList.toggle('lite', lite);
+}
+function gfxDowngrade() { if (GFX.mode !== 'auto' || isLite()) return; document.documentElement.classList.add('lite'); store.set('gfxAuto', { v: 'lite', t: Date.now() }); }
+// counts real frames for `ms`; slow frames on a visible tab mean the device can't keep up with the full effects
+function fpsProbe(ms, cb) { let n = 0, slow = 0; const t0 = performance.now(); let last = t0; const f = now => { if (document.hidden) return; n++; if (now - last > 40) slow++; last = now; if (now - t0 < ms) requestAnimationFrame(f); else cb(n / ((now - t0) / 1000), slow / Math.max(1, n)); }; requestAnimationFrame(f); }
+function gfxProbe() { if (GFX.mode !== 'auto' || isLite() || reduced()) return; fpsProbe(2400, (fps, slowShare) => { if (fps < 40 || slowShare > 0.25) gfxDowngrade(); }); }
+// pause looping animations that are off-screen, behind the opening stage, or in a hidden tab
+let animIO = null; const ANIM_SEL = '.cc,.case-art,.hero,.auc-plate,.mini-wheel,.turntable,.pc,.mres-i,.medal-b,.ava,.nk,.wf,.lstrip,.page-head,.btn-xl';
+function animWatch(root = document) {
+  if (!('IntersectionObserver' in window)) return;
+  if (!animIO) animIO = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('ofs', !e.isIntersecting)), { rootMargin: '120px 0px' });
+  root.querySelectorAll(ANIM_SEL).forEach(el => { if (!el._aw) { el._aw = 1; animIO.observe(el); } });
+}
+document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('hid', document.hidden));
+gfxApply();
 function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; const sk = document.querySelector('.skip'); if (sk) sk.textContent = L('К содержимому', 'Skip to content'); const lg = document.querySelector('.hdr .logo'); if (lg) lg.setAttribute('aria-label', L('Plate Club — главная', 'Plate Club — home')); const tn = document.getElementById('topnav'); if (tn) tn.setAttribute('aria-label', L('Главное меню', 'Main menu')); const bn = document.getElementById('botnav'); if (bn) bn.setAttribute('aria-label', L('Меню', 'Menu')); }
 
 /* ---------- sound (always on; volume in settings) ---------- */
@@ -400,7 +423,7 @@ function coins(from, n = 14) {
   for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'coin-burst'; c.style.left = r.left + r.width / 2 + 'px'; c.style.top = r.top + r.height / 2 + 'px'; c.style.setProperty('--dx', (to.left + to.width / 2 - r.left - r.width / 2 + (Math.random() - 0.5) * 40) + 'px'); c.style.setProperty('--dy', (to.top - r.top + (Math.random() - 0.5) * 30) + 'px'); c.style.animationDelay = i * 35 + 'ms'; document.body.appendChild(c); setTimeout(() => c.remove(), 1400); }
 }
 function confetti(host, col, n = 40) {
-  if (reduced()) return; const box = host.getBoundingClientRect();
+  if (reduced()) return; if (isLite()) n = n >> 1; const box = host.getBoundingClientRect();
   for (let i = 0; i < n; i++) { const s = document.createElement('i'); s.className = 'particle'; s.style.position = 'fixed'; s.style.left = box.left + box.width / 2 + 'px'; s.style.top = box.top + box.height / 2 + 'px'; const a = Math.random() * Math.PI * 2, r = 80 + Math.random() * 260; s.style.setProperty('--dx', Math.cos(a) * r + 'px'); s.style.setProperty('--dy', Math.sin(a) * r * 0.7 + 'px'); s.style.setProperty('--rot', Math.random() * 720 + 'deg'); s.style.background = i % 3 ? col : '#fff'; s.style.zIndex = 500; document.body.appendChild(s); setTimeout(() => s.remove(), 1300); }
 }
 
@@ -499,7 +522,7 @@ function after(name) {
   const dcd = $('#dealerCd'); if (dcd) countdown(dcd, Number(dcd.dataset.t), () => render(false));
   const dc = $('#dailyCd'); if (dc) countdown(dc, Number(dc.dataset.t), () => render(false));
   ['#wfCd', '#taskCd', '#seasonCd'].forEach(id => { const el = $(id); if (el) countdown(el, Number(el.dataset.t), () => render(false)); });
-  fx($('#view'));
+  fx($('#view')); animWatch($('#view'));
 }
 
 /* ---------- live strip: who is online and what rare plates just dropped ---------- */
@@ -905,6 +928,7 @@ VIEWS.settings = async () => `<div class="wrap"><section class="page-head"><div>
   <div class="panel" style="max-width:760px;margin-bottom:80px">
    <div class="set-row"><div><b>${L('Язык', 'Language')}</b><p>Русский / English</p></div><div class="lang"><button data-act="lang" data-l="ru" aria-pressed="${LANG === 'ru'}">RU</button><button data-act="lang" data-l="en" aria-pressed="${LANG === 'en'}">EN</button></div></div>
    <div class="set-row"><div><b>${L('Громкость', 'Volume')}</b><p id="volTxt">${Math.round(PREF.vol * 100)}%</p></div><input type="range" id="svol" min="0" max="1" step="0.05" value="${PREF.vol}" aria-label="${L('Громкость', 'Volume')}"></div>
+   <div class="set-row"><div><b>${L('Графика', 'Graphics')}</b><p>${L('«Авто» сам включает экономный режим на слабых телефонах: выглядит так же, но не тормозит.', '“Auto” switches weak phones to the light mode: same look, no lag.')}${isLite() ? ` <span class="tag">${L('сейчас: экономная', 'now: light')}</span>` : ''}</p></div><select class="inline" id="sgfx">${[['auto', L('Авто', 'Auto')], ['lite', L('Экономная', 'Light')], ['full', L('Максимальная', 'Maximum')]].map(([v, t]) => `<option value="${v}"${GFX.mode === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
    <div class="set-row" style="border:0"><div><b>${L('Анимации', 'Animations')}</b><p>${L('«Как в системе» следует настройке устройства.', '“System” follows your device setting.')}</p></div><select class="inline" id="smotion">${[['system', L('Как в системе', 'System')], ['reduced', L('Минимум', 'Reduced')], ['full', L('Все', 'All')]].map(([v, t]) => `<option value="${v}"${PREF.motion === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div></div></div>`;
 let MEDIA_LANG = null;
 VIEWS.media = async () => {
@@ -1361,9 +1385,11 @@ function bezier(p1x, p1y, p2x, p2y) {
 // gentle start, long smooth deceleration — about 10 cards per second at the top speed
 const EASE = bezier(0.3, 0.55, 0.12, 1);
 let rollState = null; const ROLLS = new Set();
-function rollAbort() { ROLLS.forEach(r => cancelAnimationFrame(r.raf)); ROLLS.clear(); rollState = null; }
 // slow start (you see it pick up speed), long glide, slow finish
 const EASE2 = k => { const a = 0.14; if (k < a) return 0.5 * a * (k / a) * (k / a) / (1 - a / 2) * 0.62; const v0 = 0.5 * a / (1 - a / 2) * 0.62; return v0 + (1 - v0) * EASE((k - a) / (1 - a)); };
+function rollAbort() { ROLLS.forEach(r => r.stop()); ROLLS.clear(); rollState = null; }
+// position along the strip at time `el` ms (spin, then a small overshoot that settles back)
+const rollPos = (el, D, SETTLE, target, over) => el < D ? (target + over) * EASE2(el / D) : el < D + SETTLE ? target + over * Math.pow(1 - (el - D) / SETTLE, 3) : target;
 function roll(root, c, plate, spinEl, extra = 0) {
   return new Promise(res => {
     const spin = spinEl || root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 64, WIN = 56;
@@ -1373,23 +1399,29 @@ function roll(root, c, plate, spinEl, extra = 0) {
     const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700; const t0 = performance.now();
-    let lastIdx = -1, lastX = 0, skipFrom = null; const me = { raf: 0 };
+    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700, T = D + SETTLE;
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
-    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; setX(target); res(); };
-    const frame = now => {
-      if (!ROLLS.has(me)) return; let x;
-      if (skipFrom) { const k = Math.min(1, (now - skipFrom.t) / 300); x = skipFrom.x + (target - skipFrom.x) * (1 - Math.pow(1 - k, 3)); if (k >= 1) return done(); }
-      else { const el = now - t0; if (el < D) x = (target + over) * EASE2(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
-      setX(x);
-      const v = Math.abs(x - lastX);
-      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0 && !extra) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
-      lastX = x; me.raf = requestAnimationFrame(frame);
+    const me = { raf: 0, anim: null, t0: 0 };
+    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; cancelAnimationFrame(me.raf); clearTimeout(me.tm); setX(target); if (me.anim) me.anim.cancel(); res(); };
+    if (!D) { setX(target); return setTimeout(res, 30); }
+    // the strip moves on the compositor (Web Animations): it stays smooth even when the phone's main thread is busy
+    const K = 90, frames = [];
+    for (let i = 0; i <= K; i++) { const el = T * Math.pow(i / K, 1.15); frames.push({ offset: el / T, transform: `translate3d(${-rollPos(el, D, SETTLE, target, over).toFixed(1)}px,0,0)` }); }
+    const canWA = typeof track.animate === 'function';
+    me.t0 = performance.now();
+    if (canWA) { me.anim = track.animate(frames, { duration: T, easing: 'linear', fill: 'forwards' }); me.anim.onfinish = done; }
+    // tick sounds: crossing times are precomputed, so nothing runs per frame on the main thread
+    const ticks = []; { let li = Math.floor(center / W), lx = 0; for (let el = 0; el <= T; el += 12) { const x = rollPos(el, D, SETTLE, target, over), idx = Math.floor((x + center) / W); if (idx !== li) { ticks.push([el, Math.min(1, Math.abs(x - lx) / 22)]); li = idx; } lx = x; } }
+    let ti = 0; const tick = () => { if (!ROLLS.has(me) || me.skipTo) return; const el = performance.now() - me.t0; let v = -1; while (ti < ticks.length && ticks[ti][0] <= el) v = ticks[ti++][1]; if (v >= 0) sfx('tick', v); if (ti < ticks.length) me.tm = setTimeout(tick, Math.max(8, ticks[ti][0] - el)); };
+    const frame = now => { if (!ROLLS.has(me)) return; const x = me.skipTo ? me.skipTo(now) : rollPos(now - me.t0, D, SETTLE, target, over); setX(x); if (!me.skipTo && now - me.t0 >= T) return done(); me.raf = requestAnimationFrame(frame); };
+    me.stop = () => { cancelAnimationFrame(me.raf); clearTimeout(me.tm); if (me.anim) me.anim.cancel(); };
+    me.skip = () => {
+      if (me.skipTo) return; clearTimeout(me.tm); const now = performance.now(); const x0 = rollPos(now - me.t0, D, SETTLE, target, over);
+      const ts = now; me.skipTo = n => { const k = Math.min(1, (n - ts) / 300); if (k >= 1 && !canWA) setTimeout(done); return x0 + (target - x0) * (1 - Math.pow(1 - k, 3)); };
+      if (canWA) { me.anim.cancel(); me.anim = track.animate([{ transform: `translate3d(${-x0}px,0,0)` }, { transform: `translate3d(${-target}px,0,0)` }], { duration: 300, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }); me.anim.onfinish = done; }
     };
-    me.skip = () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; };
     ROLLS.add(me); rollState = { skip: () => ROLLS.forEach(r => r.skip()) };
-    if (!D) { setX(target); ROLLS.delete(me); return setTimeout(res, 30); }
-    me.raf = requestAnimationFrame(frame);
+    if (!canWA) me.raf = requestAnimationFrame(frame); else if (!extra) me.tm = setTimeout(tick, 16);
   });
 }
 // several cases at once: one strip per case, all spinning together, each stops on its own plate
@@ -1404,7 +1436,7 @@ function celebrate(root, p, spinEl) {
   const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
-  const n = PARTS[p.tier]; const box = spin.querySelector('.spin-in');
+  const n = isLite() ? PARTS[p.tier] >> 1 : PARTS[p.tier]; const box = spin.querySelector('.spin-in');
   for (let i = 0; i < n; i++) { const s = document.createElement('i'); s.className = 'particle'; const a = Math.random() * Math.PI * 2, r = 90 + Math.random() * 260; s.style.setProperty('--dx', Math.cos(a) * r + 'px'); s.style.setProperty('--dy', Math.sin(a) * r * 0.6 + 'px'); s.style.setProperty('--rot', Math.random() * 720 + 'deg'); s.style.background = i % 3 ? col : '#fff'; box.appendChild(s); setTimeout(() => s.remove(), 1300); }
 }
 
@@ -1412,7 +1444,7 @@ function celebrate(root, p, spinEl) {
 let STAGE = null;
 function closeStage(instant) {
   if (!STAGE) return; const el = STAGE.el; STAGE.dead = true; cancelAnimationFrame(STAGE.raf); rollAbort(); STAGE = null;
-  if (instant) el.remove(); else { el.classList.add('out'); setTimeout(() => el.remove(), 320); }
+  document.documentElement.classList.remove('staged'); if (instant) el.remove(); else { el.classList.add('out'); setTimeout(() => el.remove(), 320); }
   document.body.style.overflow = '';
 }
 function openStage(c) {
@@ -1424,7 +1456,7 @@ function openStage(c) {
     <div class="st-flash"></div>
     <div class="st-roll"><section class="spin"><div class="spin-in"><div class="track"></div><div class="marker"></div><div class="spin-flash"></div></div></section></div>
     <div class="st-res" aria-live="polite"></div><button class="st-skip" data-act="stskip">${L('Пропустить анимацию', 'Skip animation')}</button>`;
-  document.body.appendChild(el); document.body.style.overflow = 'hidden';
+  document.body.appendChild(el); document.body.style.overflow = 'hidden'; setTimeout(() => { if (STAGE && STAGE.el === el) document.documentElement.classList.add('staged'); }, 380);
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
@@ -1454,7 +1486,7 @@ function spinCase(st, ready, min = 2800) {
 function shatter(st) {
   const wrap = st.el; if (!wrap || reduced()) return;
   const host = document.createElement('div'); host.className = 'shards';
-  const N = 30;
+  const N = isLite() ? 12 : 30;
   const calcL = () => 38 + Math.random() * 24, calcT = () => 36 + Math.random() * 24;
   for (let i = 0; i < N; i++) {
     const sh = document.createElement('i');
@@ -2141,6 +2173,7 @@ document.addEventListener('change', e => {
   if (t.id === 'csort') { C.sort = t.value; render(false); }
   if (t.id === 'csort2') { CF.sort = t.value; $('#cgridBox').innerHTML = casesGrid(); fx($('#cgridBox')); }
   if (t.id === 'smotion') { PREF.motion = t.value; savePref(); }
+  if (t.id === 'sgfx') { GFX.mode = t.value; store.set('gfx', t.value); store.set('gfxAuto', null); gfxApply(); toast(L('Графика: ', 'Graphics: ') + t.selectedOptions[0].textContent); }
   if (t.id === 'svol') sfx('tick');
 });
 document.addEventListener('submit', async e => {
@@ -2203,5 +2236,6 @@ async function boot() {
   await refreshPerks();
   await render(false); liveFeed(); setTimeout(installBar, 2500);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);
+  setTimeout(gfxProbe, 1600);
 }
 boot();

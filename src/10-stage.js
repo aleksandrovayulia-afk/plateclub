@@ -30,9 +30,11 @@ function bezier(p1x, p1y, p2x, p2y) {
 // gentle start, long smooth deceleration — about 10 cards per second at the top speed
 const EASE = bezier(0.3, 0.55, 0.12, 1);
 let rollState = null; const ROLLS = new Set();
-function rollAbort() { ROLLS.forEach(r => cancelAnimationFrame(r.raf)); ROLLS.clear(); rollState = null; }
 // slow start (you see it pick up speed), long glide, slow finish
 const EASE2 = k => { const a = 0.14; if (k < a) return 0.5 * a * (k / a) * (k / a) / (1 - a / 2) * 0.62; const v0 = 0.5 * a / (1 - a / 2) * 0.62; return v0 + (1 - v0) * EASE((k - a) / (1 - a)); };
+function rollAbort() { ROLLS.forEach(r => r.stop()); ROLLS.clear(); rollState = null; }
+// position along the strip at time `el` ms (spin, then a small overshoot that settles back)
+const rollPos = (el, D, SETTLE, target, over) => el < D ? (target + over) * EASE2(el / D) : el < D + SETTLE ? target + over * Math.pow(1 - (el - D) / SETTLE, 3) : target;
 function roll(root, c, plate, spinEl, extra = 0) {
   return new Promise(res => {
     const spin = spinEl || root.querySelector('.spin'), box = spin.querySelector('.spin-in'), track = spin.querySelector('.track'); const N = 64, WIN = 56;
@@ -42,23 +44,29 @@ function roll(root, c, plate, spinEl, extra = 0) {
     const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700; const t0 = performance.now();
-    let lastIdx = -1, lastX = 0, skipFrom = null; const me = { raf: 0 };
+    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700, T = D + SETTLE;
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
-    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; setX(target); res(); };
-    const frame = now => {
-      if (!ROLLS.has(me)) return; let x;
-      if (skipFrom) { const k = Math.min(1, (now - skipFrom.t) / 300); x = skipFrom.x + (target - skipFrom.x) * (1 - Math.pow(1 - k, 3)); if (k >= 1) return done(); }
-      else { const el = now - t0; if (el < D) x = (target + over) * EASE2(el / D); else if (el < D + SETTLE) { const k = (el - D) / SETTLE; x = target + over * Math.pow(1 - k, 3); } else return done(); }
-      setX(x);
-      const v = Math.abs(x - lastX);
-      const idx = Math.floor((x + center) / W); if (idx !== lastIdx) { if (lastIdx >= 0 && !extra) sfx('tick', Math.min(1, v / 30)); lastIdx = idx; }
-      lastX = x; me.raf = requestAnimationFrame(frame);
+    const me = { raf: 0, anim: null, t0: 0 };
+    const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; cancelAnimationFrame(me.raf); clearTimeout(me.tm); setX(target); if (me.anim) me.anim.cancel(); res(); };
+    if (!D) { setX(target); return setTimeout(res, 30); }
+    // the strip moves on the compositor (Web Animations): it stays smooth even when the phone's main thread is busy
+    const K = 90, frames = [];
+    for (let i = 0; i <= K; i++) { const el = T * Math.pow(i / K, 1.15); frames.push({ offset: el / T, transform: `translate3d(${-rollPos(el, D, SETTLE, target, over).toFixed(1)}px,0,0)` }); }
+    const canWA = typeof track.animate === 'function';
+    me.t0 = performance.now();
+    if (canWA) { me.anim = track.animate(frames, { duration: T, easing: 'linear', fill: 'forwards' }); me.anim.onfinish = done; }
+    // tick sounds: crossing times are precomputed, so nothing runs per frame on the main thread
+    const ticks = []; { let li = Math.floor(center / W), lx = 0; for (let el = 0; el <= T; el += 12) { const x = rollPos(el, D, SETTLE, target, over), idx = Math.floor((x + center) / W); if (idx !== li) { ticks.push([el, Math.min(1, Math.abs(x - lx) / 22)]); li = idx; } lx = x; } }
+    let ti = 0; const tick = () => { if (!ROLLS.has(me) || me.skipTo) return; const el = performance.now() - me.t0; let v = -1; while (ti < ticks.length && ticks[ti][0] <= el) v = ticks[ti++][1]; if (v >= 0) sfx('tick', v); if (ti < ticks.length) me.tm = setTimeout(tick, Math.max(8, ticks[ti][0] - el)); };
+    const frame = now => { if (!ROLLS.has(me)) return; const x = me.skipTo ? me.skipTo(now) : rollPos(now - me.t0, D, SETTLE, target, over); setX(x); if (!me.skipTo && now - me.t0 >= T) return done(); me.raf = requestAnimationFrame(frame); };
+    me.stop = () => { cancelAnimationFrame(me.raf); clearTimeout(me.tm); if (me.anim) me.anim.cancel(); };
+    me.skip = () => {
+      if (me.skipTo) return; clearTimeout(me.tm); const now = performance.now(); const x0 = rollPos(now - me.t0, D, SETTLE, target, over);
+      const ts = now; me.skipTo = n => { const k = Math.min(1, (n - ts) / 300); if (k >= 1 && !canWA) setTimeout(done); return x0 + (target - x0) * (1 - Math.pow(1 - k, 3)); };
+      if (canWA) { me.anim.cancel(); me.anim = track.animate([{ transform: `translate3d(${-x0}px,0,0)` }, { transform: `translate3d(${-target}px,0,0)` }], { duration: 300, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }); me.anim.onfinish = done; }
     };
-    me.skip = () => { if (!skipFrom) skipFrom = { t: performance.now(), x: lastX }; };
     ROLLS.add(me); rollState = { skip: () => ROLLS.forEach(r => r.skip()) };
-    if (!D) { setX(target); ROLLS.delete(me); return setTimeout(res, 30); }
-    me.raf = requestAnimationFrame(frame);
+    if (!canWA) me.raf = requestAnimationFrame(frame); else if (!extra) me.tm = setTimeout(tick, 16);
   });
 }
 // several cases at once: one strip per case, all spinning together, each stops on its own plate
@@ -73,7 +81,7 @@ function celebrate(root, p, spinEl) {
   const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
-  const n = PARTS[p.tier]; const box = spin.querySelector('.spin-in');
+  const n = isLite() ? PARTS[p.tier] >> 1 : PARTS[p.tier]; const box = spin.querySelector('.spin-in');
   for (let i = 0; i < n; i++) { const s = document.createElement('i'); s.className = 'particle'; const a = Math.random() * Math.PI * 2, r = 90 + Math.random() * 260; s.style.setProperty('--dx', Math.cos(a) * r + 'px'); s.style.setProperty('--dy', Math.sin(a) * r * 0.6 + 'px'); s.style.setProperty('--rot', Math.random() * 720 + 'deg'); s.style.background = i % 3 ? col : '#fff'; box.appendChild(s); setTimeout(() => s.remove(), 1300); }
 }
 
@@ -81,7 +89,7 @@ function celebrate(root, p, spinEl) {
 let STAGE = null;
 function closeStage(instant) {
   if (!STAGE) return; const el = STAGE.el; STAGE.dead = true; cancelAnimationFrame(STAGE.raf); rollAbort(); STAGE = null;
-  if (instant) el.remove(); else { el.classList.add('out'); setTimeout(() => el.remove(), 320); }
+  document.documentElement.classList.remove('staged'); if (instant) el.remove(); else { el.classList.add('out'); setTimeout(() => el.remove(), 320); }
   document.body.style.overflow = '';
 }
 function openStage(c) {
@@ -93,7 +101,7 @@ function openStage(c) {
     <div class="st-flash"></div>
     <div class="st-roll"><section class="spin"><div class="spin-in"><div class="track"></div><div class="marker"></div><div class="spin-flash"></div></div></section></div>
     <div class="st-res" aria-live="polite"></div><button class="st-skip" data-act="stskip">${L('Пропустить анимацию', 'Skip animation')}</button>`;
-  document.body.appendChild(el); document.body.style.overflow = 'hidden';
+  document.body.appendChild(el); document.body.style.overflow = 'hidden'; setTimeout(() => { if (STAGE && STAGE.el === el) document.documentElement.classList.add('staged'); }, 380);
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
@@ -123,7 +131,7 @@ function spinCase(st, ready, min = 2800) {
 function shatter(st) {
   const wrap = st.el; if (!wrap || reduced()) return;
   const host = document.createElement('div'); host.className = 'shards';
-  const N = 30;
+  const N = isLite() ? 12 : 30;
   const calcL = () => 38 + Math.random() * 24, calcT = () => 36 + Math.random() * 24;
   for (let i = 0; i < N; i++) {
     const sh = document.createElement('i');

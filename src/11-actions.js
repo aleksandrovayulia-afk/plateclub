@@ -323,6 +323,7 @@ document.addEventListener('change', e => {
   if (t.id === 'csort') { C.sort = t.value; render(false); }
   if (t.id === 'csort2') { CF.sort = t.value; $('#cgridBox').innerHTML = casesGrid(); fx($('#cgridBox')); }
   if (t.id === 'smotion') { PREF.motion = t.value; savePref(); }
+  if (t.id === 'sgfx') { GFX.mode = t.value; store.set('gfx', t.value); store.set('gfxAuto', null); gfxApply(); toast(L('Графика: ', 'Graphics: ') + t.selectedOptions[0].textContent); }
   if (t.id === 'svol') sfx('tick');
 });
 document.addEventListener('submit', async e => {
@@ -385,5 +386,6 @@ async function boot() {
   await refreshPerks();
   await render(false); liveFeed(); setTimeout(installBar, 2500);
   const sp = $('#splash'); sp.classList.add('gone'); setTimeout(() => sp.remove(), 450);
+  setTimeout(gfxProbe, 1600);
 }
 boot();

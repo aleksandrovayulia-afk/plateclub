@@ -13,7 +13,7 @@ async function getHandle() {
   process.env.SESSION_COOKIE = '__session'; // Firebase Hosting only forwards this cookie
   const { createApp } = await import('./server/app.mjs');
   const pool = new pg.Pool({ connectionString: DATABASE_URL.value(), ssl: { rejectUnauthorized: false }, max: 5 });
-  handle = createApp({ pool, env: { ...process.env, PLATE_SEAL_SECRET: PLATE_SEAL_SECRET.value(), ADMIN_SETUP_CODE: ADMIN_SETUP_CODE.value() } });
+  handle = createApp({ pool, env: { ...process.env, PLATE_SEAL_SECRET: PLATE_SEAL_SECRET.value(), ADMIN_SETUP_CODE: ADMIN_SETUP_CODE.value(), ADMIN_INITIAL_GRANT: process.env.ADMIN_INITIAL_GRANT || '50000000' } });
   return handle;
 }
 

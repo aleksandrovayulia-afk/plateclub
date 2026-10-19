@@ -93,7 +93,7 @@ function after(name) {
   const dcd = $('#dealerCd'); if (dcd) countdown(dcd, Number(dcd.dataset.t), () => render(false));
   const dc = $('#dailyCd'); if (dc) countdown(dc, Number(dc.dataset.t), () => render(false));
   ['#wfCd', '#taskCd', '#seasonCd'].forEach(id => { const el = $(id); if (el) countdown(el, Number(el.dataset.t), () => render(false)); });
-  fx($('#view'));
+  fx($('#view')); animWatch($('#view'));
 }
 
 /* ---------- live strip: who is online and what rare plates just dropped ---------- */

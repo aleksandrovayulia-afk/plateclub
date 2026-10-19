@@ -174,6 +174,29 @@ const PREF = { vol: store.get('vol', 0.6), motion: store.get('motion', 'system')
 const savePref = () => { store.set('vol', PREF.vol); store.set('motion', PREF.motion); applyPrefs(); };
 const reduced = () => PREF.motion === 'reduced' || (PREF.motion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const finePointer = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+/* ---------- graphics: "lite" for weak phones/tablets (same look, far less GPU/CPU work), "full" for the rest ---------- */
+// mode: auto | lite | full (Settings). Auto = device hints + a short frame-rate probe; a slow device is remembered for 7 days.
+const GFX = { mode: store.get('gfx', 'auto') };
+const isLite = () => document.documentElement.classList.contains('lite');
+function gfxWeakHint() { const n = navigator, c = n.hardwareConcurrency || 8, m = n.deviceMemory || 8, sd = n.connection && n.connection.saveData; return !!(sd || m <= 4 || c <= 4); }
+function gfxApply() {
+  const a = store.get('gfxAuto', null); const remembered = a && a.v === 'lite' && Date.now() - a.t < 7 * 864e5;
+  const lite = GFX.mode === 'lite' || (GFX.mode === 'auto' && (gfxWeakHint() || remembered));
+  document.documentElement.classList.toggle('lite', lite);
+}
+function gfxDowngrade() { if (GFX.mode !== 'auto' || isLite()) return; document.documentElement.classList.add('lite'); store.set('gfxAuto', { v: 'lite', t: Date.now() }); }
+// counts real frames for `ms`; slow frames on a visible tab mean the device can't keep up with the full effects
+function fpsProbe(ms, cb) { let n = 0, slow = 0; const t0 = performance.now(); let last = t0; const f = now => { if (document.hidden) return; n++; if (now - last > 40) slow++; last = now; if (now - t0 < ms) requestAnimationFrame(f); else cb(n / ((now - t0) / 1000), slow / Math.max(1, n)); }; requestAnimationFrame(f); }
+function gfxProbe() { if (GFX.mode !== 'auto' || isLite() || reduced()) return; fpsProbe(2400, (fps, slowShare) => { if (fps < 40 || slowShare > 0.25) gfxDowngrade(); }); }
+// pause looping animations that are off-screen, behind the opening stage, or in a hidden tab
+let animIO = null; const ANIM_SEL = '.cc,.case-art,.hero,.auc-plate,.mini-wheel,.turntable,.pc,.mres-i,.medal-b,.ava,.nk,.wf,.lstrip,.page-head,.btn-xl';
+function animWatch(root = document) {
+  if (!('IntersectionObserver' in window)) return;
+  if (!animIO) animIO = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('ofs', !e.isIntersecting)), { rootMargin: '120px 0px' });
+  root.querySelectorAll(ANIM_SEL).forEach(el => { if (!el._aw) { el._aw = 1; animIO.observe(el); } });
+}
+document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('hid', document.hidden));
+gfxApply();
 function applyPrefs() { const h = document.documentElement; h.classList.toggle('rm', PREF.motion === 'reduced'); h.classList.toggle('fm', PREF.motion === 'full'); h.lang = LANG; const sk = document.querySelector('.skip'); if (sk) sk.textContent = L('К содержимому', 'Skip to content'); const lg = document.querySelector('.hdr .logo'); if (lg) lg.setAttribute('aria-label', L('Plate Club — главная', 'Plate Club — home')); const tn = document.getElementById('topnav'); if (tn) tn.setAttribute('aria-label', L('Главное меню', 'Main menu')); const bn = document.getElementById('botnav'); if (bn) bn.setAttribute('aria-label', L('Меню', 'Menu')); }
 
 /* ---------- sound (always on; volume in settings) ---------- */
