@@ -502,7 +502,7 @@ function countUp(el) {
 }
 function countdown(el, ends, onEnd) {
   const set = () => { if (!document.body.contains(el)) return clearInterval(t); const ms = Math.max(0, ends - Date.now()); const p = [Math.floor(ms / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0'));
-    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; spans[i].classList.remove('tick'); void spans[i].offsetWidth; spans[i].classList.add('tick'); } }); } else { const dd = Math.floor(ms / 864e5); el.textContent = dd >= 2 ? `${dd} ${L('д', 'd')} ` + [Math.floor(ms % 864e5 / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0')).join(':') : p.join(':'); }
+    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; if (!reduced() && !isLite() && spans[i].animate) spans[i].animate([{ transform: 'translateY(-35%)', opacity: 0.2 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }); } }); } else { const dd = Math.floor(ms / 864e5); el.textContent = dd >= 2 ? `${dd} ${L('д', 'd')} ` + [Math.floor(ms % 864e5 / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0')).join(':') : p.join(':'); }
     if (!ms) { clearInterval(t); onEnd && onEnd(); } };
   const t = setInterval(set, 1000); set();
 }
@@ -2021,6 +2021,8 @@ function installBar() {
   if (standalone() || $('#instBar') || !matchMedia('(max-width: 820px)').matches || parseRoute().name !== '') return;
   let until = 0; try { until = Number(localStorage.getItem('pc.instHide') || 0); } catch {}
   if (Date.now() < until) return;
+  // not on the very first visit: let people see the game first
+  if ((store.get('visits', 0) || 0) < 2 && !(ME && ME.opened)) return;
   const el = document.createElement('div'); el.id = 'instBar'; el.className = 'inst-bar';
   el.innerHTML = `<img src="${BRAND('app-icon-192.png')}" alt=""><div><b>${L('Plate Club на телефон', 'Plate Club on your phone')}</b><span>${L('Иконка на рабочем столе, как приложение', 'An icon on your home screen, like an app')}</span></div><button class="btn btn-chrome btn-sm" data-act="install">${L('Установить', 'Install')}</button><button class="inst-x" data-act="instx" aria-label="${L('Закрыть', 'Close')}">×</button>`;
   document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('on'));
@@ -2221,6 +2223,7 @@ document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (
 
 /* ---------- boot ---------- */
 async function boot() {
+  try { if (!sessionStorage.getItem('pc_visit')) { sessionStorage.setItem('pc_visit', '1'); store.set('visits', (store.get('visits', 0) || 0) + 1); } } catch {}
   applyPrefs(); document.documentElement.style.setProperty('--logo', `url("${BRAND('logo-chrome-900.png')}")`); document.documentElement.style.setProperty('--bgimg', `url("${IMG('hero-chrome.jpg')}")`);document.documentElement.style.setProperty('--tex', `url("${IMG('tex-1.jpg')}")`);
   const bar = $('#spBar'), step = $('#spStep'); const set = (p, s) => { if (bar) bar.style.width = p + '%'; if (step) step.textContent = s; };
   set(15, L('Загружаем каталог', 'Loading catalogue')); const params = new URLSearchParams(location.search);

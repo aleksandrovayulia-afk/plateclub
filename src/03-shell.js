@@ -73,7 +73,7 @@ function countUp(el) {
 }
 function countdown(el, ends, onEnd) {
   const set = () => { if (!document.body.contains(el)) return clearInterval(t); const ms = Math.max(0, ends - Date.now()); const p = [Math.floor(ms / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0'));
-    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; spans[i].classList.remove('tick'); void spans[i].offsetWidth; spans[i].classList.add('tick'); } }); } else { const dd = Math.floor(ms / 864e5); el.textContent = dd >= 2 ? `${dd} ${L('д', 'd')} ` + [Math.floor(ms % 864e5 / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0')).join(':') : p.join(':'); }
+    if (el.classList.contains('timer')) { const spans = el.querySelectorAll('span'); p.forEach((v, i) => { if (spans[i].textContent !== v) { spans[i].textContent = v; if (!reduced() && !isLite() && spans[i].animate) spans[i].animate([{ transform: 'translateY(-35%)', opacity: 0.2 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }); } }); } else { const dd = Math.floor(ms / 864e5); el.textContent = dd >= 2 ? `${dd} ${L('д', 'd')} ` + [Math.floor(ms % 864e5 / 3600e3), Math.floor(ms % 3600e3 / 60e3), Math.floor(ms % 60e3 / 1e3)].map(n => String(n).padStart(2, '0')).join(':') : p.join(':'); }
     if (!ms) { clearInterval(t); onEnd && onEnd(); } };
   const t = setInterval(set, 1000); set();
 }

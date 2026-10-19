@@ -1412,3 +1412,66 @@ textarea.field{padding:12px 14px;min-height:96px;resize:vertical;font:inherit;li
 .lite .live-track::before,.lite .live-track::after{content:"";position:absolute;top:0;bottom:0;width:6%;z-index:1;pointer-events:none}
 .lite .live-track::before{left:0;background:linear-gradient(90deg,#0a0e0c,transparent)}
 .lite .live-track::after{right:0;background:linear-gradient(270deg,#090c11,transparent)}
+
+/* ===== device fixes (QA pass: 320–1920px) ===== */
+html,body{overflow-x:clip}
+/* small phones: the header must fit — logo, balance and menu always on screen */
+@media(max-width:380px){
+  .hdr .wrap{gap:8px}.hdr-r{gap:6px;min-width:0;flex-shrink:1}
+  .logo img{height:26px}
+  .hdr-r .lvl{display:none}
+  .bal{gap:5px;padding:3px 3px 3px 10px;font-size:clamp(11.5px,3.6vw,13.5px);min-width:0}
+  .bal small{display:none}
+  .bal .plus{width:30px;height:30px}
+  .burger{width:40px;height:40px}
+}
+/* blurred glass on every case card was 98 filter layers on /cases — a tinted fill looks the same */
+.cc-rank{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,.55)}
+.cc-info{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,.52)}
+/* bigger tap targets without changing how things look */
+.cc-info::after,.ava-btn::after,.ava-del::after,.inst-x::after{content:"";position:absolute;inset:-8px}
+.inst-x{position:relative;width:36px;height:36px}
+.st-skip{padding:12px 20px;font-size:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.seg button{min-height:40px}
+#mq,.mk-search input{min-height:42px}
+.foot a{display:inline-block;padding-block:8px}
+/* stage results: a tall ×3 result scrolls instead of being cut off */
+.st-res{display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;padding:max(16px,env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))}
+.st-res>.result{margin:auto}
+@media(max-width:600px){
+  .mres{gap:8px}
+  .mres-i{grid-template-columns:auto minmax(0,1fr);justify-items:start;align-items:center;column-gap:12px;row-gap:4px;text-align:left}
+  .mres-i>.plate{grid-row:span 3;--ps:4.2px}
+  .mres-i .row{justify-content:flex-start!important}
+}
+/* phones/tablets: the main action of a game sits above the bottom menu */
+@media(max-width:1099px){
+  .hl-acts{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6;padding:8px;margin-inline:-8px;border-radius:22px;background:rgba(6,8,12,.86)}
+  .hl-acts .btn{white-space:normal;line-height:1.1;padding-inline:12px;font-size:16px}
+  .case-info>.row:has(>.open-row),.case-info>.open-row{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6;padding:8px;margin-inline:-8px;border-radius:24px;background:rgba(6,8,12,.88)}
+}
+@media(max-width:1039px){
+  .up-grid>section:nth-child(3){order:1}.up-grid>section:nth-child(2){order:2}
+  .up-list{max-height:42vh}
+  #upBtn{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6}
+}
+/* long button labels wrap on narrow screens instead of being clipped */
+@media(max-width:420px){
+  .btn-lg,[data-act="tgjoin"],[data-act="resend"]{white-space:normal;text-align:center;line-height:1.15;padding-inline:16px}
+}
+/* tiny labels get readable */
+.cc-top .cc-rank,.cc-top .cc-no{font-size:10px}
+.hl-steps>span,.medal-b{font-size:10.5px}
+.pc-r .rl,.pc-r .pid{font-size:10.5px}
+.stat>span{font-size:11.5px}
+/* no layout jump while the app boots: the menus keep their size before they are filled */
+#botnav:empty{height:calc(65px + env(safe-area-inset-bottom,0px))}
+#foot:empty{display:none}
+#view{min-height:100vh}
+@media(min-width:1100px){#botnav:empty{height:0}}
+/* plate IDs in long lists shimmer on hover (desktop) instead of repainting all the time */
+.pc .iri-t{animation-play-state:paused}.pc:hover .iri-t{animation-play-state:running}
+/* case page on phones: the "Open" button is visible without scrolling and follows you above the menu */
+.case-hero{overflow:clip}
+@media(max-width:600px){.case-hero .case-art{min-height:190px!important}.case-hero .case-art .cg{--w:min(210px,50vw)}.case-hero{padding:20px;gap:14px}}
+@media(max-width:600px){.open-row{flex-wrap:nowrap;gap:6px}.open-row .btn-xl{flex:1 1 auto!important;min-width:0;padding-inline:12px;font-size:15px;min-height:58px;white-space:normal;line-height:1.1}.open-row .open-x{flex:0 0 auto;padding-inline:10px;min-height:58px}.open-x b{font-size:16px}.open-x span{font-size:10.5px}}
