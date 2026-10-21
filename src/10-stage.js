@@ -1,7 +1,7 @@
 
 /* ---------- roulette: a readable Standoff-style strip that slows down and stops on the server's plate ---------- */
 // decorative strip cards follow the same pattern rules as the server, so a "rare" card looks rare
-const VPATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'] };
+const VPATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'], mythic: ['full'] };
 function vDigits(k, n) {
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1)); const d = ri(1, 9); let e; do e = ri(0, 9); while (e === d);
   if (k === 'triple' || k === 'full') return String(d).repeat(n);
@@ -21,7 +21,7 @@ function visualPlate(c) {
   const letters = same ? l0.repeat(n) : Array.from({ length: n }, () => pick(L2)).join('');
   return { country: by ? 'BY' : 'RU', letters, digits: vDigits(pat === 'letters' ? 'random' : pat, by ? 4 : 3), region: pick(by ? c.pool.BY : c.pool.RU), tier, pattern: pat };
 }
-const cardHtml = (p, win) => `<div class="card t-${p.tier}"${win ? ' id="win"' : ''} aria-hidden="true">${Plate(p)}${Rarity(p.tier)}</div>`;
+const cardHtml = (p, win) => `<div class="card t-${p.tier}${p.tier === 'grail' || p.tier === 'mythic' ? ' hot' : ''}"${win ? ' id="win"' : ''} aria-hidden="true">${Plate(p)}${Rarity(p.tier)}</div>`;
 function bezier(p1x, p1y, p2x, p2y) {
   const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx, cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
   const sx = t => ((ax * t + bx) * t + cx) * t, sy = t => ((ay * t + by) * t + cy) * t, dx = t => (3 * ax * t + 2 * bx) * t + cx;
@@ -41,10 +41,10 @@ function roll(root, c, plate, spinEl, extra = 0) {
     spin.classList.remove('done'); spin.style.removeProperty('--tc');
     track.style.transform = 'translate3d(0,0,0)';
     track.innerHTML = Array.from({ length: N }, (_, i) => cardHtml(i === WIN ? plate : visualPlate(c), i === WIN)).join('');
-    const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
+    const W = track.children[0].offsetWidth + parseFloat(getComputedStyle(track).columnGap || 10), center = box.clientWidth / 2; // layout sizes: the strip may still be scaling in
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700, T = D + SETTLE;
+    const D = reduced() ? 0 : 5800 + extra, SETTLE = 650, T = D + SETTLE;
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
     const me = { raf: 0, anim: null, t0: 0 };
     const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; cancelAnimationFrame(me.raf); clearTimeout(me.tm); setX(target); if (me.anim) me.anim.cancel(); res(); };
@@ -74,10 +74,11 @@ function rollMany(root, c, plates) {
   const host = root.querySelector('.st-roll'); const tpl = host.querySelector('.spin');
   host.classList.add('multi'); host.innerHTML = '';
   const spins = plates.map(() => { const sp = tpl.cloneNode(true); host.appendChild(sp); return sp; });
-  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 600)));
+  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 400)));
 }
-const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70 };
+const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70, mythic: 110 };
 function celebrate(root, p, spinEl) {
+  if (p.tier === 'mythic' || p.tier === 'grail') mythicMoment(root, p.tier);
   const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
@@ -105,7 +106,7 @@ function openStage(c) {
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
-function spinCase(st, ready, min = 2800) {
+function spinCase(st, ready, min = 1600) {
   return new Promise(res => {
     const box = st.el.querySelector('.box3'); let ang = 0, last = performance.now(), t0 = last, isReady = false, lastQ = 0;
     ready.then(() => { isReady = true; });
@@ -160,7 +161,7 @@ function resultHtml(c, p) {
   const word = tierName(p.tier); const canMore = ME && ME.balance >= priceOf(c);
   return `<div class="result t-${p.tier}"><p class="eyebrow">${esc(caseName(c))} · <span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></p>${Plate(p, { holo: true })}<p class="tier" aria-label="${esc(word)}">${[...word].map((ch, i) => `<span style="--i:${i}" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</p>
     <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}</div>
-    <dl class="kv"><dt>${L('Номер', 'Plate')}</dt><dd>${esc(plateStr(p))}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd></dl>
+    <dl class="kv"><dt>${L('Номер', 'Plate')}</dt><dd>${esc(plateStr(p))}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>${blatRow(p)}</dl>
     <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать', 'Collect')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}">${L('Ещё раз', 'Again')} · ${fmt(priceOf(c))}</button>` : ''}</div>
     <div class="row" style="justify-content:center"><a class="btn btn-sm btn-ghost" href="#/upgrade?p=${p.id}">${L('Апгрейд', 'Upgrade')}</a><button class="btn btn-sm btn-ghost" data-act="shareplate" data-id="${p.id}">📤 ${L('Похвастаться', 'Share')}</button><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button><button class="btn btn-sm btn-ghost" data-act="bank" data-id="${p.id}" data-v="${p.value}" data-s="${esc(plateStr(p))}" data-after="stage">${L('Банку за', 'Bank for')} ${fmt(p.value * CFG.bankRate)}</button></div></div>`;
 }
@@ -174,4 +175,13 @@ function resultMulti(c, plates, n) {
       <div class="row" style="justify-content:center;gap:6px"><button class="btn btn-sm btn-ghost" data-act="shareplate" data-id="${p.id}">📤</button><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button></div></div>`).join('')}</div>
     <p class="small" style="margin:0">${L('Всего на', 'Total value')} <b>${fmt(total)} PLT</b></p>
     <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать всё', 'Collect all')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}" data-n="${n}">${L('Ещё', 'Again')} ×${n} · ${fmt(priceOf(c) * n)}</button>` : ''}</div></div>`;
+}
+
+// a Mythic (or Grail) drop takes over the stage for a moment: colour wash, rings and a banner
+function mythicMoment(root, tier) {
+  if (reduced() || !root || !root.classList) return;
+  root.classList.remove('myth-drop', 'grail-drop'); void root.offsetWidth; root.classList.add(tier === 'mythic' ? 'myth-drop' : 'grail-drop');
+  const b = document.createElement('div'); b.className = 'myth-ban'; b.setAttribute('aria-hidden', 'true');
+  b.innerHTML = tier === 'mythic' ? `<b>${L('МИФИЧЕСКИЙ', 'MYTHIC')}</b><span>${L('один из одного', 'one of one')}</span>` : `<b>${L('ГРААЛЬ', 'GRAIL')}</b><span>${L('легендарная находка', 'a legendary find')}</span>`;
+  root.appendChild(b); setTimeout(() => b.remove(), 2600);
 }

@@ -4,7 +4,7 @@
   --bg:#040507; --bg2:#090B10; --card:#0D1017; --card2:#131722; --card3:#1A1F2C;
   --line:#191E2B; --line2:#272E40; --fg:#F2F5FA; --fg2:#A3ABBD; --fg3:#646C80;
   --ice:#8FD3FF; --ice2:#4AA8FF; --ice3:#D9F1FF; --acid:#C6FF3D; --gold:#FFD25E; --ok:#3DDC97; --err:#FF5C6C; --mark:#FFD54A;
-  --c-common:#8A93A6; --c-fine:#4FA3FF; --c-rare:#A87CFF; --c-elite:#FF5FA8; --c-grail:#FFD25E;
+  --c-common:#8A93A6; --c-fine:#4FA3FF; --c-rare:#A87CFF; --c-elite:#FF5FA8; --c-grail:#FFD25E; --c-mythic:#FF3355;
   --chrome:linear-gradient(180deg,#FFFFFF 0%,#E2F3FF 16%,#A9DAFF 38%,#5FA9EE 56%,#245FB4 70%,#8FCBFF 84%,#F3FAFF 100%);
   --chrome-soft:linear-gradient(180deg,#FFFFFF 0%,#E6F5FF 30%,#B6E0FF 62%,#7EC1F7 100%);
   --f-display:'Unbounded','Arial Black',system-ui,sans-serif;
@@ -194,7 +194,7 @@ img{max-width:100%;display:block}
 .plate>.vb{position:absolute;top:-.7em;right:-.7em;width:1.55em;height:1.55em;min-width:15px;min-height:15px;z-index:2}
 
 /* tiers, tags */
-.t-common{--tc:var(--c-common)}.t-fine{--tc:var(--c-fine)}.t-rare{--tc:var(--c-rare)}.t-elite{--tc:var(--c-elite)}.t-grail{--tc:var(--c-grail)}
+.t-common{--tc:var(--c-common)}.t-fine{--tc:var(--c-fine)}.t-rare{--tc:var(--c-rare)}.t-elite{--tc:var(--c-elite)}.t-grail{--tc:var(--c-grail)}.t-mythic{--tc:var(--c-mythic)}
 .rl{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--tc);white-space:nowrap}
 .rl i{width:8px;height:8px;border-radius:50%;background:var(--tc);box-shadow:0 0 10px var(--tc)}
 .price{font-family:var(--f-mono);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1480,3 +1480,64 @@ html,body{overflow-x:clip}
 .fav-b[aria-pressed="true"]{color:#ffd36b;border-color:rgba(255,211,107,.55);background:rgba(255,211,107,.12)}
 .fav-b:active{transform:scale(.88)}
 .fav-chip[aria-pressed="true"]{color:#ffd36b;border-color:rgba(255,211,107,.55)}
+
+/* ===== Mythic & Grail: a slow shimmer in their own colour (GPU-only: a moving light band + a breathing glow) ===== */
+.plate.gl,.plate.my{overflow:hidden;isolation:isolate;border-color:transparent}
+.plate.gl{--sh1:#fff6d6;--sh2:#ffd25e;--sh3:#c98a12;background:linear-gradient(170deg,#fffdf4,#fbf3dc 60%,#f1e3b8) padding-box,linear-gradient(135deg,#8a5a00,#ffd25e 30%,#fff3c2 50%,#ffd25e 70%,#8a5a00) border-box;box-shadow:0 0 .9em color-mix(in srgb,#ffd25e 45%,transparent)}
+.plate.my{--sh1:#ffe1e6;--sh2:#ff3355;--sh3:#9e0b25;background:linear-gradient(170deg,#fff7f8,#ffe9ec 60%,#ffd3da) padding-box,linear-gradient(135deg,#6b0014,#ff3355 30%,#ffb3c0 50%,#ff3355 70%,#6b0014) border-box;box-shadow:0 0 1.1em color-mix(in srgb,#ff3355 55%,transparent)}
+.plate.gl::after,.plate.my::after{content:"";position:absolute;inset:-20% -60%;z-index:2;pointer-events:none;background:linear-gradient(105deg,transparent 38%,color-mix(in srgb,var(--sh2) 22%,transparent) 45%,color-mix(in srgb,var(--sh1) 70%,transparent) 50%,color-mix(in srgb,var(--sh2) 22%,transparent) 55%,transparent 62%);transform:translateX(-60%);animation:plSweep 3.8s cubic-bezier(.45,.05,.35,1) infinite;mix-blend-mode:multiply}
+.plate.my::after{animation-duration:3.1s;mix-blend-mode:normal;opacity:.75}
+.plate.gl::before,.plate.my::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 .5em color-mix(in srgb,var(--sh2) 55%,transparent);opacity:.35;animation:plBreath 3.8s ease-in-out infinite}
+.plate.my::before{animation-duration:3.1s}
+@keyframes plSweep{0%{transform:translateX(-60%)}55%,100%{transform:translateX(60%)}}
+@keyframes plBreath{0%,100%{opacity:.25}50%{opacity:.75}}
+.cp.myth{color:#fff;background:linear-gradient(90deg,#9e0b25,#ff3355);border:0;font-weight:800}
+.rl.t-mythic{color:var(--c-mythic);text-shadow:0 0 12px color-mix(in srgb,var(--c-mythic) 60%,transparent)}
+.lite .plate.gl::after,.lite .plate.my::after,.lite .plate.gl::before,.lite .plate.my::before{animation:none}
+.lite .plate.gl::after,.lite .plate.my::after{transform:translateX(0);opacity:.35}
+
+/* roulette: Grail/Mythic cards stand out while the strip spins */
+.card.hot{border-color:color-mix(in srgb,var(--tc) 70%,transparent);background:radial-gradient(120% 80% at 50% 0%,color-mix(in srgb,var(--tc) 38%,transparent),transparent 70%),linear-gradient(180deg,#1b1610,#120e0b 55%,color-mix(in srgb,var(--tc) 40%,#10131b))}
+.card.hot.t-mythic{background:radial-gradient(120% 80% at 50% 0%,color-mix(in srgb,var(--tc) 45%,transparent),transparent 70%),linear-gradient(180deg,#1e0c10,#14080b 55%,color-mix(in srgb,var(--tc) 45%,#10131b))}
+.card.hot::after{height:6px;box-shadow:0 0 22px var(--tc),0 0 4px #fff}
+.card.hot .rl{color:var(--tc);font-weight:800}
+
+/* the drop moment */
+#stage.myth-drop::before,#stage.grail-drop::before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:radial-gradient(55% 45% at 50% 45%,color-mix(in srgb,var(--dc) 55%,transparent),transparent 70%);animation:mdWash 2.4s ease-out forwards}
+#stage.myth-drop{--dc:#ff3355}#stage.grail-drop{--dc:#ffd25e}
+#stage.myth-drop::after,#stage.grail-drop::after{content:"";position:absolute;left:50%;top:45%;width:40vmin;height:40vmin;margin:-20vmin 0 0 -20vmin;z-index:5;pointer-events:none;border-radius:50%;border:3px solid var(--dc);box-shadow:0 0 40px var(--dc),inset 0 0 30px var(--dc);animation:mdRing 1.6s cubic-bezier(.2,.7,.3,1) 2 forwards}
+@keyframes mdWash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes mdRing{0%{transform:scale(.2);opacity:1}100%{transform:scale(2.6);opacity:0}}
+.myth-ban{position:absolute;left:50%;top:18%;z-index:6;transform:translateX(-50%);display:grid;justify-items:center;gap:4px;pointer-events:none;animation:mdBan 2.6s cubic-bezier(.2,.8,.2,1) forwards}
+.myth-ban b{font-family:var(--f-name,var(--f-display));font-size:clamp(34px,8vw,72px);letter-spacing:.06em;color:#fff;text-shadow:0 0 18px var(--dc,#ff3355),0 0 50px var(--dc,#ff3355)}
+.myth-ban span{font-family:var(--f-mono);font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--dc,#ff3355)}
+#stage.myth-drop .myth-ban{--dc:#ff3355}#stage.grail-drop .myth-ban{--dc:#ffd25e}
+@keyframes mdBan{0%{opacity:0;transform:translateX(-50%) scale(.6)}18%{opacity:1;transform:translateX(-50%) scale(1.05)}30%{transform:translateX(-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-14px)}}
+
+/* ===== case backgrounds: every rarity has its own scene ===== */
+.cc.r-common .cc-bg::before,.case-hero.t-common .cc-bg::before{background:repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px),linear-gradient(180deg,rgba(255,255,255,.08),transparent 60%);mix-blend-mode:normal;filter:none;opacity:.9}
+.cc.r-fine .cc-bg::before,.case-hero.t-fine .cc-bg::before{background:linear-gradient(rgba(143,211,255,.11) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,rgba(143,211,255,.11) 1px,transparent 1px) 0 0/22px 22px,radial-gradient(60% 45% at 50% 30%,rgba(79,163,255,.28),transparent 70%);mix-blend-mode:normal;filter:none;opacity:1}
+.cc.r-rare .cc-bg::before,.case-hero.t-rare .cc-bg::before{background:radial-gradient(1.2px 1.2px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 72% 12%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 44%,#e9dcff,transparent),radial-gradient(1px 1px at 30% 52%,#fff,transparent),radial-gradient(1.2px 1.2px at 58% 30%,#fff,transparent),radial-gradient(1px 1px at 18% 76%,#e9dcff,transparent),radial-gradient(50% 40% at 30% 30%,rgba(168,124,255,.45),transparent 70%),radial-gradient(45% 40% at 75% 60%,rgba(80,40,200,.45),transparent 70%);mix-blend-mode:normal;filter:none;opacity:1}
+.cc.r-elite .cc-bg::before,.case-hero.t-elite .cc-bg::before{background:conic-gradient(from 210deg at 50% 38%,rgba(255,95,168,.0),rgba(255,95,168,.32) 10%,rgba(255,255,255,.06) 18%,rgba(255,95,168,.0) 26%,rgba(143,211,255,.22) 40%,rgba(255,95,168,0) 52%,rgba(255,95,168,.28) 66%,rgba(255,255,255,.05) 74%,rgba(255,95,168,0) 86%);mix-blend-mode:normal;filter:none;opacity:1}
+.cc.r-grail .cc-bg::before,.case-hero.t-grail .cc-bg::before{background:repeating-conic-gradient(from 0deg at 50% 36%,rgba(255,210,94,.22) 0 5deg,transparent 5deg 15deg),radial-gradient(55% 45% at 50% 36%,rgba(255,210,94,.55),transparent 72%);mix-blend-mode:normal;filter:none;opacity:1;-webkit-mask-image:radial-gradient(90% 75% at 50% 36%,#000 25%,transparent 80%);mask-image:radial-gradient(90% 75% at 50% 36%,#000 25%,transparent 80%)}
+.cc:hover .cc-bg::before{opacity:1}
+.cc.r-grail{box-shadow:0 0 0 1px rgba(255,210,94,.35),0 18px 50px -25px rgba(255,210,94,.6)}
+
+/* daily deals on top of the cases page */
+@media(min-width:900px){.deals{grid-template-columns:repeat(4,1fr)}}
+.deal-max{display:inline-block;vertical-align:middle;font-size:.5em;padding:.25em .6em;border-radius:999px;background:linear-gradient(90deg,#ff3355,#ff7a59);color:#fff;letter-spacing:.02em}
+.deals-sec{margin-top:6px}
+.deal-max{-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:#fff!important;color:#fff!important;font-family:var(--f-mono);font-weight:800}
+
+/* games in the logo's style: liquid-chrome titles with a dark outline and chrome-edged cards */
+.gcard{border:1.5px solid transparent;background:linear-gradient(#05070c,#05070c) padding-box,linear-gradient(160deg,rgba(255,255,255,.55),rgba(143,211,255,.18) 30%,rgba(10,30,70,.6) 55%,rgba(143,211,255,.45) 85%,rgba(255,255,255,.3)) border-box}
+.gcard h2{font-family:var(--f-display,'Unbounded',system-ui);font-weight:800;letter-spacing:-.02em;background:linear-gradient(180deg,#ffffff 0%,#e6f5ff 22%,#9fd3ff 42%,#1f5fd1 58%,#7cc4ff 74%,#ffffff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:.6px rgba(3,10,30,.65);filter:drop-shadow(0 2px 0 rgba(0,8,30,.8)) drop-shadow(0 8px 18px rgba(74,168,255,.35))}
+.gcard .eyebrow{color:#9fd3ff}
+.gcard-in h2::after{content:none}
+.lite .gcard h2{filter:none}
+/* top-up packs: the popular and the best-value pack stand out */
+.pkg.hot,.pkg.best{border-color:rgba(143,211,255,.55)!important;box-shadow:0 0 0 1px rgba(143,211,255,.25),0 14px 34px -20px rgba(74,168,255,.8)}
+.pkg.best{border-color:rgba(255,210,94,.6)!important;box-shadow:0 0 0 1px rgba(255,210,94,.3),0 14px 34px -20px rgba(255,210,94,.8)}
+.pkg-flag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap;font:800 10.5px var(--f-mono);letter-spacing:.04em;padding:3px 9px;border-radius:999px;background:var(--chrome,#8fd3ff);color:#03132e}
+.pkg-flag.best{background:linear-gradient(90deg,#ffd25e,#ff9f43);color:#2a1600}
+.pkg{position:relative}

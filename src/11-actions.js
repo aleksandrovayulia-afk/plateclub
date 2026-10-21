@@ -20,7 +20,7 @@ A.open = async btn => {
     await burstCase(st); if (st.dead) return;
     if (r.plates && r.plates.length > 1) { await rollMany(st.el, c, r.plates); if (st.dead) return; st.el.querySelectorAll('.st-roll .spin').forEach((sp, i) => celebrate(st.el, r.plates[i], sp)); }
     else { await roll(st.el, c, r.plate); if (st.dead) return; celebrate(st.el, r.plate); }
-    await wait(reduced() ? 0 : ({ common: 800, fine: 1000, rare: 1300, elite: 1600, grail: 2100 })[r.plate.tier]); if (st.dead) return;
+    await wait(reduced() ? 0 : ({ common: 500, fine: 650, rare: 900, elite: 1200, grail: 1900, mythic: 2600 })[r.plate.tier] || 900); if (st.dead) return;
     st.el.querySelector('.st-res').innerHTML = r.plates && r.plates.length > 1 ? resultMulti(c, r.plates, r.count) : resultHtml(c, r.plate); st.el.classList.add('st-done'); st.el.querySelector('.st-skip').hidden = true;
     st.el.querySelector('.st-res [autofocus]')?.focus();
     if ($('#openAct')) { $('#openAct').innerHTML = openAction(c); if ($('#buybox')) $('#buybox').innerHTML = buyBox(c); }
@@ -54,7 +54,7 @@ A.detail = async btn => {
   const l = d.listing, p = d.plate; if (!l) return toast(L('Этот номер больше не продаётся.', 'This plate is no longer for sale.'), true);
   const can = ME.balance >= l.price;
   openDialog(`<div class="dlg"><div><p class="eyebrow">${L('Объявление', 'Listing')} ${l.id}</p><h2 class="h3" id="dlgTitle" style="margin-top:6px">${L('Покупка', 'Buy')} ${esc(plateStr(p))}</h2></div><div class="dlg-plate">${Plate(p, { holo: true })}</div>
-    <dl class="kv"><dt>ID</dt><dd><span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Продавец', 'Seller')}</dt><dd>${esc(l.seller)}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
+    <dl class="kv"><dt>ID</dt><dd><span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd>${blatRow(p)}<dt>${L('Продавец', 'Seller')}</dt><dd>${esc(l.seller)}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
       <dt class="tot">${L('К оплате', 'To pay')}</dt><dd class="tot">${fmt(l.price)} PLT</dd><dt>${L('Баланс после', 'Balance after')}</dt><dd>${can ? fmt(ME.balance - l.price) + ' PLT' : '—'}</dd></dl>
     ${can ? '' : `<p class="err">${L(`Не хватает ${fmt(l.price - ME.balance)} PLT.`, `${fmt(l.price - ME.balance)} PLT short.`)}</p>`}
     <div class="dlg-acts">${favBtn(p.id, l.price)}<a class="btn btn-ghost" href="#/plate/${p.id}">${L('Сначала проверить', 'Verify first')}</a><button class="btn btn-chrome" data-act="buy" data-id="${l.id}" data-price="${l.price}" ${can ? '' : 'disabled'} autofocus>${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button></div></div>`);
@@ -102,7 +102,7 @@ A.shareplate = async btn => {
     x.font = '700 26px "IBM Plex Mono", ui-monospace, monospace'; x.fillStyle = '#555'; x.fillText('RUS', px + pw * .86, py + ph * .76); }
   // rarity + value
   x.textAlign = 'center';
-  x.fillStyle = ({ common: '#9FB4CC', fine: '#8FD3FF', rare: '#C9A8FF', elite: '#FF7AD9', grail: '#FFD25E' })[p.tier] || '#fff';
+  x.fillStyle = ({ common: '#9FB4CC', fine: '#8FD3FF', rare: '#C9A8FF', elite: '#FF7AD9', grail: '#FFD25E', mythic: '#FF3355' })[p.tier] || '#fff';
   x.font = '800 62px Unbounded, Manrope, system-ui, sans-serif';
   x.fillText(tierName(p.tier).toUpperCase(), W / 2, py + ph + 110);
   x.fillStyle = '#DCE9F7'; x.font = '600 44px Manrope, system-ui, sans-serif';

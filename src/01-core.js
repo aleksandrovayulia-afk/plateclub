@@ -24,12 +24,12 @@ const pl = (n, ru3, en2) => (LANG === 'en' ? (n === 1 ? en2[0] : en2[1]) : plura
 const rel = ts => { const s = (Date.now() - ts) / 1000; if (s < 60) return L('только что', 'just now'); if (s < 3600) { const m = Math.floor(s / 60); return L(`${m} мин назад`, `${m} min ago`); } if (s < 86400) { const h = Math.floor(s / 3600); return L(`${h} ч назад`, `${h} h ago`); } const d = Math.floor(s / 86400); return L(`${d} ${plural(d, 'день', 'дня', 'дней')} назад`, `${d} ${d === 1 ? 'day' : 'days'} ago`); };
 const date = ts => new Date(ts).toLocaleString(LOC(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const day = ts => new Date(ts).toLocaleDateString(LOC(), { day: 'numeric', month: 'long', year: 'numeric' });
-const TIER_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Грааль', 'Grail'] };
-const RANK_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Легендарный', 'Legendary'] };
-const PAT_EN = { random: 'Random', seq: 'Sequence', pair: 'Pair', mirror: 'Mirror', round: 'Round', triple: 'Same digits', zero: 'Zero series', letters: 'Same letters', full: 'Full match', zerofull: 'Zero + letters' };
+const TIER_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Грааль', 'Grail'], mythic: ['Мифический', 'Mythic'] };
+const RANK_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Легендарный', 'Legendary'], mythic: ['Мифический', 'Mythic'] };
+const PAT_EN = { random: 'Random', seq: 'Sequence', pair: 'Pair', mirror: 'Mirror', round: 'Round', triple: 'Same digits', zero: 'Zero series', letters: 'Same letters', full: 'Full match', zerofull: 'Zero + letters', mythic: 'Full match + region' };
 const CAT_EN = { season: 'Season', start: 'Starter', region: 'Russian regions', belarus: 'Belarus', pattern: 'Patterns', premium: 'Premium', top: 'Top', legend: 'Legends' };
 const BY_EN = { 1: 'Brest region', 2: 'Vitebsk region', 3: 'Gomel region', 4: 'Grodno region', 5: 'Minsk region', 6: 'Mogilev region', 7: 'Minsk' };
-const ACH_EN = { first: ['First plate', 'Open your first case.'], ten: ['Ten', 'Collect 10 plates.'], opener: ['Thrill', 'Open 25 cases.'], rare: ['Rare find', 'Get a rare plate or better.'], elite: ['Elite', 'Get an elite plate.'], grail: ['Grail', 'Get a Grail plate.'], regions: ['Traveller', 'Plates from 5 regions.'], belarus: ['Two countries', 'Collect plates from Russia and Belarus.'], buyer: ['First purchase', 'Buy a plate on the market.'], lister: ['Seller', 'List a plate on the market.'], seller: ['First sale', 'Sell a plate to another player.'], twin: ['Twins', 'Get a “2 of 2” plate — the last copy of a combination.'] };
+const ACH_EN = { mythic: ['Myth', 'Get a Mythic plate — one of one.'], first: ['First plate', 'Open your first case.'], ten: ['Ten', 'Collect 10 plates.'], opener: ['Thrill', 'Open 25 cases.'], rare: ['Rare find', 'Get a rare plate or better.'], elite: ['Elite', 'Get an elite plate.'], grail: ['Grail', 'Get a Grail plate.'], regions: ['Traveller', 'Plates from 5 regions.'], belarus: ['Two countries', 'Collect plates from Russia and Belarus.'], buyer: ['First purchase', 'Buy a plate on the market.'], lister: ['Seller', 'List a plate on the market.'], seller: ['First sale', 'Sell a plate to another player.'], twin: ['Twins', 'Get a “2 of 2” plate — the last copy of a combination.'] };
 const TR = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya' };
 const translit = s => String(s).replace(/[А-яЁё]/g, ch => { const lo = ch.toLowerCase(); const t = TR[lo] ?? ch; return ch === lo ? t : t.charAt(0).toUpperCase() + t.slice(1); });
 const REG_EN = { 'Москва': 'Moscow', 'Санкт-Петербург': 'Saint Petersburg', 'Московская обл.': 'Moscow region', 'Ленинградская обл.': 'Leningrad region' };
@@ -160,6 +160,8 @@ const MEDAL_ORDER = ['lv100', 'top3', 'lv50', 'top10', 'earner', 'trader', 'spen
 const MEDAL = m => { const d = MEDAL_DEF()[m]; return d ? `<span class="medal-b ${d[0]}" title="${d[3]}"><i>${d[1]}</i>${d[2]}</span>` : ''; };
 const Medals = ms => (ms && ms.length ? `<span class="medals">${[...ms].sort((a, b) => MEDAL_ORDER.indexOf(a) - MEDAL_ORDER.indexOf(b)).map(MEDAL).join('')}</span>` : '');
 const LV_TITLE = t => ({ rookie: L('Новичок', 'Rookie'), collector: L('Коллекционер', 'Collector'), expert: L('Знаток', 'Expert'), star: L('Звезда', 'Star'), tycoon: L('Магнат', 'Tycoon'), legend: L('Легенда', 'Legend') })[t] || '';
+// "who drives it" line for blatnoy series (popular lore)
+const blatRow = p => { const x = p && p.country !== 'BY' && CFG.blat && CFG.blat[p.letters]; return x ? `<dt>${L('Кто ездит', 'Who drives it')}</dt><dd>${esc(L(x[0], x[1]))} <span class="small" style="opacity:.6">${L('(по народной версии)', '(popular lore)')}</span></dd>` : ''; };
 const perkOf = p => { const out = []; if (p.pattern && p.pattern !== 'random') out.push(patName(p.pattern)); if (Array.isArray(p.traits)) p.traits.forEach(t => out.push(traitName(t))); else { if (/^7+$/.test(p.digits)) out.push(L('Счастливые семёрки', 'Lucky sevens')); if (/^0+1$/.test(p.digits)) out.push(L('Номер один', 'Number one')); } return out; };
 const vsValue = (price, value) => Math.round((price / Math.max(1, value) - 1) * 100);
 const rarePlus = c => Math.round((c.odds[2] + c.odds[3] + c.odds[4]) * 100) / 100;
@@ -221,6 +223,7 @@ function sfx(kind, x = 1) {
       common: () => tone(520, 0, 0.2), fine: () => { tone(587, 0, 0.12); tone(784, 0.08, 0.22); },
       rare: () => { tone(784, 0, 0.16); tone(1046, 0.11, 0.2); tone(1318, 0.22, 0.4); },
       elite: () => { tone(392, 0, 0.5, 'triangle'); tone(784, 0.12, 0.3); tone(1175, 0.26, 0.5); tone(1568, 0.4, 0.6); },
+      mythic: () => { [392, 494, 587, 784, 988, 1175, 1568].forEach((f, i) => tone(f, i * 0.11, 0.9)); tone(98, 0, 2.2, 'triangle', v * 0.9); tone(1568, 0.9, 1.4); },
       grail: () => { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, i * 0.09, 0.7)); tone(130, 0, 1.4, 'triangle', v * 0.8); },
       fail: () => { tone(330, 0, 0.25, 'sawtooth', v * 0.5); tone(220, 0.18, 0.45, 'sawtooth', v * 0.5); noise(0.4, 900, 0.4); },
       buy: () => { tone(523, 0, 0.09); tone(784, 0.08, 0.16); },

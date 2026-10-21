@@ -3,7 +3,6 @@
 const MiniWheel = (pct = 0.32) => { const r = 80, C = 2 * Math.PI * r; return `<svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="${r}" fill="none" stroke="#2a1820" stroke-width="18"/><circle cx="100" cy="100" r="${r}" fill="none" stroke="url(#mwg)" stroke-width="18" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 100 100)" stroke-linecap="round"/><defs><linearGradient id="mwg" x1="0" x2="1"><stop offset="0" stop-color="#7affc4"/><stop offset="1" stop-color="#3ddc97"/></linearGradient></defs><line x1="100" y1="100" x2="100" y2="30" stroke="#fff" stroke-width="4" stroke-linecap="round" transform="rotate(70 100 100)"/><circle cx="100" cy="100" r="10" fill="#fff"/></svg>`; };
 VIEWS[''] = async () => {
   const [mk, drops, rk, on] = await Promise.all([GET('/api/market?sort=val').catch(() => ({ listings: [] })), GET('/api/drops').catch(() => ({ drops: [] })), GET('/api/rankings').catch(() => ({ rankings: [] })), GET('/api/online').catch(() => ({ count: 0, players: [] }))]);
-  const deals = CFG.deals.map(d => caseById(d.id));
   const popular = ['01', '05', '06', '12', '21', '30', '36', '40', '43', '44'].map(caseById);
   const floor = mk.listings.length ? Math.min(...mk.listings.map(l => l.price)) : 0;
   const top3 = rk.rankings.slice(0, 3);
@@ -16,9 +15,7 @@ VIEWS[''] = async () => {
     </div></section>
   <div class="wrap">
     ${(() => { const sc = CFG.cases.find(c => c.until && c.until > Date.now()); return sc ? `<a class="season-ban rv" href="#/case/${sc.id}" style="--c:${sc.color};--c2:${sc.color2}"><div><p class="eyebrow">🍂 ${L('Сезонный кейс', 'Seasonal case')} · ${L('только до', 'until')} ${day(sc.until - 1)}</p><h2 class="h2" style="margin-top:6px">${esc(caseName(sc))}</h2><p class="small" style="margin:6px 0 0">${L('Шансы на редкие и элитные номера выше обычного. Потом кейс исчезнет.', 'Better odds on rare and elite plates. Then it disappears.')}</p></div><div class="season-r"><span class="mono" id="seasonCd" data-t="${sc.until}"></span><span class="btn btn-chrome">${L('Открыть за', 'Open for')} ${fmt(priceOf(sc))}</span></div></a>` : ''; })()}
-    <section class="sec"><div class="deals-head"><div><p class="eyebrow">${L('Только сегодня', 'Today only')}</p><h2 class="h2" style="margin-top:8px">${L('Скидки дня', 'Daily deals')}</h2></div>
-        <div><div class="timer" id="dealTimer" role="timer" aria-label="${L('До конца скидок', 'Deals end in')}"><span>00</span><i>:</i><span>00</span><i>:</i><span>00</span></div><div class="timer-lbl" aria-hidden="true"><span>${L('часы', 'hours')}</span><i></i><span>${L('мин', 'min')}</span><i></i><span>${L('сек', 'sec')}</span></div></div></div>
-      <div class="deals">${deals.map(CaseCard).join('')}</div></section>
+    ${dealsSection()}
     <section class="sec">${SH(L('Игры', 'Games'), L('Баттлы, аукцион, коллекции и обмен.', 'Battles, auction, collections and swaps.'), `<a class="sh-link" href="#/games">${L('Все игры', 'All games')} →</a>`)}<div class="gmini">${[['battles', 'swords', L('Кейс-баттл', 'Case battle'), L('Кто выбьет дороже — забирает всё', 'Highest pull takes it all')], ['auction', 'hammer', L('Аукцион дня', 'Auction of the day'), L('Один редкий номер в день', 'One rare plate a day')], ['sets', 'layers', L('Коллекции', 'Collections'), L(`${CFG.sets.length} сетов с наградами`, `${CFG.sets.length} sets with rewards`)], ['swap', 'swap', L('Обмен', 'Swaps'), L('Номера на номера напрямую', 'Plates for plates, directly')]].map(([h, ic, t, x]) => `<a class="gm rv" href="#/${h}"><span class="gm-ic">${IC[ic]}</span><b>${t}</b><span class="small">${x}</span></a>`).join('')}</div></section>
     <section class="sec">${SH(L('Хиты', 'Hits'), '', `<a class="sh-link" href="#/cases">${L('Все кейсы', 'All cases')} →</a>`)}<div class="cgrid">${popular.map(CaseCard).join('')}</div></section>
     <section class="sec"><div class="bento">
@@ -31,3 +28,12 @@ VIEWS[''] = async () => {
     ${drops.drops.length ? `<section class="sec" style="padding-bottom:80px">${SH(L('Редкие выигрыши', 'Rare drops'), L('Номера редкие и выше, выпавшие из кейсов.', 'Rare-or-better plates pulled from cases.'))}<div class="dgrid">${drops.drops.slice(0, 8).map((d, i) => `<a class="drop rv t-${d.plate.tier}" href="#/plate/${d.plate.id}">${Plate(d.plate)}${Rarity(d.plate.tier)}<small>${esc(d.nickname)} · ${rel(d.at)}</small></a>`).join('')}</div></section>` : '<div style="height:60px"></div>'}
   </div>`;
 };
+
+// today's discounted cases (up to −30%), shown on the home page and on top of the cases page
+function dealsSection() {
+  const deals = CFG.deals.filter(d => d.ends > Date.now()).map(d => ({ d, c: caseById(d.id) })).filter(x => x.c).sort((a, b) => b.d.pct - a.d.pct);
+  if (!deals.length) return '';
+  return `<section class="sec deals-sec"><div class="deals-head"><div><p class="eyebrow">${L('Только сегодня', 'Today only')}</p><h2 class="h2" style="margin-top:8px">${L('Скидки дня', 'Daily deals')} <span class="deal-max">−${deals[0].d.pct}%</span></h2></div>
+        <div><div class="timer" id="dealTimer" role="timer" aria-label="${L('До конца скидок', 'Deals end in')}"><span>00</span><i>:</i><span>00</span><i>:</i><span>00</span></div><div class="timer-lbl" aria-hidden="true"><span>${L('часы', 'hours')}</span><i></i><span>${L('мин', 'min')}</span><i></i><span>${L('сек', 'sec')}</span></div></div></div>
+      <div class="deals">${deals.map(x => CaseCard(x.c)).join('')}</div></section>`;
+}

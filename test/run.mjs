@@ -21,7 +21,7 @@ const fakeFetch = async (url, opts) => {
   if (url.includes('stripe')) return new Response(JSON.stringify({ id: 'cs_test_' + Math.random().toString(36).slice(2), url: 'https://checkout.stripe.test/x' }), { status: 200 });
   throw new Error('unexpected fetch ' + url);
 };
-const env = { RANK_CACHE_MS: '0', PLATE_SEAL_SECRET: 'x'.repeat(48), URL: 'https://plateclub.test', RESEND_API_KEY: 're_test', MAIL_FROM: 'Plate Club <hi@plateclub.test>', STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec_test', ADMIN_SETUP_CODE: 'admin-code-for-tests-123', ADMIN_INITIAL_GRANT: '10000000', MARKET_BOT: 'off' };
+const env = { RANK_CACHE_MS: '0', MARKET_SYNC: '1', PLATE_SEAL_SECRET: 'x'.repeat(48), URL: 'https://plateclub.test', RESEND_API_KEY: 're_test', MAIL_FROM: 'Plate Club <hi@plateclub.test>', STRIPE_SECRET_KEY: 'sk_test', STRIPE_WEBHOOK_SECRET: 'whsec_test', ADMIN_SETUP_CODE: 'admin-code-for-tests-123', ADMIN_INITIAL_GRANT: '10000000', MARKET_BOT: 'off' };
 const app = createApp({ pool, env, fetchImpl: fakeFetch });
 const appNoMail = createApp({ pool, env: { PLATE_SEAL_SECRET: env.PLATE_SEAL_SECRET } });
 
@@ -39,7 +39,7 @@ function client(a = app) {
   };
 }
 const q1 = async (sql, p) => (await pool.query(sql, p)).rows;
-async function topUp(c, pkg = 'plt3000') {
+async function topUp(c, pkg = 'plt3500') {
   const r = await c.call('POST', '/api/payments/checkout', { packageId: pkg, currency: 'EUR' });
   const [p] = await q1('SELECT provider_ref, amount_minor FROM payments WHERE id=$1', [r.data.paymentId]);
   const ev = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: p.provider_ref, payment_status: 'paid', amount_total: Number(p.amount_minor), currency: 'eur', metadata: { payment_id: r.data.paymentId } } } });
@@ -50,8 +50,8 @@ async function topUp(c, pkg = 'plt3000') {
 
 console.log('\n1. Config');
 const cfg = (await client().call('GET', '/api/config')).data;
-ok(cfg.cases.length === 49 && cfg.cases.some(c => c.until), '48 cases + the seasonal one'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward >= 10 && a.reward <= 250) && Math.max(...cfg.achievements.map(a => a.reward)) === 250 && new Set(cfg.cases.map(c => c.color)).size === 49, 'every case has its own colour and a rarity');
-{ const el = cfg.cases.filter(c => c.cat === 'elite'), rest = cfg.cases.filter(c => c.cat !== 'elite'); const maxRest = Math.max(...rest.map(c => c.price)); ok(el.length === 4 && el.every(c => c.odds[0] + c.odds[1] + c.odds[2] === 0) && el.filter(c => c.price >= 2 * maxRest).length >= 3, 'elite cases: only Elite/Grail, 2–3× the price of the rest', el.map(c => c.price)); } ok(cfg.payments.packages.length === 7 && cfg.payments.packages[0].plt === 100 && cfg.payments.packages.at(-1).plt === 20000, 'top-ups from 100 to 20 000 PLT');
+ok(cfg.cases.length === 49 && cfg.cases.some(c => c.until), '48 cases + the seasonal one'); ok(cfg.cases.every(c => c.rank && c.ru && c.color2) && cfg.achievements.every(a => a.reward >= 50 && a.reward <= 25000) && Math.max(...cfg.achievements.map(a => a.reward)) === 25000 && new Set(cfg.cases.map(c => c.color)).size === 49, 'every case has its own colour and a rarity');
+{ const el = cfg.cases.filter(c => c.cat === 'elite'), rest = cfg.cases.filter(c => c.cat !== 'elite'); const maxRest = Math.max(...rest.map(c => c.price)); ok(el.length === 4 && el.every(c => c.odds[0] + c.odds[1] + c.odds[2] === 0) && el.filter(c => c.price >= 2 * maxRest).length >= 3, 'elite cases: only Elite/Grail, 2–3× the price of the rest', el.map(c => c.price)); } ok(cfg.payments.packages.length === 7 && cfg.payments.packages[0].plt === 500 && cfg.payments.packages[0].price.EUR === 100 && cfg.payments.packages.at(-1).plt === 100000, 'top-ups: 1 € = 500 PLT, up to 100 000 PLT');
 ok(cfg.cases[0].name === 'Starter' && cfg.cases[0].price === 100 && cfg.cases.every(c => c.price >= 100), 'STARTER costs 100 PLT');
 ok(cfg.cases.slice(1).every(c => c.price > 100), 'every other case costs more than STARTER', cfg.cases.map(c => c.price));
 ok(cfg.cases.every(c => Math.abs(c.odds.reduce((a, b) => a + b, 0) - 100) < 1e-9), 'odds of every case add up to 100%');
@@ -106,9 +106,9 @@ ok(r.status === 402 && (await A.call('GET', '/api/me')).data.user.balance === 50
 console.log('\n5. Top-up (Stripe webhook simulated, signed)');
 const tu = await topUp(A);
 ok(tu.checkout.status === 200 && tu.checkout.data.url, 'checkout session created');
-ok(tu.webhook === 200 && (await A.call('GET', '/api/me')).data.user.balance === 3050, 'webhook credits 3000 PLT once confirmed');
+ok(tu.webhook === 200 && (await A.call('GET', '/api/me')).data.user.balance === 3550, 'webhook credits 3500 PLT once confirmed');
 const replay = await app(new Request('https://plateclub.test/api/payments/webhook/stripe', { method: 'POST', headers: { 'stripe-signature': `t=${tu.t},v1=${tu.sig}` }, body: tu.ev }));
-ok(replay.status === 200 && (await A.call('GET', '/api/me')).data.user.balance === 3050, 'replayed webhook does not credit twice');
+ok(replay.status === 200 && (await A.call('GET', '/api/me')).data.user.balance === 3550, 'replayed webhook does not credit twice');
 const forged = await app(new Request('https://plateclub.test/api/payments/webhook/stripe', { method: 'POST', headers: { 'stripe-signature': `t=${tu.t},v1=${'0'.repeat(64)}` }, body: tu.ev }));
 ok(forged.status === 400, 'webhook with a forged signature is rejected');
 const w = (await A.call('GET', '/api/wallet')).data;
@@ -116,7 +116,7 @@ ok(w.payments[0].status === 'PAID' && w.ledger[0].kind === 'topup', 'payment sta
 ok((await client(appNoMail).call('GET', '/api/config')).data.payments.methods.length === 0, 'without provider keys no payment method is offered');
 
 console.log('\n6. Case opening');
-const ids = new Set(); let lastBal = 3050;
+const ids = new Set(); let lastBal = 3550;
 for (let i = 0; i < 8; i++) {
   r = await A.call('POST', '/api/cases/01/open', {});
   if (r.status !== 200) { ok(false, 'open #' + i, r); break; }
@@ -157,8 +157,8 @@ r = await client(appNoMail).call('GET', '/api/plates/' + pid);
 ok(r.status === 200 && r.data.history[0].kind === 'MINTED' && r.data.plate.owner === 'Anna_77', 'plate page shows owner nickname and history');
 
 console.log('\n8. Market');
-const B = client(); await B.call('POST', '/api/auth/register', { email: 'boris@example.com', nickname: 'Boris', password: 'password123', terms: true }); await topUp(B, 'plt1200');
-const C = client(); await C.call('POST', '/api/auth/register', { email: 'cleo@example.com', nickname: 'Cleo', password: 'password123', terms: true }); await topUp(C, 'plt1200');
+const B = client(); await B.call('POST', '/api/auth/register', { email: 'boris@example.com', nickname: 'Boris', password: 'password123', terms: true }); await topUp(B, 'plt1300');
+const C = client(); await C.call('POST', '/api/auth/register', { email: 'cleo@example.com', nickname: 'Cleo', password: 'password123', terms: true }); await topUp(C, 'plt1300');
 r = await client().call('GET', '/api/market');
 ok(r.data.listings.length === 0, 'market starts empty — no invented listings');
 r = await B.call('POST', '/api/market/listings', { plateId: pid, price: 500 });
@@ -180,8 +180,8 @@ const race = await Promise.all([B.call('POST', `/api/market/listings/${lid}/buy`
 const wins = race.filter(x => x.status === 200); const losses = race.filter(x => x.status === 409);
 ok(wins.length === 1 && losses.length === 1, 'two buyers at once: exactly one wins, the other gets “already sold”', race.map(x => [x.status, x.data.error]));
 const winner = race[0].status === 200 ? B : C, loser = winner === B ? C : B;
-ok((await winner.call('GET', '/api/me')).data.user.balance === 1250 - 600, 'winner charged 600 once');
-ok((await loser.call('GET', '/api/me')).data.user.balance === 1250, 'loser not charged');
+ok((await winner.call('GET', '/api/me')).data.user.balance === 1350 - 600, 'winner charged 600 once');
+ok((await loser.call('GET', '/api/me')).data.user.balance === 1350, 'loser not charged');
 ok((await A.call('GET', '/api/me')).data.user.balance === balA + 570, 'seller receives 600 − 5% fee = 570');
 r = await client().call('GET', '/api/plates/' + pid);
 ok(r.data.plate.owner === (winner === B ? 'Boris' : 'Cleo') && r.data.plate.status === 'OWNED' && r.data.history.at(-1).kind === 'TRANSFERRED', 'ownership transferred with history');
@@ -281,7 +281,7 @@ console.log('\n12b. Referrals and quests');
     await q1(`UPDATE users SET balance=100000 WHERE nick_norm='byname'`);
     const before = (await INV.call('GET', '/api/me')).data.user.balance;
     for (let i = 0; i < 3; i++) await F2.call('POST', '/api/cases/01/open', {});
-    ok((await INV.call('GET', '/api/me')).data.user.balance === before + 3000, 'a nickname works as an invite code too'); }
+    { const af = (await INV.call('GET', '/api/me')).data.user.balance; ok(af === before + 3000, 'a nickname works as an invite code too', af - before); } }
 
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'not a link', handle: '@friend' }); ok(r.status === 400, 'quest needs a real link');
   r = await FR.call('POST', '/api/quests', { kind: 'story', url: 'https://instagram.com/stories/friend/1', handle: '' }); ok(r.status === 400, 'quest needs the player account');
@@ -331,7 +331,7 @@ ok((await ADM.call('GET', '/api/wallet')).data.ledger[0].kind === 'market_fee', 
 ok((await ADM.call('GET', '/api/admin/overview')).data.overview.fees === 50, 'overview counts fees received');
 
 console.log('\n13. Belarus plates, deals, odds');
-const deals = cfg.deals; ok(deals.length === 3 && deals.map(d => d.pct).join() === '5,7,10' && deals.every(d => d.price < d.was), 'three daily deals at 5/7/10% off', deals);
+const deals = cfg.deals; ok(deals.length === 4 && deals.map(d => d.pct).join() === '10,15,20,30' && deals.every(d => d.price < d.was), 'four daily deals at 10–30% off', deals);
 const dc = deals[0]; const before13 = (await A.call('GET', '/api/me')).data.user.balance;
 r = await A.call('POST', `/api/cases/${dc.id}/open`, {});
 ok(r.status === 200 && r.data.price === dc.price && (await A.call('GET', '/api/me')).data.user.balance === before13 - dc.price, `deal case ${dc.id} charged ${dc.price} instead of ${dc.was}`);
@@ -367,15 +367,15 @@ r = await ADM.call('POST', '/api/admin/promos/LUCKY7/toggle', {}); ok(r.status =
 r = await P14.call('POST', '/api/promo/redeem', { code: 'LUCKY7' }); ok(r.status === 404, 'disabled promo is rejected');
 ok((await ADM.call('GET', '/api/admin/promos')).data.promos.length >= 4, 'admin lists promos');
 r = await B.call('POST', '/api/admin/promos', { code: 'HACK', amount: 9 }); ok(r.status === 403, 'non-admin cannot create promos');
-r = await P14.call('GET', '/api/perks'); ok(r.status === 200 && r.data.daily.claimed === false && r.data.daily.amount === 10 && r.data.daily.ladder.join() === '10,20,50,75,100', 'daily bonus ladder 10→20→50→75→100, today 10', r.data.daily);
+r = await P14.call('GET', '/api/perks'); ok(r.status === 200 && r.data.daily.claimed === false && r.data.daily.amount === 30 && r.data.daily.ladder.join() === '30,60,150,225,300', 'daily bonus ladder 30→60→150→225→300, today 30', r.data.daily);
 const db1 = await Promise.all([P14.call('POST', '/api/perks/daily', {}), P14.call('POST', '/api/perks/daily', {})]);
 ok(db1.filter(x => x.status === 200).length === 1, 'daily bonus is paid once even with parallel clicks', db1.map(x => x.status));
 const [u14] = await q1(`SELECT id FROM users WHERE nick_norm='promo_user'`);
 await q1(`UPDATE ledger SET ref='D' || (floor(extract(epoch from now())/86400)::int - 1) WHERE user_id=$1 AND kind='daily_bonus'`, [u14.id]);
-r = await P14.call('POST', '/api/perks/daily', {}); ok(r.status === 200 && r.data.streak === 2 && r.data.amount === 20, 'day 2 of the streak gives 20 PLT', r.data);
+r = await P14.call('POST', '/api/perks/daily', {}); ok(r.status === 200 && r.data.streak === 2 && r.data.amount === 60, 'day 2 of the streak gives 60 PLT', r.data);
 r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 409, 'cannot claim an unfinished achievement');
 await P14.call('POST', '/api/cases/01/open', {});
-r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 200 && r.data.amount === 10, 'first achievement reward (10 PLT) paid after the condition is met');
+r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 200 && r.data.amount === 50, 'first achievement reward (50 PLT) paid after the condition is met');
 r = await P14.call('POST', '/api/perks/achievements/first/claim', {}); ok(r.status === 409, 'achievement reward only once');
 const pk = (await P14.call('GET', '/api/perks')).data; ok(pk.achievements.find(a => a.id === 'first').claimed === true, 'perks show the claimed reward');
 
@@ -383,9 +383,9 @@ console.log('\n15. Levels, upgrade, rankings');
 const U = client(); await U.call('POST', '/api/auth/register', { email: 'up@example.com', nickname: 'upgrader', password: 'upgrade pass', terms: true });
 const [uu] = await q1(`SELECT id FROM users WHERE nick_norm='upgrader'`); await q1('UPDATE users SET balance=50000 WHERE id=$1', [uu.id]);
 for (let i = 0; i < 12; i++) await U.call('POST', '/api/cases/01/open', {});
-let me15 = (await U.call('GET', '/api/me')).data.user; ok(me15.level.level === 3 && me15.level.xp === 1200, 'XP = PLT spent on cases, 1200 XP → level 3 (slow curve)', me15.level);
-r = await U.call('GET', '/api/perks'); ok(r.data.level.unclaimed === 2, '2 level rewards waiting', r.data.level);
-r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 200 && r.data.amount === 20, 'level rewards: 10 PLT per level', r.data);
+let me15 = (await U.call('GET', '/api/me')).data.user; ok(me15.level.level === 2 && me15.level.xp === 1200, 'XP = PLT spent on cases, 1200 XP → level 2 (slower curve)', me15.level);
+r = await U.call('GET', '/api/perks'); ok(r.data.level.unclaimed === 1 && r.data.level.total === GAME.levelReward(2), '1 level reward waiting', r.data.level);
+r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 200 && r.data.amount === GAME.levelReward(2) && GAME.levelReward(10) > GAME.levelReward(2), 'level rewards grow with the level', r.data);
 r = await U.call('POST', '/api/perks/level/claim', {}); ok(r.status === 409, 'level rewards are paid once');
 const upgradeChanceOf = (v, ps) => { const g = GAME; const top = ps.reduce((a, b) => (a.value >= b.value ? a : b)); return g.upgradeChance(v, g.targetValue(top, 'rare')); };
 let up = (await U.call('GET', '/api/collection')).data.plates.filter(p => p.tier === 'common' || p.tier === 'fine');
@@ -452,7 +452,7 @@ console.log('\n17. Market ecosystem: market maker, bargains, dealer, profit trac
   ok(got && got.paid === pick.price && Array.isArray(got.traits), 'collection remembers what was paid (for profit tracking)', got);
   await q1(`UPDATE listings SET updated_at = now() - interval '2 hours' WHERE seller_id=(SELECT id FROM users WHERE role='bot') AND status='ACTIVE'`);
   const before = Object.fromEntries((await q1(`SELECT l.id,l.price,p.value FROM listings l JOIN plates p ON p.id=l.plate_id JOIN users u ON u.id=l.seller_id WHERE u.role='bot' AND l.status='ACTIVE'`)).map(r => [r.id, r]));
-  T += 30000; await MB.call('GET', '/api/market');
+  T += 61000; await MB.call('GET', '/api/market');
   const after = await q1(`SELECT l.id,l.price,p.value FROM listings l JOIN plates p ON p.id=l.plate_id WHERE l.id = ANY($1::text[])`, ['{' + Object.keys(before).join(',') + '}']);
   ok(after.some(r => Number(r.price) < Number(before[r.id].price)) && after.every(r => Number(r.price) >= Math.ceil(Number(r.value) * 0.82) || Number(r.price) === Number(before[r.id].price)), 'unsold lots get cheaper over time, never below 82% of the estimate');
   const dem = (await MB.call('GET', '/api/dealer')).data; ok(dem.demands.length === 3 && dem.perDay === 3 && dem.rate === 1.15, 'dealer publishes three demands a day');
@@ -476,7 +476,7 @@ console.log('\n17. Market ecosystem: market maker, bargains, dealer, profit trac
   ok(pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АМР', vv: 3 }) === 2 * pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АВЕ', vv: 3 }), 'v3: VIP series АМР doubles the value');
   ok(pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АМР' }) >= 3.4 * pv3({ tier: 'common', region: '66', country: 'RU', digits: '345', letters: 'АВЕ' }), 'v4: beautiful plates are worth much more (VIP ×3.5)');
   ok(plateTraits({ tier: 'common', region: '66', country: 'RU', digits: '057', letters: 'ААВ' }).join() === 'low,pairL', 'traits: low number + paired letters');
-  const el = C3.filter(c => c.cat === 'elite'); ok(el.every(c => c.odds[4] >= 41), 'elite cases: +3 p.p. of Grail');
+  const el = C3.filter(c => c.cat === 'elite'); ok(el.every(c => c.odds[4] + (c.odds[5] || 0) >= 41), 'elite cases: +3 p.p. of Grail (incl. Mythic)');
 }
 
 console.log('\n18. Control panel: players, gifts, blocking, support, settings');
@@ -667,6 +667,21 @@ console.log('\n20. Multi-open, daily tasks, wheel, higher-or-lower, profiles, ph
   const [{ id: cheap }] = await q1(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,seal,country,copy) VALUES('PC-SETF-0009','ВВВ','123','39','ВВВ12339','common','random',21,$1,'OWNED','test','x','RU',1) RETURNING id`, [ub]);
   r = await SB.call('POST', '/api/upgrade', { plateIds: [cheap], target: 'grail' }); ok(r.status === 400 && /1%/.test(r.data.error), 'upgrade with a chance under 1% is refused (no floor)', r.data);
   r = await SB.call('POST', '/api/upgrade', { plateIds: [cheap], target: 'constructor' }); ok(r.status === 400, 'prototype keys are not tiers', r.data); }
+
+// v5: Mythic plates are one of one; same digits + region of that digit costs more
+{ const g = GAME.genPlate('mythic', { RU: ['77', '777', '50'], BY: [] });
+  ok(g.tier === 'mythic' && /^(.)\1\1$/.test(g.letters) && /^7{3}$/.test(g.digits) && /^7+$/.test(g.region), 'mythic: same letters, same digits, region of the same digit', g);
+  ok(GAME.genPlate('mythic', { RU: ['50'], BY: [] }).tier === 'grail', 'no one-of-one possible in the pool → a Grail instead');
+  ok(GAME.plateValue({ ...g, vv: 5 }) > 2 * GAME.plateValue({ ...g, tier: 'grail', pattern: 'full', region: '50', vv: 5 }), 'a Mythic is worth far more than a Grail');
+  const plain = { country: 'RU', letters: 'АВС', digits: '777', region: '50', tier: 'elite', vv: 5 }, match = { ...plain, region: '77' };
+  ok(GAME.plateTraits(match).includes('regMatch') && GAME.plateValue(match) > GAME.plateValue(plain) * 2, 'plate digits repeated in the region are worth more');
+  for (let i = 0; i < 300; i++) { const x = GAME.genPlate('grail', { RU: ['77', '777', '99', '66'], BY: ['7'] }); if (/^(.)\1*$/.test(x.letters) && /^(.)\1*$/.test(x.digits) && /^(\d)\1*$/.test(x.region) && x.region[0] === x.digits[0]) { ok(false, 'a Grail never takes a Mythic combination', x); break; } }
+  const c = GAME.CASES.find(x => x.id === '05'); ok(c.odds.length === 6 && c.odds[5] > 0, 'Moscow case can drop a Mythic', c.odds);
+  const M = client(); await M.call('POST', '/api/auth/register', { email: 'myth@example.com', nickname: 'MythOwner', password: 'myth-pass-123', terms: true });
+  const [{ id: mu }] = await q1(`SELECT id FROM users WHERE nick_norm='mythowner'`);
+  const ins = (id) => q1(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,seal,country,copy) SELECT $1,'ККК','999','99','К999КК|99','mythic','mythic',1,$2,'OWNED','test','x','RU',c.n+1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo='К999КК|99') c WHERE c.n < (CASE WHEN 'mythic'::text = 'mythic' THEN 1 ELSE 2 END) ON CONFLICT DO NOTHING RETURNING id`, [id, mu]);
+  ok((await ins('PC-MYTH-0001')).length === 1 && (await ins('PC-MYTH-0002')).length === 0, 'a Mythic combination is minted only once');
+  const blat = (await client().call('GET', '/api/config')).data.blat; ok(blat && blat['АМР'] && /депутат/.test(blat['АМР'][0]), 'VIP series explain who drives them'); }
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

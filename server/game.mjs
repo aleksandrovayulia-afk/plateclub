@@ -26,14 +26,16 @@ export const TIERS = [
   { id: 'rare', name: 'Редкий', base: 500 },
   { id: 'elite', name: 'Элитный', base: 2500 },
   { id: 'grail', name: 'Грааль', base: 15000 },
+  // v5: one of one — same letters, same digits and a region of the same digit (А777АА 77, 6666 MM-6); never a second copy
+  { id: 'mythic', name: 'Мифический', base: 52000 },
 ];
 // Value versions. A plate keeps the version it was minted with (plates.vv), so a sealed value never changes.
 // v1 — launch; v2 (16 Oct 2026) — rare plates worth much more; v3 (16 Oct 2026) — higher common/fine bases + plate traits.
-export const VALUE_V = 4;
-const BASES = { 1: { common: 20, fine: 60, rare: 220, elite: 900, grail: 6000 }, 2: { common: 20, fine: 60, rare: 500, elite: 2500, grail: 15000 } };
+export const VALUE_V = 5;
+const BASES = { 1: { common: 20, fine: 60, rare: 220, elite: 900, grail: 6000, mythic: 18000 }, 2: { common: 20, fine: 60, rare: 500, elite: 2500, grail: 15000, mythic: 45000 } };
 export const TI = Object.assign(Object.create(null), Object.fromEntries(TIERS.map((t, i) => [t.id, i]))); // no prototype: 'constructor' is not a tier
-export const PATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'] };
-export const PAT_NAME = { random: 'Обычный', seq: 'Лесенка', pair: 'Пара', mirror: 'Зеркальный', round: 'Круглый', triple: 'Одинаковые цифры', zero: 'Нулевая серия', letters: 'Одинаковые буквы', full: 'Полное совпадение', zerofull: 'Ноль + буквы' };
+export const PATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'], mythic: ['mythic'] };
+export const PAT_NAME = { random: 'Обычный', seq: 'Лесенка', pair: 'Пара', mirror: 'Зеркальный', round: 'Круглый', triple: 'Одинаковые цифры', zero: 'Нулевая серия', letters: 'Одинаковые буквы', full: 'Полное совпадение', zerofull: 'Ноль + буквы', mythic: 'Всё в тон с регионом'};
 
 export const SIGNUP_BONUS = 100;
 export const MARKET_FEE = 0.05;
@@ -59,7 +61,7 @@ const O = {
   by: [22, 46, 28, 3.6, 0.4], // Belarus: nice combinations show up more often, but each is worth less
 };
 // Share of the average plate value a case pays back. Cheap cases pay back the most, so small wins are frequent.
-export const RTP = { season: 0.97, start: 0.93, region: 0.92, belarus: 0.92, pattern: 0.9, premium: 0.9, top: 0.88, legend: 0.87, elite: 0.85 };
+export const RTP = { season: 0.97, start: 0.97, region: 0.94, belarus: 0.94, pattern: 0.91, premium: 0.9, top: 0.88, legend: 0.87, elite: 0.85 };
 const RU = (g) => ({ country: 'RU', group: g });
 const BY = (regs) => ({ country: 'BY', regions: regs });
 const MIX = { country: 'MIX' };
@@ -138,12 +140,13 @@ export const poolOf = c => poolRegions(c).RU;
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 export const regMult = (r, country = 'RU') => country === 'BY' ? BY_MULT : (GROUP_MULT[REGIONS[r] && REGIONS[r][1]] || 1);
 
-// ---- daily deals: three cases at 5–10% off, the same for everyone, changing at 00:00 UTC ----
+// ---- daily deals: four cases at 10–30% off, the same for everyone, changing at 00:00 UTC ----
 export function dealsFor(ts = Date.now()) {
   const day = Math.floor(ts / 86400000);
   let s = (day * 2654435761) >>> 0; const r = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   const ids = CASES.filter(c => c.id !== '01').map(c => c.id); const out = [];
-  while (out.length < 3) { const id = ids[Math.floor(r() * ids.length)]; if (!out.find(d => d.id === id)) out.push({ id, pct: [5, 7, 10][out.length] }); }
+  // four a day: 10, 15, 20 and 30% off
+  while (out.length < 4) { const id = ids[Math.floor(r() * ids.length)]; if (!out.find(d => d.id === id)) out.push({ id, pct: [10, 15, 20, 30][out.length] }); }
   const ends = (day + 1) * 86400000;
   return out.map(d => { const c = caseById(d.id); return { ...d, price: Math.round(c.price * (1 - d.pct / 100)), was: c.price, ends }; });
 }
@@ -180,17 +183,43 @@ function lettersOf(country, same) {
   if (same) { const l = pick(L); return l.repeat(n); }
   let s; do s = Array.from({ length: n }, () => pick(L)).join(''); while (allSame(s)); return s;
 }
+// every one-of-one combination a pool can give: same letters + same digits + a region made of that digit
+export function mythicCombos(pr) {
+  const out = [];
+  for (const r of pr.RU || []) if (/^(\d)\1*$/.test(r)) for (const l of LETTERS) out.push({ country: 'RU', letters: l.repeat(3), digits: r[0].repeat(3), region: r });
+  for (const r of pr.BY || []) if (/^[1-9]$/.test(r)) for (const l of BY_LETTERS) out.push({ country: 'BY', letters: l.repeat(2), digits: r.repeat(4), region: r });
+  return out;
+}
+const isMythicLike = (country, letters, digits, region) => allSame(letters) && allSame(digits) && /^(\d)\1*$/.test(region) && region[0] === digits[0];
 export function genPlate(tier, pool, focus) {
   // pool: { RU: [...regions], BY: [...regions] } or an array of RU regions
   const pr = Array.isArray(pool) ? { RU: pool, BY: [] } : (pool || { RU: ALLREG, BY: [] });
   const country = pr.RU.length && pr.BY.length ? (rnd() < 0.5 ? 'RU' : 'BY') : pr.BY.length ? 'BY' : 'RU';
+  if (tier === 'mythic') { const all = mythicCombos(pr); if (all.length) return { ...pick(all), tier: 'mythic', pattern: 'mythic' }; tier = 'grail'; }
   const pat = (focus && focus[tier]) || pick(PATS[tier]);
   const D = { random: 'random', seq: 'seq', pair: 'pair', mirror: 'mirror', round: 'round', triple: 'triple', zero: 'zero', letters: 'random', full: 'triple', zerofull: 'zero' }[pat];
   const same = pat === 'letters' || pat === 'full' || pat === 'zerofull';
-  return { country, letters: lettersOf(country, same), digits: country === 'BY' ? digitsBY(D) : digitsRU(D), region: pick(country === 'BY' ? pr.BY : pr.RU), tier, pattern: pat };
+  for (let k = 0; ; k++) {
+    const g = { country, letters: lettersOf(country, same), digits: country === 'BY' ? digitsBY(D) : digitsRU(D), region: pick(country === 'BY' ? pr.BY : pr.RU), tier, pattern: pat };
+    // a full match with its own region is a Mythic — never minted as an ordinary Grail
+    if (!isMythicLike(g.country, g.letters, g.digits, g.region) || k > 30) return g;
+  }
 }
 // ---- plate traits (value v3): small things collectors pay extra for ----
 export const BLAT = ['АМР', 'ЕКХ', 'ВОР', 'КМР', 'АКР', 'ХКХ', 'МОР', 'ОКО', 'СОС', 'ТОТ'];
+// who drives a "blatnoy" series — popular lore, not an official list
+export const BLAT_INFO = {
+  'АМР': ['Самая известная блатная серия. В народе её связывают с администрацией президента, правительством, министрами и депутатами.', 'The most famous VIP series, linked in popular lore to the presidential administration, ministers and MPs.'],
+  'ЕКХ': ['В народе — «Еду Как Хочу». Серию связывают с госохраной (ФСО) и машинами сопровождения.', 'Nicknamed “I drive as I please”; linked to state security escorts.'],
+  'ВОР': ['Скандальная серия: по слухам, её любили «авторитеты» 90-х.', 'A notorious series said to be loved by 90s crime bosses.'],
+  'КМР': ['Серию связывают с мэрией и городскими чиновниками.', 'Linked to city hall and municipal officials.'],
+  'АКР': ['Служебная серия: её связывают с машинами силовых ведомств.', 'An official-use series linked to law-enforcement agencies.'],
+  'ХКХ': ['В народе — «Хочу Как Хочу». Серию носят служебные машины и VIP-клиенты.', 'Nicknamed “whatever I want”; worn by official cars and VIP clients.'],
+  'МОР': ['Серию связывают с Министерством обороны.', 'Linked to the Ministry of Defence.'],
+  'ОКО': ['«Государево око»: серию связывают с правоохранительными органами.', '“The sovereign’s eye”: linked to law enforcement.'],
+  'СОС': ['Серию связывают с экстренными и специальными службами.', 'Linked to emergency and special services.'],
+  'ТОТ': ['Престижная «зеркальная» серия — её любят бизнесмены и коллекционеры.', 'A prestigious mirror series loved by businessmen and collectors.'],
+};
 export const TRAITS = {
   // mult = values v1–v3 (kept so old plates still verify); m4 = v4: beautiful plates are worth much more
   blat: { name: 'Блатная серия', en: 'VIP series', mult: 2, m4: 3.5 },
@@ -199,6 +228,8 @@ export const TRAITS = {
   pairL: { name: 'Парные буквы', en: 'Paired letters', mult: 1.3, m4: 1.7 },
   allSeven: { name: 'Все семёрки', en: 'All sevens', mult: 1.5, m4: 3 },
   first: { name: 'Номер один', en: 'Number one', mult: 1.4, m4: 3 },
+  // v5: the region repeats the plate's digit (А777ВС 77, 3333 AB-3)
+  regMatch: { name: 'Регион в тон', en: 'Matching region', mult: 1, m4: 1, m5: 2.6 },
 };
 const digitTraits = (d, country) => {
   const t = [];
@@ -216,9 +247,11 @@ const letterTraits = (l, country) => {
 export function plateTraits(p) {
   const vv = p.vv || VALUE_V, country = p.country || 'RU';
   if (vv < 3) return [/^7+$/.test(p.digits) && 'allSeven', /^0+1$/.test(p.digits) && 'first'].filter(Boolean);
-  return [...digitTraits(p.digits, country), ...letterTraits(p.letters, country)];
+  const t = [...digitTraits(p.digits, country), ...letterTraits(p.letters, country)];
+  if (vv >= 5 && p.tier !== 'mythic' && p.region && allSame(p.digits) && /^(\d)\1*$/.test(p.region) && p.region[0] === p.digits[0]) t.push('regMatch');
+  return t;
 }
-const traitMult = (ts, vv = VALUE_V) => ts.reduce((m, t) => m * (vv >= 4 ? TRAITS[t].m4 : TRAITS[t].mult), 1);
+const traitMult = (ts, vv = VALUE_V) => ts.reduce((m, t) => m * (vv >= 5 ? (TRAITS[t].m5 ?? TRAITS[t].m4) : vv >= 4 ? TRAITS[t].m4 : TRAITS[t].mult), 1);
 export function plateValue(p) {
   const vv = p.vv || VALUE_V;
   const base = BASES[vv] ? BASES[vv][p.tier] : TIERS[TI[p.tier]].base;
@@ -251,18 +284,22 @@ export function tierFactor(tier, country, focus, vv = VALUE_V) {
   const pats = focus && focus[tier] ? [focus[tier]] : PATS[tier];
   const key = tier + country + pats.join() + vv;
   if (TF[key]) return TF[key];
-  const D = { random: 'random', seq: 'seq', pair: 'pair', mirror: 'mirror', round: 'round', triple: 'triple', zero: 'zero', letters: 'random', full: 'triple', zerofull: 'zero' };
+  const D = { random: 'random', seq: 'seq', pair: 'pair', mirror: 'mirror', round: 'round', triple: 'triple', zero: 'zero', letters: 'random', full: 'triple', zerofull: 'zero', mythic: 'triple' };
   return (TF[key] = mean(pats.map(pat => {
     const ds = digitSet(D[pat], country); const dm = mean(ds.map(d => traitMult(digitTraits(d, country), vv)));
-    const same = pat === 'letters' || pat === 'full' || pat === 'zerofull';
+    const same = pat === 'letters' || pat === 'full' || pat === 'zerofull' || pat === 'mythic';
     return dm * (same || country === 'BY' ? 1 : lmean(vv));
   })));
 }
 // v4 bases: plain plates a little cheaper, beautiful ones much dearer — the average per tier (and case prices) stay as in v3
 BASES[4] = Object.fromEntries(TIERS.map(t => [t.id, Math.round(t.base * tierFactor(t.id, 'RU', null, 3) / tierFactor(t.id, 'RU', null, 4) * 10) / 10]));
+BASES[5] = { ...BASES[4] };
 export const tierBase = id => (BASES[VALUE_V] ? BASES[VALUE_V][id] : TIERS[TI[id]].base);
-export const CASES = RAW.map(c => {
-  const pr = poolRegions(c);
+// a slice of the Grail chance becomes the Mythic chance where the pool can give a one-of-one plate
+export const MYTHIC_SHARE = 0.08;
+const withMythic = (odds, pr) => (odds[4] > 0 && mythicCombos(pr).length ? [...odds.slice(0, 4), +(odds[4] * (1 - MYTHIC_SHARE)).toFixed(4), +(odds[4] * MYTHIC_SHARE).toFixed(4)] : odds);
+export const CASES = RAW.map(c0 => {
+  const pr = poolRegions(c0); const c = { ...c0, odds: withMythic(c0.odds, pr) };
   const parts = [...(pr.RU.length ? [mean(pr.RU.map(r => regMult(r)))] : []), ...(pr.BY.length ? [BY_MULT] : [])];
   const mult = mean(parts);
   const countries = [...(pr.RU.length ? ['RU'] : []), ...(pr.BY.length ? ['BY'] : [])];
@@ -284,41 +321,43 @@ export const plateStr = p => (p.country === 'BY' ? `${p.digits} ${p.letters}-${p
 export const regionName = p => (p.country === 'BY' ? BY_REGIONS[p.region] : (REGIONS[p.region] || [''])[0]);
 
 export const PACKAGES = [
-  { id: 'plt100', plt: 100, price: { EUR: 100, USD: 110, GBP: 90 } },
-  { id: 'plt250', plt: 250, price: { EUR: 250, USD: 275, GBP: 220 } },
-  { id: 'plt500', plt: 500, price: { EUR: 500, USD: 550, GBP: 450 } },
-  { id: 'plt1200', plt: 1200, price: { EUR: 1100, USD: 1200, GBP: 950 }, tag: '+9%' },
-  { id: 'plt3000', plt: 3000, price: { EUR: 2500, USD: 2750, GBP: 2200 }, tag: '+20%' },
-  { id: 'plt7500', plt: 7500, price: { EUR: 5900, USD: 6500, GBP: 5200 }, tag: '+27%' },
-  { id: 'plt20000', plt: 20000, price: { EUR: 14900, USD: 16500, GBP: 12900 }, tag: '+34%' },
+  // 1 € = 500 PLT; bigger packs give a lot more per euro
+  { id: 'plt500', plt: 500, price: { EUR: 100, USD: 110, GBP: 90 } },
+  { id: 'plt1300', plt: 1300, price: { EUR: 200, USD: 220, GBP: 180 }, tag: '+30%' },
+  { id: 'plt3500', plt: 3500, price: { EUR: 500, USD: 550, GBP: 450 }, tag: '+40%' },
+  { id: 'plt7500', plt: 7500, price: { EUR: 1000, USD: 1100, GBP: 900 }, tag: '+50%', hot: true },
+  { id: 'plt16000', plt: 16000, price: { EUR: 2000, USD: 2200, GBP: 1800 }, tag: '+60%' },
+  { id: 'plt45000', plt: 45000, price: { EUR: 5000, USD: 5500, GBP: 4500 }, tag: '+80%', best: true },
+  { id: 'plt100000', plt: 100000, price: { EUR: 10000, USD: 11000, GBP: 9000 }, tag: '×2' },
 ];
 
 // ---- perks ----
 // Daily bonus: once per UTC day; a streak of consecutive days raises it, up to 7 days.
-export const DAILY = { base: 10, step: 0, maxStreak: 5 };
+export const DAILY = { base: 30, step: 0, maxStreak: 5 };
 // streak ladder: day 1 → 10, day 2 → 20, day 3 → 50, day 4 → 75, day 5 and on → 100. Missing a day starts over.
 export const DAILY_LADDER = [10, 20, 50, 75, 100];
 export const dailyLadder = (base = 10) => DAILY_LADDER.map(v => Math.round(v * base / 10));
 export const dailyAmount = (streak, base = 10) => dailyLadder(base)[Math.min(Math.max(streak, 1), DAILY_LADDER.length) - 1];
 // Achievements: the server checks the condition from real data before paying the reward (once per account).
 export const ACHIEVEMENTS = [
-  { id: 'first', name: 'Первый номер', text: 'Откройте первый кейс.', reward: 10, ok: s => s.opened >= 1 },
-  { id: 'ten', name: 'Десятка', text: 'Соберите 10 номеров.', reward: 40, ok: s => s.plates >= 10 },
-  { id: 'opener', name: 'Азарт', text: 'Откройте 25 кейсов.', reward: 100, ok: s => s.opened >= 25 },
-  { id: 'rare', name: 'Редкая находка', text: 'Получите редкий номер или лучше.', reward: 100, ok: s => s.maxtier >= 2 },
-  { id: 'elite', name: 'Элита', text: 'Получите элитный номер.', reward: 200, ok: s => s.maxtier >= 3 },
-  { id: 'grail', name: 'Грааль', text: 'Получите номер-Грааль.', reward: 250, ok: s => s.maxtier >= 4 },
-  { id: 'regions', name: 'Путешественник', text: 'Номера из 5 регионов.', reward: 75, ok: s => s.regions >= 5 },
-  { id: 'belarus', name: 'Две страны', text: 'Соберите номера России и Беларуси.', reward: 75, ok: s => s.countries >= 2 },
-  { id: 'buyer', name: 'Первая покупка', text: 'Купите номер на рынке.', reward: 20, ok: s => s.bought >= 1 },
-  { id: 'lister', name: 'Продавец', text: 'Выставите номер на рынок.', reward: 20, ok: s => s.listed >= 1 },
-  { id: 'seller', name: 'Первая продажа', text: 'Продайте номер другому игроку.', reward: 50, ok: s => s.sold >= 1 },
-  { id: 'twin', name: 'Близнецы', text: 'Получите номер «2 из 2» — последний экземпляр комбинации.', reward: 150, ok: s => s.twins >= 1 },
+  { id: 'first', name: 'Первый номер', text: 'Откройте первый кейс.', reward: 50, ok: s => s.opened >= 1 },
+  { id: 'ten', name: 'Десятка', text: 'Соберите 10 номеров.', reward: 150, ok: s => s.plates >= 10 },
+  { id: 'opener', name: 'Азарт', text: 'Откройте 25 кейсов.', reward: 400, ok: s => s.opened >= 25 },
+  { id: 'rare', name: 'Редкая находка', text: 'Получите редкий номер или лучше.', reward: 300, ok: s => s.maxtier >= 2 },
+  { id: 'elite', name: 'Элита', text: 'Получите элитный номер.', reward: 1000, ok: s => s.maxtier >= 3 },
+  { id: 'grail', name: 'Грааль', text: 'Получите номер-Грааль.', reward: 5000, ok: s => s.maxtier >= 4 },
+  { id: 'regions', name: 'Путешественник', text: 'Номера из 5 регионов.', reward: 300, ok: s => s.regions >= 5 },
+  { id: 'belarus', name: 'Две страны', text: 'Соберите номера России и Беларуси.', reward: 250, ok: s => s.countries >= 2 },
+  { id: 'buyer', name: 'Первая покупка', text: 'Купите номер на рынке.', reward: 100, ok: s => s.bought >= 1 },
+  { id: 'lister', name: 'Продавец', text: 'Выставите номер на рынок.', reward: 60, ok: s => s.listed >= 1 },
+  { id: 'seller', name: 'Первая продажа', text: 'Продайте номер другому игроку.', reward: 200, ok: s => s.sold >= 1 },
+  { id: 'mythic', name: 'Миф', text: 'Получите мифический номер — один из одного.', reward: 25000, ok: s => s.maxtier >= 5 },
+  { id: 'twin', name: 'Близнецы', text: 'Получите номер «2 из 2» — последний экземпляр комбинации.', reward: 1500, ok: s => s.twins >= 1 },
 ];
 export const CURRENCIES = ['EUR', 'USD', 'GBP'];
 
 // ---- runtime settings the admin can change from the control panel (stored in the settings table) ----
-export const SETTINGS_DEFAULT = { signupBonus: SIGNUP_BONUS, dailyBonus: 10, bankRate: BANK_RATE, marketFee: MARKET_FEE, dealerRate: 1.15, dealerPerDay: 3, botSize: 60, announcement: '', cases: {} };
+export const SETTINGS_DEFAULT = { signupBonus: SIGNUP_BONUS, dailyBonus: 30, bankRate: BANK_RATE, marketFee: MARKET_FEE, dealerRate: 1.15, dealerPerDay: 3, botSize: 60, announcement: '', cases: {} };
 export const SETTINGS_LIMITS = { signupBonus: [0, 100000, 1], dailyBonus: [0, 100000, 1], bankRate: [0, 0.95, 0.01], marketFee: [0, 0.3, 0.005], dealerRate: [0.5, 2, 0.01], dealerPerDay: [0, 50, 1], botSize: [0, 200, 1] };
 export function cleanSettings(raw = {}) {
   const out = { ...SETTINGS_DEFAULT, cases: {} };
@@ -345,7 +384,7 @@ export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
   const stripe = !!(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
   return { wheel: WHEEL.map(({ id, kind, amount, tier }) => ({ id, kind, amount: amount || 0, tier: tier || null })), season: SEASON, referral: { friend: REFERRAL.friend, inviter: REFERRAL.inviter, signupInviter: REFERRAL.signupInviter, signupFriend: REFERRAL.signupFriend, needOpens: REFERRAL.needOpens, milestones: REFERRAL.milestones }, quests: { story: QUESTS.story.reward, tiktokPerView: QUESTS.tiktok.perView, tiktokMax: QUESTS.tiktok.maxPerVideo }, telegram: { url: env.TELEGRAM_URL || TELEGRAM.url, reward: TELEGRAM.reward },
     announcement: st.announcement || '',
-    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN, maxPlates: UPGRADE_MAX_PLATES }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS.map(t => ({ ...t, base: tierBase(t.id) })), patNames: PAT_NAME, cats: CATS,
+    letters: LETTERS, byLetters: BY_LETTERS, maxCopies: 2, levels: { step: LEVEL_STEP, reward: LEVEL_REWARD }, groupMult: GROUP_MULT, byMult: BY_MULT, upgrade: { edge: UPGRADE_EDGE, max: UPGRADE_MAX, min: UPGRADE_MIN, maxPlates: UPGRADE_MAX_PLATES }, daily: { ...DAILY, base: st.dailyBonus, ladder: dailyLadder(st.dailyBonus) }, sets: SET_PUBLIC, battle: { seats: BATTLE.seats, maxRounds: BATTLE.maxRounds }, battleCases: BATTLE_CASES.map(({ id, ru, en, name, cat, color, color2, odds, note, cover, mult, ev, price, rank, pool }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, focus: null, mult, ev, price, rank, pool: poolRegions({ pool }) })), traits: TRAITS, blat: BLAT_INFO, dealer: { rate: st.dealerRate, perDay: st.dealerPerDay, tiers: DEALER.tiers }, botNick: MARKET_BOT.nick, achievements: ACHIEVEMENTS.map(({ ok, ...a }) => a), groups: GROUPS, regions: REGIONS, byRegions: BY_REGIONS, tiers: TIERS.map(t => ({ ...t, base: tierBase(t.id) })), patNames: PAT_NAME, cats: CATS,
     cases: CASES.filter(c => !(st.cases[c.id] && st.cases[c.id].hidden) && !(c.until && ts > c.until)).map(({ id, ru, en, name, cat, color, color2, odds, note, cover, focus, mult, ev, price, rank, pool, until }) => ({ id, ru, en, name, cat, color, color2, odds, note, cover, until: until || null, focus: focus || null, mult, ev, price: caseBasePrice({ id, price }, st), rank, pool: poolRegions({ pool }) })),
     deals: dealsFor(ts).filter(d => !(st.cases[d.id] && st.cases[d.id].hidden)).map(d => ({ ...d, was: caseBasePrice(caseById(d.id), st), price: casePrice(caseById(d.id), st, ts) })),
     fee: st.marketFee, bankRate: st.bankRate, signupBonus: st.signupBonus,
@@ -361,7 +400,9 @@ export function publicConfig(env = {}, ts = Date.now(), st = SETTINGS_DEFAULT) {
 // ---- player levels: XP = PLT spent on cases. Level n needs 50·(n−1)·n XP. Every new level: 10 PLT. ----
 export const LEVEL_STEP = 50, LEVEL_REWARD = 10;
 // slow curve: XP = PLT spent on cases. Level 10 ≈ 31k, 25 ≈ 300k, 50 ≈ 1.5M (wow), 100 ≈ 7.8M (legend).
-export const xpFor = lvl => (lvl <= 1 ? 0 : Math.round(200 * Math.pow(lvl - 1, 2.3)));
+// v5: levels take much longer (level 10 ≈ 80k PLT spent, 25 ≈ 1M), and each pays more the higher it is
+export const xpFor = lvl => (lvl <= 1 ? 0 : Math.round(300 * Math.pow(lvl - 1, 2.55)));
+export const levelReward = lvl => Math.round(30 + 12 * Math.pow(Math.max(0, lvl - 1), 1.35));
 export const LEVEL_TITLES = [[100, 'legend'], [75, 'tycoon'], [50, 'star'], [25, 'expert'], [10, 'collector'], [1, 'rookie']];
 export const levelTitle = l => LEVEL_TITLES.find(([min]) => l >= min)[1];
 // medals for big activity (besides the TOP-10 / TOP-3 ranking medals)
@@ -485,8 +526,8 @@ const BATTLE_RAW = [
   { id: 'B3', ru: 'Колизей', en: 'No common plates. Elite is common here.', name: 'Colosseum', cat: 'battle', color: '#FFB800', color2: '#4A2C00', odds: [0, 0, 55, 35, 10], pool: MIX, note: 'Без обычных и хороших: только редкие и выше.', cover: P('МММ', '777', '77') },
   { id: 'B4', ru: 'Олимп', en: 'Elite and Grail only. The biggest pots.', name: 'Olympus', cat: 'battle', color: '#E9D5FF', color2: '#2E1065', odds: [0, 0, 0, 55, 45], pool: MIX, note: 'Только элитные и Граали — самые большие банки.', cover: P('ООО', '001', '777') },
 ];
-export const BATTLE_CASES = BATTLE_RAW.map(c => {
-  const pr = poolRegions(c); const countries = [...(pr.RU.length ? ['RU'] : []), ...(pr.BY.length ? ['BY'] : [])];
+export const BATTLE_CASES = BATTLE_RAW.map(c0 => {
+  const pr = poolRegions(c0); const c = { ...c0, odds: withMythic(c0.odds, pr) }; const countries = [...(pr.RU.length ? ['RU'] : []), ...(pr.BY.length ? ['BY'] : [])];
   const ev = c.odds.reduce((a, o, i) => a + (o / 100) * tierBase(TIERS[i].id) * mean(countries.map(k => (k === 'BY' ? BY_MULT : mean(pr.RU.map(r => regMult(r)))) * tierFactor(TIERS[i].id, k, c.focus))), 0);
   const price = Math.max(110, Math.round(ev / 0.9 / 10) * 10);
   return { ...c, mult: 1, ev: Math.round(ev), price, rank: caseRank(price), cover: { ...c.cover, tier: TIERS[c.odds.findLastIndex(o => o > 0)].id } };
@@ -503,13 +544,13 @@ export const SWAP = { maxPlates: 6, maxPending: 10 };
 
 // ---- daily tasks: two per player per day, picked from this pool; progress is read from the ledger ----
 export const DAILY_TASKS = [
-  { id: 'open3', ru: 'Открой 3 кейса', en: 'Open 3 cases', need: 3, reward: 120, src: 'open' },
-  { id: 'open6', ru: 'Открой 6 кейсов', en: 'Open 6 cases', need: 6, reward: 250, src: 'open' },
-  { id: 'sell1', ru: 'Продай номер на рынке', en: 'Sell a plate on the market', need: 1, reward: 150, src: 'sell' },
-  { id: 'buy1', ru: 'Купи номер на рынке', en: 'Buy a plate on the market', need: 1, reward: 150, src: 'buy' },
-  { id: 'battle1', ru: 'Сыграй в кейс-баттл', en: 'Play a case battle', need: 1, reward: 200, src: 'battle' },
-  { id: 'upgrade1', ru: 'Сделай апгрейд номера', en: 'Upgrade a plate', need: 1, reward: 150, src: 'upgrade' },
-  { id: 'list1', ru: 'Выстави номер на продажу', en: 'List a plate for sale', need: 1, reward: 100, src: 'list' },
+  { id: 'open3', ru: 'Открой 3 кейса', en: 'Open 3 cases', need: 3, reward: 200, src: 'open' },
+  { id: 'open6', ru: 'Открой 6 кейсов', en: 'Open 6 cases', need: 6, reward: 450, src: 'open' },
+  { id: 'sell1', ru: 'Продай номер на рынке', en: 'Sell a plate on the market', need: 1, reward: 250, src: 'sell' },
+  { id: 'buy1', ru: 'Купи номер на рынке', en: 'Buy a plate on the market', need: 1, reward: 250, src: 'buy' },
+  { id: 'battle1', ru: 'Сыграй в кейс-баттл', en: 'Play a case battle', need: 1, reward: 350, src: 'battle' },
+  { id: 'upgrade1', ru: 'Сделай апгрейд номера', en: 'Upgrade a plate', need: 1, reward: 300, src: 'upgrade' },
+  { id: 'list1', ru: 'Выстави номер на продажу', en: 'List a plate for sale', need: 1, reward: 150, src: 'list' },
 ];
 export function dailyTasksFor(userId, day) {
   // deterministic per player and day, always two different tasks
@@ -521,15 +562,15 @@ export function dailyTasksFor(userId, day) {
 
 // ---- wheel of fortune: one free spin a day ----
 export const WHEEL = [
-  { id: 'c10', kind: 'plt', amount: 10, w: 26 },
-  { id: 'c25', kind: 'plt', amount: 25, w: 22 },
-  { id: 'c50', kind: 'plt', amount: 50, w: 17 },
-  { id: 'c100', kind: 'plt', amount: 100, w: 12 },
+  { id: 'c10', kind: 'plt', amount: 40, w: 26 },
+  { id: 'c25', kind: 'plt', amount: 75, w: 22 },
+  { id: 'c50', kind: 'plt', amount: 120, w: 17 },
+  { id: 'c100', kind: 'plt', amount: 200, w: 12 },
   { id: 'pfine', kind: 'plate', tier: 'fine', w: 9 },
-  { id: 'c250', kind: 'plt', amount: 250, w: 7 },
-  { id: 'c500', kind: 'plt', amount: 500, w: 4 },
+  { id: 'c250', kind: 'plt', amount: 400, w: 7 },
+  { id: 'c500', kind: 'plt', amount: 800, w: 4 },
   { id: 'prare', kind: 'plate', tier: 'rare', w: 2.4 },
-  { id: 'c2000', kind: 'plt', amount: 2000, w: 0.6 },
+  { id: 'c2000', kind: 'plt', amount: 3000, w: 0.6 },
 ];
 
 // ---- seasonal case: on sale only until the season ends ----

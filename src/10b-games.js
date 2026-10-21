@@ -11,14 +11,12 @@ VIEWS.games = async () => {
   const au = a.auction; const done = s.sets.filter(x => x.claimed).length;
   const pend = sw ? sw.incoming.filter(x => x.status === 'PENDING').length : 0;
   const card = (href, img, eyebrow, title, text, extra, cls = '') => `<a class="gcard rv ${cls}" href="${href}" style="--gimg:url(${IMG('head-' + img + '.jpg')})"><div class="gcard-bg"></div><div class="gcard-in"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p class="gtext">${text}</p>${extra || ''}</div><span class="gcard-go" aria-hidden="true">→</span></a>`;
-  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, «Дороже или дешевле», аукцион, коллекции и обмены — все игры на одной странице.', 'Battles, Higher or lower, auction, collections and swaps — everything in one place.')}</p></div></section>
+  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, апгрейд, аукцион и коллекции — всё вокруг номеров.', 'Battles, upgrade, auction and collections — all about plates.')}</p></div></section>
     <div class="ggrid">
       ${card('#/battles', 5, L('Кейс-баттл', 'Case battle') + (b.open.length ? ` · <span class="live"></span>${b.open.length} ${L('ждут', 'open')}` : ''), L('Кто выбьет дороже?', 'Who pulls the priciest?'), L('2–4 игрока открывают одинаковые кейсы одновременно. Победитель забирает все номера.', '2–4 players open the same cases at once. The winner takes every plate.'), `<div class="gstat"><b>${b.open.length}</b><span>${L('открытых баттлов', 'open battles')}</span></div>`, 'big')}
       ${card('#/auction', 3, L('Аукцион дня', 'Auction of the day'), au ? esc(miniPlateTxt(au.plate)) : L('Номер дня', 'Plate of the day'), au ? L(`${tierName(au.plate.tier)} · оценка ${fmt(au.plate.value)} PLT. Ставка в последние 5 минут продлевает торги.`, `${tierName(au.plate.tier)} · value ${fmt(au.plate.value)} PLT. A bid in the last 5 minutes extends it.`) : L('Каждый день — один редкий номер.', 'One rare plate every day.'), au ? `<div class="gstat"><b>${fmt(au.topBid || au.start)}</b><span>${au.topBid ? L('текущая ставка', 'current bid') : L('стартовая цена', 'starting price')}</span></div>` : '')}
       ${card('#/sets', 1, L('Коллекции', 'Collections'), L(`${CFG.sets.length} сетов`, `${CFG.sets.length} sets`), L('Соберите регионы, узоры и редкие серии — получите PLT и значок в профиль.', 'Collect regions, patterns and rare series to earn PLT and a profile badge.'), `<div class="gstat"><b>${done}/${CFG.sets.length}</b><span>${L('собрано', 'completed')}</span></div>`)}
-      ${card('#/swap', 2, L('Обмен', 'Swaps'), L('Меняйтесь номерами', 'Trade plates'), L('Номера плюс доплата в PLT — напрямую с другим игроком, без комиссии.', 'Plates plus PLT, directly with another player, no fee.'), pend ? `<div class="gstat"><b>${pend}</b><span>${L('новых предложений', 'new offers')}</span></div>` : '')}
       ${card('#/upgrade', 6, L('Апгрейд', 'Upgrade'), L('Рискни ради редкости', 'Risk it for rarity'), L('Поставьте номер и попробуйте превратить его в редкий.', 'Stake a plate and try to turn it into a rarer one.'), '')}
-      ${card('#/hilo', 4, L('Новая игра', 'New game') + ' · <span class="live"></span>', L('Дороже или дешевле?', 'Higher or lower?'), L('Угадай, дороже ли следующий номер. 10 угадал подряд — до 1 000 PLT. Бесплатно, 5 игр в день.', 'Guess if the next plate is worth more. Ten in a row pays up to 1,000 PLT. Free, 5 games a day.'), '', 'g-new')}
       ${card('#/bonus', 1, L('Каждый день', 'Every day'), L('Колесо удачи', 'Wheel of fortune'), L('Один бесплатный спин в день: PLT или номер.', 'One free spin a day: PLT or a plate.'), '')}
     </div><div style="height:80px"></div></div>`;
 };
@@ -102,7 +100,7 @@ async function playBattle(ar) {
       const t = col.querySelector('[data-total]'); rollNum(t, totals[x.seat], totals[x.seat] + x.value); totals[x.seat] += x.value;
       col.querySelector('.bdrops').insertAdjacentHTML('beforeend', `<a class="bdrop t-${x.plate.tier} pop" href="#/plate/${x.plate.id}">${Plate(x.plate, { iri: false })}<span class="mono">${fmt(x.value)}</span></a>`);
       if (x.value === best && !btSkip) { col.classList.add('flash'); setTimeout(() => col.classList.remove('flash'), 900); }
-      if (['elite', 'grail'].includes(x.plate.tier) && !btSkip) sfx('grail'); else if (x.plate.tier === 'rare' && !btSkip) sfx('confirm');
+      if (['elite', 'grail', 'mythic'].includes(x.plate.tier) && !btSkip) sfx('grail'); else if (x.plate.tier === 'rare' && !btSkip) sfx('confirm');
     }
     dots[r - 1] && dots[r - 1].classList.add('on');
     await wait(r < b.rounds ? 1100 : 500);
@@ -314,3 +312,6 @@ GA.hlguess = async btn => {
 GA.hlcash = async btn => { busy(btn, true, '…'); try { const r = await POST(`/api/hilo/${HL.run.id}/cash`, {}); coins(btn, 18); sfx('coin'); toast(`+${fmt(r.amount)} PLT`); HL.run = null; await refreshMe(); hlPaint(); } catch (e) { toast(e.message, true); busy(btn, false); } };
 
 VIEWS.swap.auth = true;
+
+// «Дороже или дешевле» is retired: old links lead to the games hub
+VIEWS.hilo = async () => { setTimeout(() => { if (parseRoute().name === 'hilo') location.replace('#/games'); }, 0); return ''; };

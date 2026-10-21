@@ -1,16 +1,18 @@
 
 /* ---------- components ---------- */
 function Plate(p, o = {}) {
-  const iri = o.iri ?? (p.tier === 'elite' || p.tier === 'grail');
+  // grail and mythic plates shimmer in their own colour; elite keeps the rainbow edge
+  const sh = o.iri === false ? '' : p.tier === 'mythic' ? ' my' : p.tier === 'grail' ? ' gl' : '';
+  const iri = !sh && (o.iri ?? p.tier === 'elite');
   const badge = '';
   const al = esc(L('Номер ', 'Plate ') + plateStr(p));
-  if (p.country === 'BY') return `<span class="plate by${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="by-flag" aria-hidden="true"><i></i><b>BY</b></span><span class="pl-main" aria-hidden="true"><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters}</span><span class="pl-dash">-</span><span class="pl-d">${p.region}</span></span>${badge}</span>`;
-  return `<span class="plate${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="pl-main" aria-hidden="true"><span class="pl-l">${p.letters[0]}</span><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters.slice(1)}</span></span><span class="pl-reg" aria-hidden="true"><span class="pl-rn${p.region.length > 2 ? ' r3' : ''}">${p.region}</span><span class="pl-rus">RUS<span class="flag"></span></span></span>${badge}</span>`;
+  if (p.country === 'BY') return `<span class="plate by${iri ? ' iri' : ''}${sh}" role="img" aria-label="${al}"><span class="by-flag" aria-hidden="true"><i></i><b>BY</b></span><span class="pl-main" aria-hidden="true"><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters}</span><span class="pl-dash">-</span><span class="pl-d">${p.region}</span></span>${badge}</span>`;
+  return `<span class="plate${iri ? ' iri' : ''}${sh}" role="img" aria-label="${al}"><span class="pl-main" aria-hidden="true"><span class="pl-l">${p.letters[0]}</span><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters.slice(1)}</span></span><span class="pl-reg" aria-hidden="true"><span class="pl-rn${p.region.length > 2 ? ' r3' : ''}">${p.region}</span><span class="pl-rus">RUS<span class="flag"></span></span></span>${badge}</span>`;
 }
 const Rarity = t => `<span class="rl t-${t}"><i></i>${tierName(t)}</span>`;
 const Price = n => `<span class="price">${fmt(n)}<small>PLT</small></span>`;
 const Perks = p => perkOf(p).map(t => `<span class="perk">${esc(t)}</span>`).join('');
-const Copy = p => (p.copy ? `<span class="cp${p.copy === 2 ? ' last' : ''}" title="${L(`Экземпляр ${p.copy} из 2`, `Copy ${p.copy} of 2`)}">${p.copy}/2</span>` : '');
+const Copy = p => (p.tier === 'mythic' ? `<span class="cp myth" title="${L('Единственный экземпляр', 'The only copy')}">1/1</span>` : p.copy ? `<span class="cp${p.copy === 2 ? ' last' : ''}" title="${L(`Экземпляр ${p.copy} из 2`, `Copy ${p.copy} of 2`)}">${p.copy}/2</span>` : '');
 const SH = (title, sub = '', link = '') => `<div class="sh"><div><h2 class="h2">${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>${link}</div>`;
 const Empty = (title, text, action = '', plate = null) => `<div class="empty">${plate ? Plate(plate, { iri: false }) : ''}<h3 class="h3">${title}</h3><p style="margin:0;max-width:46ch">${text}</p>${action}</div>`;
 const OddsBar = odds => `<div class="oddsbar" aria-hidden="true">${odds.map((o, i) => (o > 0 ? `<span class="t-${CFG.tiers[i].id}" style="flex:${Math.max(o, 1.5)}"></span>` : '')).join('')}</div>`;

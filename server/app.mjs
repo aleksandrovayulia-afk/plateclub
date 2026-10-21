@@ -4,7 +4,7 @@ import { randomBytes, randomInt, scrypt as _scrypt, createHash, createHmac, timi
 import { promisify } from 'node:util';
 import {
   CASES, caseById, poolOf, poolRegions, priceNow, BY_REGIONS, BY_LETTERS, genPlate, plateValue, drawTier, comboKey, plateStr, TIERS, TI, REGIONS, LETTERS,
-  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, targetValue, upgradeChance, UPGRADE_MAX_PLATES, UPGRADE_MIN, DAILY_TASKS, dailyTasksFor, WHEEL, HILO,
+  SIGNUP_BONUS, dailyLadder, MEDAL_RULES, TELEGRAM, REFERRAL, refMilestone, refNext, QUESTS, MARKET_FEE, BANK_RATE, PACKAGES, CURRENCIES, publicConfig, PAT_NAME, ACHIEVEMENTS, dailyAmount, levelOf, LEVEL_REWARD, levelReward, targetValue, upgradeChance, UPGRADE_MAX_PLATES, UPGRADE_MIN, DAILY_TASKS, dailyTasksFor, WHEEL, HILO,
   plateTraits, SETS, setProgress, BATTLE, battleCaseById, anyCaseById, AUCTION, auctionDay, auctionMin, SWAP, SETTINGS_DEFAULT, cleanSettings, casePrice, MARKET_BOT, BOT_DECAY, botListPrice, DEALER, dealerDemand, matchesDemand, dealerPrice,
 } from './game.mjs';
 import { tr, trExtra } from './i18n.mjs';
@@ -221,7 +221,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       (SELECT count(DISTINCT country) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS countries,
       (SELECT count(*) FROM plates WHERE owner_id=$1 AND status<>'BANKED' AND copy=2)::int AS twins,
       (SELECT coalesce(sum(value),0) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::bigint AS value,
-      (SELECT coalesce(max(CASE tier WHEN 'common' THEN 0 WHEN 'fine' THEN 1 WHEN 'rare' THEN 2 WHEN 'elite' THEN 3 ELSE 4 END),-1) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS maxtier,
+      (SELECT coalesce(max(CASE tier WHEN 'common' THEN 0 WHEN 'fine' THEN 1 WHEN 'rare' THEN 2 WHEN 'elite' THEN 3 WHEN 'grail' THEN 4 ELSE 5 END),-1) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS maxtier,
       (SELECT coalesce(-sum(amount),0) FROM ledger WHERE user_id=$1 AND kind='case_open')::bigint AS xp`, [user.id]);
     const stats = Object.fromEntries(Object.entries(s).map(([k, v]) => [k, n(v)]));
     const [t] = await q(`SELECT (SELECT count(*) FROM tickets WHERE user_id=$1 AND user_unread)::int AS unread, CASE WHEN $2 THEN (SELECT count(*) FROM tickets WHERE admin_unread AND status<>'CLOSED')::int + (SELECT count(*) FROM quests WHERE status='PENDING')::int ELSE 0 END AS inbox, (SELECT count(*) FROM swaps WHERE to_id=$1 AND status='PENDING')::int AS swaps`, [user.id, user.role === 'admin']);
@@ -389,12 +389,12 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         led = await ledger(Q, user.id, 'case_open', -price, `Открыт кейс ${c.id} ${c.ru}${price < c.price ? ' (скидка)' : ''}${count > 1 ? ` (×${count})` : ''}`, 'case:' + c.id);
         let plate;
         for (let i = 0; i < 40 && !plate; i++) {
-          const g = genPlate(tier, poolRegions(c), c.focus);
+          const g = genPlate(tier === 'mythic' && i >= 12 ? 'grail' : tier, poolRegions(c), c.focus); // all one-of-ones taken → a Grail
           const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: led.id };
           p.seal = seal(p);
           // At most two copies of a combination: copy 1, then copy 2. The unique (combo, copy) index settles races.
           const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy,paid)
-            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1, $14 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1, $14 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
             ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
             [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, user.id, `Кейс ${c.id} · ${c.ru}`, led.id, p.seal, p.country, price]);
           if (rows.length) plate = { ...p, copy: n(rows[0].copy), created: n(rows[0].created_ms), paid: price, traits: plateTraits(p) };
@@ -480,8 +480,12 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   });
 
   // ---- market ----
+  // the market page is the busiest one: restocking runs beside the request (never in front of it) and identical queries share a 4 s cache
+  const mkCache = new Map();
   R('GET', '/api/market', async ({ url, user }) => {
-    await stockMarket();
+    const first = lastStock === 0; const st = stockMarket().catch(e => console.error('stock', e.message)); if (first || env.MARKET_SYNC) await st;
+    const ck = url.search; const hit = mkCache.get(ck);
+    if (hit && now() - hit.at < 4000) return { listings: hit.rows.map(r => ({ ...r, mine: !!user && r.sellerId === user.id })).map(({ sellerId, ...r }) => r), fetchedAt: hit.at };
     const sp = url.searchParams, where = [`l.status='ACTIVE'`], P = [];
     const add = (sql, v) => { P.push(v); where.push(sql.replace('?', '$' + P.length)); };
     const raw = String(sp.get('q') || '').toUpperCase().replace(/[^0-9A-ZА-Я]/g, ''); const s = translit(raw);
@@ -491,18 +495,20 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const min = parseInt(sp.get('min')); if (min >= 0) add('l.price >= ?', min);
     const max = parseInt(sp.get('max')); if (max >= 0) add('l.price <= ?', max);
     const seller = sp.get('seller'); if (seller) add('u.nick_norm = ?', seller.toLowerCase());
-    const order = { new: 'l.created_at DESC', pa: 'l.price ASC', pd: 'l.price DESC', rar: `CASE p.tier WHEN 'grail' THEN 4 WHEN 'elite' THEN 3 WHEN 'rare' THEN 2 WHEN 'fine' THEN 1 ELSE 0 END DESC, l.price DESC`, val: 'p.value DESC', deal: 'l.price::float8 / greatest(p.value,1) ASC, l.created_at DESC' }[sp.get('sort')] || 'l.created_at DESC';
+    const order = { new: 'l.created_at DESC', pa: 'l.price ASC', pd: 'l.price DESC', rar: `CASE p.tier WHEN 'mythic' THEN 5 WHEN 'grail' THEN 4 WHEN 'elite' THEN 3 WHEN 'rare' THEN 2 WHEN 'fine' THEN 1 ELSE 0 END DESC, l.price DESC`, val: 'p.value DESC', deal: 'l.price::float8 / greatest(p.value,1) ASC, l.created_at DESC' }[sp.get('sort')] || 'l.created_at DESC';
     if (sp.get('deals') === '1') where.push('l.price < p.value');
     if (sp.get('who') === 'players') where.push(`u.role<>'bot'`); else if (sp.get('who') === 'market') where.push(`u.role='bot'`);
     const rows = await q(`SELECT l.id AS lid,l.price,(extract(epoch from l.created_at)*1000)::bigint AS l_ms,u.nickname AS seller,u.id AS seller_id,u.role AS seller_role,${PLATE_COLS}
       FROM listings l JOIN plates p ON p.id=l.plate_id JOIN users u ON u.id=l.seller_id WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT 120`, P);
-    return { listings: rows.map(r => ({ id: r.lid, price: n(r.price), created: n(r.l_ms), seller: r.seller, bot: r.seller_role === 'bot', mine: !!user && n(r.seller_id) === user.id, plate: plateRow(r) })), fetchedAt: now() };
+    const list = rows.map(r => ({ id: r.lid, price: n(r.price), created: n(r.l_ms), seller: r.seller, bot: r.seller_role === 'bot', sellerId: n(r.seller_id), plate: plateRow(r) }));
+    if (mkCache.size > 200) mkCache.clear(); mkCache.set(ck, { at: now(), rows: list });
+    return { listings: list.map(({ sellerId, ...r }) => ({ ...r, mine: !!user && sellerId === user.id })), fetchedAt: now() };
   });
 
   // live feed: the latest rare-or-better plates minted from cases, and the latest upgrade attempts (real data only)
   R('GET', '/api/drops', async () => {
     const rows = await q(`SELECT ${PLATE_COLS}, u.nickname, (extract(epoch from p.created_at)*1000)::bigint AS at_ms FROM plates p JOIN users u ON u.id = (SELECT e.to_user FROM plate_events e WHERE e.plate_id=p.id AND e.kind='MINTED' LIMIT 1)
-      WHERE p.tier IN ('rare','elite','grail') AND u.role <> 'bot' AND u.nick_norm <> lower($1) ORDER BY p.created_at DESC LIMIT 12`, [MARKET_BOT.nick]);
+      WHERE p.tier IN ('rare','elite','grail','mythic') AND u.role <> 'bot' AND u.nick_norm <> lower($1) ORDER BY p.created_at DESC LIMIT 12`, [MARKET_BOT.nick]);
     return { drops: rows.map(r => ({ plate: plateRow(r), nickname: r.nickname, at: n(r.at_ms) })) };
   });
   R('GET', '/api/upgrade/recent', async () => {
@@ -523,10 +529,11 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   const rnd = () => randomInt(0, 1_000_000) / 1_000_000;
   async function stockMarket(force = false) {
     if (!SECRET || SECRET.length < 32 || env.MARKET_BOT === 'off') return;
-    if (!force && now() - lastStock < 20000) return;
+    if (!force && now() - lastStock < 60000) return;
     lastStock = now();
     await tx(async Q => {
-      await Q('SELECT pg_advisory_xact_lock(424242)');
+      // another request is already restocking: skip instead of queueing behind it
+      const [lk] = await Q('SELECT pg_try_advisory_xact_lock(424242) AS ok'); if (!(lk.ok === true || lk.ok === 't')) return;
       const bot = await botUser(Q);
       // 1. unsold lots get cheaper, down to a floor
       const stale = await Q(`SELECT l.id,l.price,l.plate_id,p.value FROM listings l JOIN plates p ON p.id=l.plate_id WHERE l.seller_id=$1 AND l.status='ACTIVE'
@@ -552,7 +559,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
           const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: newId('MK') };
           p.seal = seal(p);
           const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy)
-            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED','Рынок Plate Club',$10,$11,$12, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED','Рынок Plate Club',$10,$11,$12, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
             ON CONFLICT DO NOTHING RETURNING id`, [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, bot, p.mintTx, p.seal, p.country]);
           if (!rows.length) continue;
           await addEvent(Q, { plate_id: p.id, kind: 'MINTED', to_user: bot, tx_id: p.mintTx });
@@ -849,7 +856,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       (SELECT count(DISTINCT country || region) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS regions,
       (SELECT count(DISTINCT country) FROM plates WHERE owner_id=$1 AND status<>'BANKED')::int AS countries,
       (SELECT count(*) FROM plates WHERE owner_id=$1 AND status<>'BANKED' AND copy=2)::int AS twins,
-      (SELECT coalesce(max(CASE tier WHEN 'common' THEN 0 WHEN 'fine' THEN 1 WHEN 'rare' THEN 2 WHEN 'elite' THEN 3 ELSE 4 END),-1) FROM plates WHERE owner_id=$1)::int AS maxtier`, [uid]);
+      (SELECT coalesce(max(CASE tier WHEN 'common' THEN 0 WHEN 'fine' THEN 1 WHEN 'rare' THEN 2 WHEN 'elite' THEN 3 WHEN 'grail' THEN 4 ELSE 5 END),-1) FROM plates WHERE owner_id=$1)::int AS maxtier`, [uid]);
     return Object.fromEntries(Object.entries(s).map(([k, v]) => [k, n(v)]));
   }
   R('POST', '/api/promo/redeem', async ({ user, body }) => {
@@ -888,7 +895,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const got = new Set((await q(`SELECT ref FROM ledger WHERE user_id=$1 AND kind='reward'`, [user.id])).map(r => r.ref));
     const [x] = await q(`SELECT coalesce(-sum(amount),0)::bigint AS xp FROM ledger WHERE user_id=$1 AND kind='case_open'`, [user.id]);
     const lv = levelOf(n(x.xp)); const paid = (await q(`SELECT count(*)::int AS c FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE 'lvl:%'`, [user.id]))[0];
-    lv.unclaimed = Math.max(0, lv.level - 1 - n(paid.c)); lv.reward = LEVEL_REWARD;
+    lv.unclaimed = Math.max(0, lv.level - 1 - n(paid.c)); lv.reward = levelReward(lv.level); { let t = 0, k = lv.unclaimed; for (let l = lv.level; k > 0 && l >= 2; l--, k--) t += levelReward(l); lv.total = t; }
     return { daily, level: lv, telegram: got.has('tg-join'), stats: s, achievements: ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name, text: a.text, reward: a.reward, done: a.ok(s), claimed: got.has('ach:' + a.id) })) };
   }, { auth: true });
   R('POST', '/api/perks/daily', async ({ user }) => tx(async Q => {
@@ -946,7 +953,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         for (let i = 0; i < 40 && !plate; i++) {
           const g = genPlate(prize.tier, pool); const np = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: led.id }; np.seal = seal(np);
           const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy)
-            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
             ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
             [np.id, np.letters, np.digits, np.region, np.combo, np.tier, np.pattern, np.value, user.id, 'Колесо удачи', led.id, np.seal, np.country]);
           if (rows.length) plate = { ...np, copy: n(rows[0].copy), created: n(rows[0].created_ms) };
@@ -1102,7 +1109,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
     const [x] = await Q(`SELECT coalesce(-sum(amount),0)::bigint AS xp FROM ledger WHERE user_id=$1 AND kind='case_open'`, [user.id]);
     const lv = levelOf(n(x.xp)); const done = new Set((await Q(`SELECT ref FROM ledger WHERE user_id=$1 AND kind='reward' AND ref LIKE 'lvl:%'`, [user.id])).map(r => r.ref));
     let paid = 0, bal = null;
-    for (let l = 2; l <= lv.level; l++) if (!done.has('lvl:' + l)) { const led = await ledger(Q, user.id, 'reward', LEVEL_REWARD, `Уровень ${l}`, 'lvl:' + l); paid += LEVEL_REWARD; bal = led.balance; }
+    for (let l = 2; l <= lv.level; l++) if (!done.has('lvl:' + l)) { const amt = levelReward(l); const led = await ledger(Q, user.id, 'reward', amt, `Уровень ${l}`, 'lvl:' + l); paid += amt; bal = led.balance; }
     if (!paid) throw new HttpError(409, 'Новых наград за уровень нет.');
     return { ok: true, amount: paid, level: lv.level, balance: bal };
   }), { auth: true });
@@ -1110,7 +1117,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   // ---- upgrade: burn one plate for a chance at a higher tier; the roll is decided here ----
   R('POST', '/api/upgrade', async ({ user, body, req }) => {
     needSecret();
-    const tierIdx = Object.hasOwn(TI, String(body.target)) ? TI[body.target] : null; if (tierIdx == null) throw bad('Выберите редкость, до которой улучшить.');
+    const tierIdx = Object.hasOwn(TI, String(body.target)) && body.target !== 'mythic' ? TI[body.target] : null; if (tierIdx == null) throw bad('Выберите редкость, до которой улучшить.');
     return withIdem(user, req, () => tx(async Q => {
       // one or two plates; the chance grows with their combined value
       const wantIds = [...new Set((Array.isArray(body.plateIds) ? body.plateIds : [body.plateId]).map(x => String(x || '')).filter(Boolean))];
@@ -1135,7 +1142,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         for (let i = 0; i < 40 && !plate; i++) {
           const g = genPlate(body.target, pool); const np = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: upId }; np.seal = seal(np);
           const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy)
-            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+            SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED',$10,$11,$12,$13, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
             ON CONFLICT DO NOTHING RETURNING copy,(extract(epoch from created_at)*1000)::bigint AS created_ms`,
             [np.id, np.letters, np.digits, np.region, np.combo, np.tier, np.pattern, np.value, user.id, `Апгрейд из ${p.id}`, upId, np.seal, np.country]);
           if (rows.length) plate = { ...np, copy: n(rows[0].copy), created: n(rows[0].created_ms) };
@@ -1437,7 +1444,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
       for (let k = 0; k < 20; k++) {
         const g = genPlate(tier, pool); const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: newId('GF') }; p.seal = seal(p);
         const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy)
-          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED','Подарок Plate Club',$10,$11,$12, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+          SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'OWNED','Подарок Plate Club',$10,$11,$12, c.n + 1 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
           ON CONFLICT DO NOTHING RETURNING id`, [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, id, p.mintTx, p.seal, p.country]);
         if (!rows.length) continue;
         await addEvent(Q, { plate_id: p.id, kind: 'MINTED', to_user: id, tx_id: p.mintTx });
@@ -1516,10 +1523,10 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
   // Mint a plate inside a transaction. owner may be null (assigned later). Returns the public plate or null if no free combination.
   async function mint(Q, { tier, pool, focus, owner, origin, txId, status = 'OWNED', paid = null }) {
     for (let k = 0; k < 40; k++) {
-      const g = genPlate(tier, pool, focus); const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: txId };
+      const g = genPlate(tier === 'mythic' && k >= 12 ? 'grail' : tier, pool, focus); const p = { ...g, id: newId('PC'), combo: comboKey(g), value: plateValue(g), mintTx: txId };
       p.seal = seal(p);
       const rows = await Q(`INSERT INTO plates(id,letters,digits,region,combo,tier,pattern,value,owner_id,status,origin,last_tx_id,seal,country,copy,paid)
-        SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, c.n + 1, $15 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < 2
+        SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, c.n + 1, $15 FROM (SELECT count(*)::int AS n FROM plates WHERE combo=$5) c WHERE c.n < (CASE WHEN $6::text = 'mythic' THEN 1 ELSE 2 END)
         ON CONFLICT DO NOTHING RETURNING copy`, [p.id, p.letters, p.digits, p.region, p.combo, p.tier, p.pattern, p.value, owner, status, origin, txId, p.seal, p.country, paid]);
       if (rows.length) return { id: p.id, country: p.country, letters: p.letters, digits: p.digits, region: p.region, tier: p.tier, pattern: p.pattern, value: p.value, copy: n(rows[0].copy), traits: plateTraits(p) };
     }
@@ -1810,6 +1817,7 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
         else if (origin === 'null') throw new HttpError(403, 'Запрос с чужого сайта отклонён.');
       }
       if (Number(req.headers.get('content-length') || 0) > 262144) throw new HttpError(413, 'Слишком большой запрос.');
+      if (write) mkCache.clear(); // any change can touch listings
       const raw = write ? await req.text() : '';
       if (raw.length > 262144) throw new HttpError(413, 'Слишком большой запрос.');
       let body = {};

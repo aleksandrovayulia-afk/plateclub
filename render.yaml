@@ -1,0 +1,19 @@
+# Render blueprint: one free web service in Frankfurt (next to the Neon database)
+services:
+  - type: web
+    name: plate-club
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node server/render.mjs
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PLATE_SEAL_SECRET
+        generateValue: true
+      - key: ADMIN_SETUP_CODE
+        sync: false
+      - key: NODE_VERSION
+        value: "20"

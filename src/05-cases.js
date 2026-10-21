@@ -3,6 +3,7 @@
 const CF = { cat: 'all', sort: 'id' };
 VIEWS.cases = async () => `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Каталог', 'Catalogue')} · ${CFG.cases.length}</p><h1 class="h1" style="margin-top:12px">${L('Кейсы', 'Cases')}</h1><p class="lede" style="margin-top:12px">${L('У каждого кейса свой цвет и своя редкость. Шансы видны до открытия. Белорусские номера дешевле.', 'Every case has its own colour and rarity. Odds are shown before you open. Belarusian plates are cheaper.')}</p></div>
     <label class="sr-only" for="csort2">${L('Сортировка', 'Sort')}</label><select class="inline" id="csort2">${[['id', L('По порядку', 'Default')], ['pa', L('Сначала дешёвые', 'Cheapest first')], ['pd', L('Сначала дорогие', 'Priciest first')], ['rare', L('Больше редких', 'Most rares')]].map(([v, t]) => `<option value="${v}"${CF.sort === v ? ' selected' : ''}>${t}</option>`).join('')}</select></section>
+  ${dealsSection()}
   ${featured()}
   <div class="cats" role="toolbar" aria-label="${L('Категории', 'Categories')}">${[['all', L('Все', 'All')], ...Object.keys(CFG.cats).map(k => [k, catName(k)])].map(([k, t]) => `<button class="chip" data-act="ccat" data-k="${k}" aria-pressed="${CF.cat === k}">${t} <b>${k === 'all' ? CFG.cases.length : CFG.cases.filter(c => c.cat === k).length}</b></button>`).join('')}</div>
   <div id="cgridBox" style="padding-block:18px 80px">${casesGrid()}</div></div>`;

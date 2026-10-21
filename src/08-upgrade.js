@@ -26,7 +26,7 @@ function wheelSvg(chance) {
 VIEWS.upgrade = async ({ query }) => {
   const [d, rec] = await Promise.all([GET('/api/collection'), GET('/api/upgrade/recent').catch(() => ({ upgrades: [] }))]); UP.plates = d.plates.filter(p => !p.listing).sort((a, b) => b.value - a.value);
   const want = query && query.get('p'); if (want && UP.plates.find(p => p.id === want)) UP.sels = [want];
-  upPick(); if (!UP.sels.length && UP.plates.length) { const f = UP.plates.find(p => p.tier !== 'grail'); UP.sels = f ? [f.id] : []; }
+  upPick(); if (!UP.sels.length && UP.plates.length) { const f = UP.plates.find(p => p.tier !== 'grail' && p.tier !== 'mythic'); UP.sels = f ? [f.id] : []; }
   UP.angle = 0;
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Апгрейд', 'Upgrade')}</p><h1 class="h1" style="margin-top:12px">${L('Рискни номером', 'Risk a plate')}</h1><p class="lede" style="margin-top:12px">${L('Выбери номер и цель. Зелёный сектор — твой шанс. Колесо остановится там, где решил сервер: попал в зелёное — получаешь номер выше, нет — номер сгорает.', 'Pick a plate and a target. The green sector is your chance. The wheel stops where the server decided: land in green and you get a rarer plate, otherwise the plate burns.')}</p></div></section>
   ${UP.plates.length ? `<div class="up-grid">
@@ -50,7 +50,7 @@ function upPaint() {
   const ti = TI(); const cur = sel ? pk.top : 5;
   if (sel && (!UP.target || ti[UP.target] <= cur)) UP.target = CFG.tiers[Math.min(4, cur + 1)].id;
   if (sel && cur >= 4) UP.target = null;
-  $('#upTargets').innerHTML = CFG.tiers.map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
+  $('#upTargets').innerHTML = CFG.tiers.filter(t => t.id !== 'mythic').map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
   const ch = sel && UP.target ? upChance(sel, UP.target, pk.extra) : 0;
   $('#wArc').setAttribute('stroke-dasharray', `${WC * ch} ${WC}`);
   $('#wPct').textContent = sel && UP.target ? (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%' : '—';
@@ -105,8 +105,8 @@ UA.upgo = async btn => {
   }
   await wait(reduced() ? 0 : 1600); if (!$('#wheel')) { UP.busy = false; refreshMe(); return; }
   try { const d = await GET('/api/collection'); UP.plates = d.plates.filter(p => !p.listing).sort((a, b) => b.value - a.value); } catch {}
-  const firstUp = (UP.plates.find(p => p.tier !== 'grail') || {}).id || null;
-  UP.sels = [r.success && r.plate.tier !== 'grail' ? r.plate.id : firstUp].filter(Boolean);
+  const firstUp = (UP.plates.find(p => p.tier !== 'grail' && p.tier !== 'mythic') || {}).id || null;
+  UP.sels = [r.success && r.plate.tier !== 'grail' && r.plate.tier !== 'mythic' ? r.plate.id : firstUp].filter(Boolean);
   UP.busy = false; refreshMe(); if (!$('#wheel')) return; busy(btn, false); upPaint();
   $('#wheel').classList.add(r.success ? 'win' : 'lose');
 };

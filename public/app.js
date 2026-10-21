@@ -112,12 +112,12 @@ const pl = (n, ru3, en2) => (LANG === 'en' ? (n === 1 ? en2[0] : en2[1]) : plura
 const rel = ts => { const s = (Date.now() - ts) / 1000; if (s < 60) return L('только что', 'just now'); if (s < 3600) { const m = Math.floor(s / 60); return L(`${m} мин назад`, `${m} min ago`); } if (s < 86400) { const h = Math.floor(s / 3600); return L(`${h} ч назад`, `${h} h ago`); } const d = Math.floor(s / 86400); return L(`${d} ${plural(d, 'день', 'дня', 'дней')} назад`, `${d} ${d === 1 ? 'day' : 'days'} ago`); };
 const date = ts => new Date(ts).toLocaleString(LOC(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const day = ts => new Date(ts).toLocaleDateString(LOC(), { day: 'numeric', month: 'long', year: 'numeric' });
-const TIER_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Грааль', 'Grail'] };
-const RANK_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Легендарный', 'Legendary'] };
-const PAT_EN = { random: 'Random', seq: 'Sequence', pair: 'Pair', mirror: 'Mirror', round: 'Round', triple: 'Same digits', zero: 'Zero series', letters: 'Same letters', full: 'Full match', zerofull: 'Zero + letters' };
+const TIER_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Грааль', 'Grail'], mythic: ['Мифический', 'Mythic'] };
+const RANK_N = { common: ['Обычный', 'Common'], fine: ['Хороший', 'Fine'], rare: ['Редкий', 'Rare'], elite: ['Элитный', 'Elite'], grail: ['Легендарный', 'Legendary'], mythic: ['Мифический', 'Mythic'] };
+const PAT_EN = { random: 'Random', seq: 'Sequence', pair: 'Pair', mirror: 'Mirror', round: 'Round', triple: 'Same digits', zero: 'Zero series', letters: 'Same letters', full: 'Full match', zerofull: 'Zero + letters', mythic: 'Full match + region' };
 const CAT_EN = { season: 'Season', start: 'Starter', region: 'Russian regions', belarus: 'Belarus', pattern: 'Patterns', premium: 'Premium', top: 'Top', legend: 'Legends' };
 const BY_EN = { 1: 'Brest region', 2: 'Vitebsk region', 3: 'Gomel region', 4: 'Grodno region', 5: 'Minsk region', 6: 'Mogilev region', 7: 'Minsk' };
-const ACH_EN = { first: ['First plate', 'Open your first case.'], ten: ['Ten', 'Collect 10 plates.'], opener: ['Thrill', 'Open 25 cases.'], rare: ['Rare find', 'Get a rare plate or better.'], elite: ['Elite', 'Get an elite plate.'], grail: ['Grail', 'Get a Grail plate.'], regions: ['Traveller', 'Plates from 5 regions.'], belarus: ['Two countries', 'Collect plates from Russia and Belarus.'], buyer: ['First purchase', 'Buy a plate on the market.'], lister: ['Seller', 'List a plate on the market.'], seller: ['First sale', 'Sell a plate to another player.'], twin: ['Twins', 'Get a “2 of 2” plate — the last copy of a combination.'] };
+const ACH_EN = { mythic: ['Myth', 'Get a Mythic plate — one of one.'], first: ['First plate', 'Open your first case.'], ten: ['Ten', 'Collect 10 plates.'], opener: ['Thrill', 'Open 25 cases.'], rare: ['Rare find', 'Get a rare plate or better.'], elite: ['Elite', 'Get an elite plate.'], grail: ['Grail', 'Get a Grail plate.'], regions: ['Traveller', 'Plates from 5 regions.'], belarus: ['Two countries', 'Collect plates from Russia and Belarus.'], buyer: ['First purchase', 'Buy a plate on the market.'], lister: ['Seller', 'List a plate on the market.'], seller: ['First sale', 'Sell a plate to another player.'], twin: ['Twins', 'Get a “2 of 2” plate — the last copy of a combination.'] };
 const TR = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya' };
 const translit = s => String(s).replace(/[А-яЁё]/g, ch => { const lo = ch.toLowerCase(); const t = TR[lo] ?? ch; return ch === lo ? t : t.charAt(0).toUpperCase() + t.slice(1); });
 const REG_EN = { 'Москва': 'Moscow', 'Санкт-Петербург': 'Saint Petersburg', 'Московская обл.': 'Moscow region', 'Ленинградская обл.': 'Leningrad region' };
@@ -248,6 +248,8 @@ const MEDAL_ORDER = ['lv100', 'top3', 'lv50', 'top10', 'earner', 'trader', 'spen
 const MEDAL = m => { const d = MEDAL_DEF()[m]; return d ? `<span class="medal-b ${d[0]}" title="${d[3]}"><i>${d[1]}</i>${d[2]}</span>` : ''; };
 const Medals = ms => (ms && ms.length ? `<span class="medals">${[...ms].sort((a, b) => MEDAL_ORDER.indexOf(a) - MEDAL_ORDER.indexOf(b)).map(MEDAL).join('')}</span>` : '');
 const LV_TITLE = t => ({ rookie: L('Новичок', 'Rookie'), collector: L('Коллекционер', 'Collector'), expert: L('Знаток', 'Expert'), star: L('Звезда', 'Star'), tycoon: L('Магнат', 'Tycoon'), legend: L('Легенда', 'Legend') })[t] || '';
+// "who drives it" line for blatnoy series (popular lore)
+const blatRow = p => { const x = p && p.country !== 'BY' && CFG.blat && CFG.blat[p.letters]; return x ? `<dt>${L('Кто ездит', 'Who drives it')}</dt><dd>${esc(L(x[0], x[1]))} <span class="small" style="opacity:.6">${L('(по народной версии)', '(popular lore)')}</span></dd>` : ''; };
 const perkOf = p => { const out = []; if (p.pattern && p.pattern !== 'random') out.push(patName(p.pattern)); if (Array.isArray(p.traits)) p.traits.forEach(t => out.push(traitName(t))); else { if (/^7+$/.test(p.digits)) out.push(L('Счастливые семёрки', 'Lucky sevens')); if (/^0+1$/.test(p.digits)) out.push(L('Номер один', 'Number one')); } return out; };
 const vsValue = (price, value) => Math.round((price / Math.max(1, value) - 1) * 100);
 const rarePlus = c => Math.round((c.odds[2] + c.odds[3] + c.odds[4]) * 100) / 100;
@@ -309,6 +311,7 @@ function sfx(kind, x = 1) {
       common: () => tone(520, 0, 0.2), fine: () => { tone(587, 0, 0.12); tone(784, 0.08, 0.22); },
       rare: () => { tone(784, 0, 0.16); tone(1046, 0.11, 0.2); tone(1318, 0.22, 0.4); },
       elite: () => { tone(392, 0, 0.5, 'triangle'); tone(784, 0.12, 0.3); tone(1175, 0.26, 0.5); tone(1568, 0.4, 0.6); },
+      mythic: () => { [392, 494, 587, 784, 988, 1175, 1568].forEach((f, i) => tone(f, i * 0.11, 0.9)); tone(98, 0, 2.2, 'triangle', v * 0.9); tone(1568, 0.9, 1.4); },
       grail: () => { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, i * 0.09, 0.7)); tone(130, 0, 1.4, 'triangle', v * 0.8); },
       fail: () => { tone(330, 0, 0.25, 'sawtooth', v * 0.5); tone(220, 0.18, 0.45, 'sawtooth', v * 0.5); noise(0.4, 900, 0.4); },
       buy: () => { tone(523, 0, 0.09); tone(784, 0.08, 0.16); },
@@ -322,16 +325,18 @@ function sfx(kind, x = 1) {
 
 /* ---------- components ---------- */
 function Plate(p, o = {}) {
-  const iri = o.iri ?? (p.tier === 'elite' || p.tier === 'grail');
+  // grail and mythic plates shimmer in their own colour; elite keeps the rainbow edge
+  const sh = o.iri === false ? '' : p.tier === 'mythic' ? ' my' : p.tier === 'grail' ? ' gl' : '';
+  const iri = !sh && (o.iri ?? p.tier === 'elite');
   const badge = '';
   const al = esc(L('Номер ', 'Plate ') + plateStr(p));
-  if (p.country === 'BY') return `<span class="plate by${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="by-flag" aria-hidden="true"><i></i><b>BY</b></span><span class="pl-main" aria-hidden="true"><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters}</span><span class="pl-dash">-</span><span class="pl-d">${p.region}</span></span>${badge}</span>`;
-  return `<span class="plate${iri ? ' iri' : ''}" role="img" aria-label="${al}"><span class="pl-main" aria-hidden="true"><span class="pl-l">${p.letters[0]}</span><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters.slice(1)}</span></span><span class="pl-reg" aria-hidden="true"><span class="pl-rn${p.region.length > 2 ? ' r3' : ''}">${p.region}</span><span class="pl-rus">RUS<span class="flag"></span></span></span>${badge}</span>`;
+  if (p.country === 'BY') return `<span class="plate by${iri ? ' iri' : ''}${sh}" role="img" aria-label="${al}"><span class="by-flag" aria-hidden="true"><i></i><b>BY</b></span><span class="pl-main" aria-hidden="true"><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters}</span><span class="pl-dash">-</span><span class="pl-d">${p.region}</span></span>${badge}</span>`;
+  return `<span class="plate${iri ? ' iri' : ''}${sh}" role="img" aria-label="${al}"><span class="pl-main" aria-hidden="true"><span class="pl-l">${p.letters[0]}</span><span class="pl-d">${p.digits}</span><span class="pl-l">${p.letters.slice(1)}</span></span><span class="pl-reg" aria-hidden="true"><span class="pl-rn${p.region.length > 2 ? ' r3' : ''}">${p.region}</span><span class="pl-rus">RUS<span class="flag"></span></span></span>${badge}</span>`;
 }
 const Rarity = t => `<span class="rl t-${t}"><i></i>${tierName(t)}</span>`;
 const Price = n => `<span class="price">${fmt(n)}<small>PLT</small></span>`;
 const Perks = p => perkOf(p).map(t => `<span class="perk">${esc(t)}</span>`).join('');
-const Copy = p => (p.copy ? `<span class="cp${p.copy === 2 ? ' last' : ''}" title="${L(`Экземпляр ${p.copy} из 2`, `Copy ${p.copy} of 2`)}">${p.copy}/2</span>` : '');
+const Copy = p => (p.tier === 'mythic' ? `<span class="cp myth" title="${L('Единственный экземпляр', 'The only copy')}">1/1</span>` : p.copy ? `<span class="cp${p.copy === 2 ? ' last' : ''}" title="${L(`Экземпляр ${p.copy} из 2`, `Copy ${p.copy} of 2`)}">${p.copy}/2</span>` : '');
 const SH = (title, sub = '', link = '') => `<div class="sh"><div><h2 class="h2">${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>${link}</div>`;
 const Empty = (title, text, action = '', plate = null) => `<div class="empty">${plate ? Plate(plate, { iri: false }) : ''}<h3 class="h3">${title}</h3><p style="margin:0;max-width:46ch">${text}</p>${action}</div>`;
 const OddsBar = odds => `<div class="oddsbar" aria-hidden="true">${odds.map((o, i) => (o > 0 ? `<span class="t-${CFG.tiers[i].id}" style="flex:${Math.max(o, 1.5)}"></span>` : '')).join('')}</div>`;
@@ -434,7 +439,7 @@ function confetti(host, col, n = 40) {
 /* ---------- routing & chrome ---------- */
 const NAVS = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['top', L('Топ', 'Top'), 'trophy'], ['bonus', L('Бонусы', 'Bonuses'), 'gift']];
 const BNAV = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['collection', L('Номера', 'Plates'), 'coll']];
-const SECTION_OF = { hilo: 'games', battles: 'games', battle: 'games', sets: 'games', swap: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
+const SECTION_OF = { hilo: 'games', swap: 'market', battles: 'games', battle: 'games', sets: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
 let lastBal = null;
 function parseRoute() { const h = location.hash.replace(/^#\/?/, ''); const [path, qs] = h.split('?'); const seg = path.split('/').filter(Boolean).map(decodeURIComponent); return { name: seg[0] || '', arg: seg[1], query: new URLSearchParams(qs || '') }; }
 const go = h => { if (location.hash === h) render(); else location.hash = h; };
@@ -510,7 +515,7 @@ function countdown(el, ends, onEnd) {
   const t = setInterval(set, 1000); set();
 }
 function after(name) {
-  if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 12000); }
+  if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 20000); }
   if (name === 'wallet' || name === 'transactions') walletHooks();
   if (name === 'register') regHooks();
   if (name === 'bonus') { loadRef(); loadQuests(); }
@@ -572,7 +577,6 @@ function showTip(name) {
 const MiniWheel = (pct = 0.32) => { const r = 80, C = 2 * Math.PI * r; return `<svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="${r}" fill="none" stroke="#2a1820" stroke-width="18"/><circle cx="100" cy="100" r="${r}" fill="none" stroke="url(#mwg)" stroke-width="18" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 100 100)" stroke-linecap="round"/><defs><linearGradient id="mwg" x1="0" x2="1"><stop offset="0" stop-color="#7affc4"/><stop offset="1" stop-color="#3ddc97"/></linearGradient></defs><line x1="100" y1="100" x2="100" y2="30" stroke="#fff" stroke-width="4" stroke-linecap="round" transform="rotate(70 100 100)"/><circle cx="100" cy="100" r="10" fill="#fff"/></svg>`; };
 VIEWS[''] = async () => {
   const [mk, drops, rk, on] = await Promise.all([GET('/api/market?sort=val').catch(() => ({ listings: [] })), GET('/api/drops').catch(() => ({ drops: [] })), GET('/api/rankings').catch(() => ({ rankings: [] })), GET('/api/online').catch(() => ({ count: 0, players: [] }))]);
-  const deals = CFG.deals.map(d => caseById(d.id));
   const popular = ['01', '05', '06', '12', '21', '30', '36', '40', '43', '44'].map(caseById);
   const floor = mk.listings.length ? Math.min(...mk.listings.map(l => l.price)) : 0;
   const top3 = rk.rankings.slice(0, 3);
@@ -585,9 +589,7 @@ VIEWS[''] = async () => {
     </div></section>
   <div class="wrap">
     ${(() => { const sc = CFG.cases.find(c => c.until && c.until > Date.now()); return sc ? `<a class="season-ban rv" href="#/case/${sc.id}" style="--c:${sc.color};--c2:${sc.color2}"><div><p class="eyebrow">🍂 ${L('Сезонный кейс', 'Seasonal case')} · ${L('только до', 'until')} ${day(sc.until - 1)}</p><h2 class="h2" style="margin-top:6px">${esc(caseName(sc))}</h2><p class="small" style="margin:6px 0 0">${L('Шансы на редкие и элитные номера выше обычного. Потом кейс исчезнет.', 'Better odds on rare and elite plates. Then it disappears.')}</p></div><div class="season-r"><span class="mono" id="seasonCd" data-t="${sc.until}"></span><span class="btn btn-chrome">${L('Открыть за', 'Open for')} ${fmt(priceOf(sc))}</span></div></a>` : ''; })()}
-    <section class="sec"><div class="deals-head"><div><p class="eyebrow">${L('Только сегодня', 'Today only')}</p><h2 class="h2" style="margin-top:8px">${L('Скидки дня', 'Daily deals')}</h2></div>
-        <div><div class="timer" id="dealTimer" role="timer" aria-label="${L('До конца скидок', 'Deals end in')}"><span>00</span><i>:</i><span>00</span><i>:</i><span>00</span></div><div class="timer-lbl" aria-hidden="true"><span>${L('часы', 'hours')}</span><i></i><span>${L('мин', 'min')}</span><i></i><span>${L('сек', 'sec')}</span></div></div></div>
-      <div class="deals">${deals.map(CaseCard).join('')}</div></section>
+    ${dealsSection()}
     <section class="sec">${SH(L('Игры', 'Games'), L('Баттлы, аукцион, коллекции и обмен.', 'Battles, auction, collections and swaps.'), `<a class="sh-link" href="#/games">${L('Все игры', 'All games')} →</a>`)}<div class="gmini">${[['battles', 'swords', L('Кейс-баттл', 'Case battle'), L('Кто выбьет дороже — забирает всё', 'Highest pull takes it all')], ['auction', 'hammer', L('Аукцион дня', 'Auction of the day'), L('Один редкий номер в день', 'One rare plate a day')], ['sets', 'layers', L('Коллекции', 'Collections'), L(`${CFG.sets.length} сетов с наградами`, `${CFG.sets.length} sets with rewards`)], ['swap', 'swap', L('Обмен', 'Swaps'), L('Номера на номера напрямую', 'Plates for plates, directly')]].map(([h, ic, t, x]) => `<a class="gm rv" href="#/${h}"><span class="gm-ic">${IC[ic]}</span><b>${t}</b><span class="small">${x}</span></a>`).join('')}</div></section>
     <section class="sec">${SH(L('Хиты', 'Hits'), '', `<a class="sh-link" href="#/cases">${L('Все кейсы', 'All cases')} →</a>`)}<div class="cgrid">${popular.map(CaseCard).join('')}</div></section>
     <section class="sec"><div class="bento">
@@ -601,11 +603,21 @@ VIEWS[''] = async () => {
   </div>`;
 };
 
+// today's discounted cases (up to −30%), shown on the home page and on top of the cases page
+function dealsSection() {
+  const deals = CFG.deals.filter(d => d.ends > Date.now()).map(d => ({ d, c: caseById(d.id) })).filter(x => x.c).sort((a, b) => b.d.pct - a.d.pct);
+  if (!deals.length) return '';
+  return `<section class="sec deals-sec"><div class="deals-head"><div><p class="eyebrow">${L('Только сегодня', 'Today only')}</p><h2 class="h2" style="margin-top:8px">${L('Скидки дня', 'Daily deals')} <span class="deal-max">−${deals[0].d.pct}%</span></h2></div>
+        <div><div class="timer" id="dealTimer" role="timer" aria-label="${L('До конца скидок', 'Deals end in')}"><span>00</span><i>:</i><span>00</span><i>:</i><span>00</span></div><div class="timer-lbl" aria-hidden="true"><span>${L('часы', 'hours')}</span><i></i><span>${L('мин', 'min')}</span><i></i><span>${L('сек', 'sec')}</span></div></div></div>
+      <div class="deals">${deals.map(x => CaseCard(x.c)).join('')}</div></section>`;
+}
+
 
 /* ---------- cases ---------- */
 const CF = { cat: 'all', sort: 'id' };
 VIEWS.cases = async () => `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Каталог', 'Catalogue')} · ${CFG.cases.length}</p><h1 class="h1" style="margin-top:12px">${L('Кейсы', 'Cases')}</h1><p class="lede" style="margin-top:12px">${L('У каждого кейса свой цвет и своя редкость. Шансы видны до открытия. Белорусские номера дешевле.', 'Every case has its own colour and rarity. Odds are shown before you open. Belarusian plates are cheaper.')}</p></div>
     <label class="sr-only" for="csort2">${L('Сортировка', 'Sort')}</label><select class="inline" id="csort2">${[['id', L('По порядку', 'Default')], ['pa', L('Сначала дешёвые', 'Cheapest first')], ['pd', L('Сначала дорогие', 'Priciest first')], ['rare', L('Больше редких', 'Most rares')]].map(([v, t]) => `<option value="${v}"${CF.sort === v ? ' selected' : ''}>${t}</option>`).join('')}</select></section>
+  ${dealsSection()}
   ${featured()}
   <div class="cats" role="toolbar" aria-label="${L('Категории', 'Categories')}">${[['all', L('Все', 'All')], ...Object.keys(CFG.cats).map(k => [k, catName(k)])].map(([k, t]) => `<button class="chip" data-act="ccat" data-k="${k}" aria-pressed="${CF.cat === k}">${t} <b>${k === 'all' ? CFG.cases.length : CFG.cases.filter(c => c.cat === k).length}</b></button>`).join('')}</div>
   <div id="cgridBox" style="padding-block:18px 80px">${casesGrid()}</div></div>`;
@@ -691,7 +703,8 @@ const mkReset = () => { MK_SHOW = 24; mkSig = ''; };
 async function loadMarket(silent = false) {
   const box = $('#mres'); if (!box) return; const seq = ++mkSeq;
   const p = new URLSearchParams({ sort: M.sort }); if (M.q) p.set('q', M.q); if (M.tiers.length) p.set('tiers', M.tiers.join(',')); if (M.group) p.set('group', M.group); if (M.min !== '') p.set('min', M.min); if (M.max !== '') p.set('max', M.max); if (M.who) p.set('who', M.who);
-  let d; try { d = await GET('/api/market?' + p); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
+  // a slow or sleepy server gets a second chance before the error is shown
+  let d; try { d = await GET('/api/market?' + p).catch(() => wait(1500).then(() => GET('/api/market?' + p))); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
   if (seq !== mkSeq || !$('#mres')) return;
   // the silent refresh rewrites the grid only when something really changed — rebuilding 120 cards
   // every 12 s used to eat memory on phones and the tab would reload
@@ -732,7 +745,7 @@ VIEWS.plate = async ({ arg }) => {
       <button class="btn btn-ghost" data-act="shareplate" data-id="${p.id}">${L('Поделиться номером', 'Share this plate')}</button></section>
     <section class="split" style="padding-bottom:80px">
       <div class="panel"><h1 class="h2">${esc(plateStr(p))}</h1>
-        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd><span class="pidv">${p.id}${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.copy || 1} ${L('из', 'of')} 2</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
+        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd><span class="pidv">${p.id}${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}${blatRow(p)}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.tier === 'mythic' ? L('1 из 1 — единственный', '1 of 1 — the only one') : `${p.copy || 1} ${L('из', 'of')} 2`}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
           <dt>${L('Создан', 'Created')}</dt><dd>${date(p.created)}</dd><dt>${L('Происхождение', 'Origin')}</dt><dd>${esc(srv(p.origin))}</dd><dt>${L('Владелец', 'Owner')}</dt><dd>${p.owner ? `<a href="#/u/${esc(p.owner)}">${esc(p.owner)}</a>` : '—'}</dd></dl>
         ${l ? `<div class="row" style="margin-top:22px;justify-content:space-between"><div><p class="eyebrow">${L('В продаже', 'For sale')} · ${l.id}</p>${Price(l.price)}<p class="small" style="margin:4px 0 0">${L('Продавец', 'Seller')}: <a href="#/u/${esc(l.seller)}">${esc(l.seller)}</a></p></div>${mine ? `<span class="small">${L('Это ваше объявление', 'This is your listing')}</span>` : `<button class="btn btn-chrome btn-lg" data-act="detail" data-id="${p.id}">${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button>`}</div>` : ''}
         ${ME && !mine && !l && p.owner && p.status === 'OWNED' ? `<div class="row" style="margin-top:22px"><a class="btn btn-ghost" href="#/swap/new?to=${encodeURIComponent(p.owner)}&want=${p.id}">${IC.swap}${L('Предложить обмен владельцу', 'Offer the owner a swap')}</a></div>` : ''}
@@ -807,7 +820,7 @@ VIEWS.wallet = async ({ query }) => {
         <a class="earn" href="#/bonus"><b>TikTok</b><span>${L('1 PLT за просмотр', '1 PLT per view')}</span></a>
         <a class="earn" href="#/market"><b>${L('Купить дешевле — продать дороже', 'Buy low, sell high')}</b><span>${L('рынок между игроками', 'the player market')}</span></a></div>`}
       <form class="panel" id="topupForm" ${methods.length ? '' : 'hidden'} style="display:grid;gap:16px;align-content:start"><div class="row" style="justify-content:space-between"><h2 class="h3">${L('Пополнить', 'Top up')}</h2><label class="sr-only" for="tcur">${L('Валюта', 'Currency')}</label><select class="inline" id="tcur" name="cur">${CFG.payments.currencies.map(c => `<option${c === cur ? ' selected' : ''}>${c}</option>`).join('')}</select></div>
-        <fieldset style="border:0;padding:0;margin:0"><legend class="sr-only">${L('Пакет', 'Package')}</legend><div class="pkgs">${CFG.payments.packages.map((p, i) => `<label class="pkg"><input type="radio" name="pkg" value="${p.id}" ${i === 2 ? 'checked' : ''}>${p.tag ? `<span class="tag deal">${p.tag}</span>` : ''}<b>${fmt(p.plt)}</b><span class="small">PLT</span><span class="mono small" data-price="${esc(JSON.stringify(p.price))}">${money(p.price[cur], cur)}</span></label>`).join('')}</div></fieldset>
+        <fieldset style="border:0;padding:0;margin:0"><legend class="sr-only">${L('Пакет', 'Package')}</legend><div class="pkgs">${CFG.payments.packages.map((p, i) => `<label class="pkg${p.hot ? ' hot' : ''}${p.best ? ' best' : ''}"><input type="radio" name="pkg" value="${p.id}" ${p.hot ? 'checked' : ''}>${p.hot ? `<span class="pkg-flag">${L('Популярный', 'Popular')}</span>` : p.best ? `<span class="pkg-flag best">${L('Выгоднее всего', 'Best value')}</span>` : ''}${p.tag ? `<span class="tag deal">${p.tag}</span>` : ''}<b>${fmt(p.plt)}</b><span class="small">PLT</span><span class="mono small" data-price="${esc(JSON.stringify(p.price))}">${money(p.price[cur], cur)}</span></label>`).join('')}</div></fieldset>
         <div class="fld"><span class="small" style="font-weight:700">${L('Способ оплаты', 'Payment method')}</span>${methods.length ? methods.map((m, i) => `<label class="opt"><input type="radio" name="method" value="${m.id}" ${i === 0 ? 'checked' : ''}><b style="font-size:14px">${esc(m.name)}</b><span class="small">${esc(m.provider)}</span></label>`).join('') : `<div class="notice"><b>${L('Оплата пока не подключена', 'Payments are not connected yet')}</b>${L('Карты появятся здесь, когда владелец сайта подключит платёжный сервис.', 'Cards appear here once the site owner connects a payment provider.')}</div>`}</div>
         <dl class="kv" id="tsum"></dl>
         <button class="btn btn-chrome btn-lg" type="submit" ${methods.length ? '' : 'disabled'}>${L('Перейти к оплате', 'Continue to payment')}</button></form>
@@ -844,8 +857,8 @@ VIEWS.bonus = async () => {
       <div class="ladder">${(d.ladder || []).map((v, i) => { const day = i + 1, cur = Math.min(d.streak + (d.claimed ? 0 : 1), d.ladder.length), done = day < cur || (d.claimed && day === cur); return `<div class="lstep${done ? ' done' : ''}${!d.claimed && day === cur ? ' now' : ''}"><span>${L('День', 'Day')} ${day}${day === d.ladder.length ? '+' : ''}</span><b>+${fmt(v)}</b></div>`; }).join('')}</div>
       ${d.claimed ? `<p class="small" style="margin:0">${L('Завтра', 'Tomorrow')} +${fmt(d.amount)} PLT · ${L('через', 'in')} <span class="mono" id="dailyCd" data-t="${d.nextAt}"></span></p>` : `<button class="btn btn-chrome btn-lg" data-act="daily">${L('Забрать', 'Claim')} ${fmt(d.amount)} PLT</button>`}<p class="small" style="margin:0;opacity:.7">${L('Пропустили день — серия начнётся заново.', 'Miss a day and the streak starts over.')}</p></section>
     <section class="panel bonus-card"><p class="eyebrow">${L('Уровень', 'Level')}</p><div class="row" style="gap:14px"><span class="lvl" style="width:64px;height:64px">${LvlRing(lv, 64)}</span><div><div class="bonus-big" style="font-size:30px">LV ${lv.level}</div><p class="small" style="margin:2px 0 0">${fmt(lv.xp)} / ${fmt(lv.next)} XP</p></div></div>
-      <div class="lvl-bar"><span style="width:${Math.round(k * 100)}%"></span></div><p class="small" style="margin:0">${L('XP = PLT, потраченные на кейсы. За каждый новый уровень — 10 PLT.', 'XP = PLT spent on cases. Each new level pays 10 PLT.')}</p>
-      ${lv.unclaimed ? `<button class="btn btn-chrome" data-act="lvlclaim">${L(`Забрать ${lv.unclaimed * lv.reward} PLT за уровни`, `Claim ${lv.unclaimed * lv.reward} PLT for levels`)}</button>` : ''}</section>
+      <div class="lvl-bar"><span style="width:${Math.round(k * 100)}%"></span></div><p class="small" style="margin:0">${L(`XP = PLT, потраченные на кейсы. Чем выше уровень, тем больше награда: следующий даст ${fmt(lv.reward ?? 0)}+ PLT.`, `XP = PLT spent on cases. Higher levels pay more: the next one pays ${fmt(lv.reward ?? 0)}+ PLT.`)}</p>
+      ${lv.unclaimed ? `<button class="btn btn-chrome" data-act="lvlclaim">${L(`Забрать ${lv.total ?? lv.unclaimed * lv.reward} PLT за уровни`, `Claim ${lv.total ?? lv.unclaimed * lv.reward} PLT for levels`)}</button>` : ''}</section>
     <section class="panel bonus-card" style="--bc:rgba(168,124,255,.22)"><p class="eyebrow">${L('Промокод', 'Promo code')}</p><h2 class="h3">${L('Есть промокод?', 'Got a code?')}</h2><p class="small" style="margin:0">${L('Каждый код — один раз на аккаунт.', 'Each code works once per account.')}</p>${promoForm()}</section>
   </div>
   <section class="sec">${SH(L('Пригласи друга', 'Invite a friend'), L('Своя ссылка у каждого', 'Everyone has their own link'))}<div id="refBox" class="panel">${Spin()}</div></section>
@@ -997,7 +1010,7 @@ VIEWS.help = async () => `<div class="wrap"><section class="page-head"><div><h1 
   ['Как определяется выигрыш?', 'Сервер выбирает редкость по опубликованным шансам и создаёт номер до запуска ленты. Анимация только показывает результат.'],
   ['Что значит синяя галочка?', 'Номер есть в реестре Plate Club, его печать и история владельцев сходятся. Это не проверка настоящего госномера.'],
   ['Как работает апгрейд?', 'Ставите один номер и выбираете более редкую цель. Шанс = 90% × (оценка вашего номера / оценка цели), от 1% до 75%. При победе — новый номер выбранной редкости в том же регионе, при проигрыше номер сгорает.'],
-  ['Что такое уровни?', 'XP — это PLT, потраченные на кейсы. Для уровня n нужно 50·(n−1)·n XP. За каждый новый уровень — 10 PLT.'],
+  ['Что такое уровни?', 'XP — это PLT, потраченные на кейсы. Каждый следующий уровень набирать дольше, зато и награда за него больше: от 42 PLT за 2-й уровень до тысяч PLT за высокие.'],
   ['Почему белорусские номера дешевле?', 'Их оценка — 60% от российского номера той же редкости, зато красивые комбинации выпадают чаще.'],
   ['Сколько копий бывает у номера?', 'Каждая комбинация существует максимум в двух экземплярах: 1/2 и 2/2.'],
   ['Кто платит комиссию рынка?', `Продавец: ${CFG.fee * 100}% от цены.`],
@@ -1055,7 +1068,7 @@ function wheelSvg(chance) {
 VIEWS.upgrade = async ({ query }) => {
   const [d, rec] = await Promise.all([GET('/api/collection'), GET('/api/upgrade/recent').catch(() => ({ upgrades: [] }))]); UP.plates = d.plates.filter(p => !p.listing).sort((a, b) => b.value - a.value);
   const want = query && query.get('p'); if (want && UP.plates.find(p => p.id === want)) UP.sels = [want];
-  upPick(); if (!UP.sels.length && UP.plates.length) { const f = UP.plates.find(p => p.tier !== 'grail'); UP.sels = f ? [f.id] : []; }
+  upPick(); if (!UP.sels.length && UP.plates.length) { const f = UP.plates.find(p => p.tier !== 'grail' && p.tier !== 'mythic'); UP.sels = f ? [f.id] : []; }
   UP.angle = 0;
   return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Апгрейд', 'Upgrade')}</p><h1 class="h1" style="margin-top:12px">${L('Рискни номером', 'Risk a plate')}</h1><p class="lede" style="margin-top:12px">${L('Выбери номер и цель. Зелёный сектор — твой шанс. Колесо остановится там, где решил сервер: попал в зелёное — получаешь номер выше, нет — номер сгорает.', 'Pick a plate and a target. The green sector is your chance. The wheel stops where the server decided: land in green and you get a rarer plate, otherwise the plate burns.')}</p></div></section>
   ${UP.plates.length ? `<div class="up-grid">
@@ -1079,7 +1092,7 @@ function upPaint() {
   const ti = TI(); const cur = sel ? pk.top : 5;
   if (sel && (!UP.target || ti[UP.target] <= cur)) UP.target = CFG.tiers[Math.min(4, cur + 1)].id;
   if (sel && cur >= 4) UP.target = null;
-  $('#upTargets').innerHTML = CFG.tiers.map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
+  $('#upTargets').innerHTML = CFG.tiers.filter(t => t.id !== 'mythic').map(t => { const below = !sel || ti[t.id] <= cur; const ch = sel && !below ? upChance(sel, t.id, pk.extra) : 0; const far = sel && !below && ch < CFG.upgrade.min; const dis = below || far; return `<button class="tgt t-${t.id}" data-act="uptgt" data-t="${t.id}" aria-pressed="${UP.target === t.id}" ${dis ? 'disabled' : ''}>${Rarity(t.id)}<span class="small">≈ ${sel && !dis ? fmt(targetValue(sel, t.id)) + ' PLT · ×' + (targetValue(sel, t.id) / sel.value).toFixed(1) : '—'}</span><span class="pct">${far ? '<1%' : dis ? '—' : (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%'}</span></button>`; }).join('');
   const ch = sel && UP.target ? upChance(sel, UP.target, pk.extra) : 0;
   $('#wArc').setAttribute('stroke-dasharray', `${WC * ch} ${WC}`);
   $('#wPct').textContent = sel && UP.target ? (ch * 100).toFixed(ch < 0.1 ? 1 : 0) + '%' : '—';
@@ -1134,8 +1147,8 @@ UA.upgo = async btn => {
   }
   await wait(reduced() ? 0 : 1600); if (!$('#wheel')) { UP.busy = false; refreshMe(); return; }
   try { const d = await GET('/api/collection'); UP.plates = d.plates.filter(p => !p.listing).sort((a, b) => b.value - a.value); } catch {}
-  const firstUp = (UP.plates.find(p => p.tier !== 'grail') || {}).id || null;
-  UP.sels = [r.success && r.plate.tier !== 'grail' ? r.plate.id : firstUp].filter(Boolean);
+  const firstUp = (UP.plates.find(p => p.tier !== 'grail' && p.tier !== 'mythic') || {}).id || null;
+  UP.sels = [r.success && r.plate.tier !== 'grail' && r.plate.tier !== 'mythic' ? r.plate.id : firstUp].filter(Boolean);
   UP.busy = false; refreshMe(); if (!$('#wheel')) return; busy(btn, false); upPaint();
   $('#wheel').classList.add(r.success ? 'win' : 'lose');
 };
@@ -1374,7 +1387,7 @@ ADMIN_ACTS.udelete = async btn => {
 
 /* ---------- roulette: a readable Standoff-style strip that slows down and stops on the server's plate ---------- */
 // decorative strip cards follow the same pattern rules as the server, so a "rare" card looks rare
-const VPATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'] };
+const VPATS = { common: ['random'], fine: ['seq', 'pair'], rare: ['mirror', 'round'], elite: ['triple', 'zero', 'letters'], grail: ['full', 'zerofull'], mythic: ['full'] };
 function vDigits(k, n) {
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1)); const d = ri(1, 9); let e; do e = ri(0, 9); while (e === d);
   if (k === 'triple' || k === 'full') return String(d).repeat(n);
@@ -1394,7 +1407,7 @@ function visualPlate(c) {
   const letters = same ? l0.repeat(n) : Array.from({ length: n }, () => pick(L2)).join('');
   return { country: by ? 'BY' : 'RU', letters, digits: vDigits(pat === 'letters' ? 'random' : pat, by ? 4 : 3), region: pick(by ? c.pool.BY : c.pool.RU), tier, pattern: pat };
 }
-const cardHtml = (p, win) => `<div class="card t-${p.tier}"${win ? ' id="win"' : ''} aria-hidden="true">${Plate(p)}${Rarity(p.tier)}</div>`;
+const cardHtml = (p, win) => `<div class="card t-${p.tier}${p.tier === 'grail' || p.tier === 'mythic' ? ' hot' : ''}"${win ? ' id="win"' : ''} aria-hidden="true">${Plate(p)}${Rarity(p.tier)}</div>`;
 function bezier(p1x, p1y, p2x, p2y) {
   const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx, cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
   const sx = t => ((ax * t + bx) * t + cx) * t, sy = t => ((ay * t + by) * t + cy) * t, dx = t => (3 * ax * t + 2 * bx) * t + cx;
@@ -1414,10 +1427,10 @@ function roll(root, c, plate, spinEl, extra = 0) {
     spin.classList.remove('done'); spin.style.removeProperty('--tc');
     track.style.transform = 'translate3d(0,0,0)';
     track.innerHTML = Array.from({ length: N }, (_, i) => cardHtml(i === WIN ? plate : visualPlate(c), i === WIN)).join('');
-    const W = track.children[0].getBoundingClientRect().width + 10, center = box.clientWidth / 2;
+    const W = track.children[0].offsetWidth + parseFloat(getComputedStyle(track).columnGap || 10), center = box.clientWidth / 2; // layout sizes: the strip may still be scaling in
     const target = WIN * W + (W - 10) / 2 - center + (Math.random() - 0.5) * (W - 36) * 0.8;
     const over = Math.min(14, W * 0.08);
-    const D = reduced() ? 0 : 10500 + extra, SETTLE = 700, T = D + SETTLE;
+    const D = reduced() ? 0 : 5800 + extra, SETTLE = 650, T = D + SETTLE;
     const setX = x => { track.style.transform = `translate3d(${-x}px,0,0)`; };
     const me = { raf: 0, anim: null, t0: 0 };
     const done = () => { if (!ROLLS.has(me)) return; ROLLS.delete(me); if (!ROLLS.size) rollState = null; cancelAnimationFrame(me.raf); clearTimeout(me.tm); setX(target); if (me.anim) me.anim.cancel(); res(); };
@@ -1447,10 +1460,11 @@ function rollMany(root, c, plates) {
   const host = root.querySelector('.st-roll'); const tpl = host.querySelector('.spin');
   host.classList.add('multi'); host.innerHTML = '';
   const spins = plates.map(() => { const sp = tpl.cloneNode(true); host.appendChild(sp); return sp; });
-  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 600)));
+  return Promise.all(plates.map((p, i) => roll(root, c, p, spins[i], i * 400)));
 }
-const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70 };
+const PARTS = { common: 0, fine: 14, rare: 28, elite: 44, grail: 70, mythic: 110 };
 function celebrate(root, p, spinEl) {
+  if (p.tier === 'mythic' || p.tier === 'grail') mythicMoment(root, p.tier);
   const spin = spinEl || root.querySelector('.spin'); const col = getComputedStyle(document.documentElement).getPropertyValue('--c-' + p.tier).trim();
   spin.style.setProperty('--tc', col); spin.classList.add('done'); root.querySelector('#win')?.classList.add('win'); sfx(p.tier);
   if (reduced()) return;
@@ -1478,7 +1492,7 @@ function openStage(c) {
   STAGE = { el, c, raf: 0, dead: false, skipped: false };
   return STAGE;
 }
-function spinCase(st, ready, min = 2800) {
+function spinCase(st, ready, min = 1600) {
   return new Promise(res => {
     const box = st.el.querySelector('.box3'); let ang = 0, last = performance.now(), t0 = last, isReady = false, lastQ = 0;
     ready.then(() => { isReady = true; });
@@ -1533,7 +1547,7 @@ function resultHtml(c, p) {
   const word = tierName(p.tier); const canMore = ME && ME.balance >= priceOf(c);
   return `<div class="result t-${p.tier}"><p class="eyebrow">${esc(caseName(c))} · <span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></p>${Plate(p, { holo: true })}<p class="tier" aria-label="${esc(word)}">${[...word].map((ch, i) => `<span style="--i:${i}" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</p>
     <div class="pc-tags" style="justify-content:center">${Perks(p)}${Copy(p)}</div>
-    <dl class="kv"><dt>${L('Номер', 'Plate')}</dt><dd>${esc(plateStr(p))}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd></dl>
+    <dl class="kv"><dt>${L('Номер', 'Plate')}</dt><dd>${esc(plateStr(p))}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>${blatRow(p)}</dl>
     <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать', 'Collect')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}">${L('Ещё раз', 'Again')} · ${fmt(priceOf(c))}</button>` : ''}</div>
     <div class="row" style="justify-content:center"><a class="btn btn-sm btn-ghost" href="#/upgrade?p=${p.id}">${L('Апгрейд', 'Upgrade')}</a><button class="btn btn-sm btn-ghost" data-act="shareplate" data-id="${p.id}">📤 ${L('Похвастаться', 'Share')}</button><button class="btn btn-sm btn-ghost" data-act="listdlg" data-id="${p.id}">${L('На рынок', 'Sell')}</button><button class="btn btn-sm btn-ghost" data-act="bank" data-id="${p.id}" data-v="${p.value}" data-s="${esc(plateStr(p))}" data-after="stage">${L('Банку за', 'Bank for')} ${fmt(p.value * CFG.bankRate)}</button></div></div>`;
 }
@@ -1549,6 +1563,15 @@ function resultMulti(c, plates, n) {
     <div class="row" style="justify-content:center"><button class="btn btn-chrome btn-lg" data-act="stclose" autofocus>${L('Забрать всё', 'Collect all')}</button>${canMore ? `<button class="btn btn-glass btn-lg" data-act="open" data-case="${c.id}" data-n="${n}">${L('Ещё', 'Again')} ×${n} · ${fmt(priceOf(c) * n)}</button>` : ''}</div></div>`;
 }
 
+// a Mythic (or Grail) drop takes over the stage for a moment: colour wash, rings and a banner
+function mythicMoment(root, tier) {
+  if (reduced() || !root || !root.classList) return;
+  root.classList.remove('myth-drop', 'grail-drop'); void root.offsetWidth; root.classList.add(tier === 'mythic' ? 'myth-drop' : 'grail-drop');
+  const b = document.createElement('div'); b.className = 'myth-ban'; b.setAttribute('aria-hidden', 'true');
+  b.innerHTML = tier === 'mythic' ? `<b>${L('МИФИЧЕСКИЙ', 'MYTHIC')}</b><span>${L('один из одного', 'one of one')}</span>` : `<b>${L('ГРААЛЬ', 'GRAIL')}</b><span>${L('легендарная находка', 'a legendary find')}</span>`;
+  root.appendChild(b); setTimeout(() => b.remove(), 2600);
+}
+
 
 /* ================= games: hub, case battle, collections, swaps, auction of the day ================= */
 const GA = {};
@@ -1562,14 +1585,12 @@ VIEWS.games = async () => {
   const au = a.auction; const done = s.sets.filter(x => x.claimed).length;
   const pend = sw ? sw.incoming.filter(x => x.status === 'PENDING').length : 0;
   const card = (href, img, eyebrow, title, text, extra, cls = '') => `<a class="gcard rv ${cls}" href="${href}" style="--gimg:url(${IMG('head-' + img + '.jpg')})"><div class="gcard-bg"></div><div class="gcard-in"><p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p class="gtext">${text}</p>${extra || ''}</div><span class="gcard-go" aria-hidden="true">→</span></a>`;
-  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, «Дороже или дешевле», аукцион, коллекции и обмены — все игры на одной странице.', 'Battles, Higher or lower, auction, collections and swaps — everything in one place.')}</p></div></section>
+  return `<div class="wrap"><section class="page-head"><div><p class="eyebrow">${L('Игры', 'Games')}</p><h1 class="h1" style="margin-top:12px">${L('Во что сыграем?', 'What shall we play?')}</h1><p class="lede" style="margin-top:10px">${L('Баттлы, апгрейд, аукцион и коллекции — всё вокруг номеров.', 'Battles, upgrade, auction and collections — all about plates.')}</p></div></section>
     <div class="ggrid">
       ${card('#/battles', 5, L('Кейс-баттл', 'Case battle') + (b.open.length ? ` · <span class="live"></span>${b.open.length} ${L('ждут', 'open')}` : ''), L('Кто выбьет дороже?', 'Who pulls the priciest?'), L('2–4 игрока открывают одинаковые кейсы одновременно. Победитель забирает все номера.', '2–4 players open the same cases at once. The winner takes every plate.'), `<div class="gstat"><b>${b.open.length}</b><span>${L('открытых баттлов', 'open battles')}</span></div>`, 'big')}
       ${card('#/auction', 3, L('Аукцион дня', 'Auction of the day'), au ? esc(miniPlateTxt(au.plate)) : L('Номер дня', 'Plate of the day'), au ? L(`${tierName(au.plate.tier)} · оценка ${fmt(au.plate.value)} PLT. Ставка в последние 5 минут продлевает торги.`, `${tierName(au.plate.tier)} · value ${fmt(au.plate.value)} PLT. A bid in the last 5 minutes extends it.`) : L('Каждый день — один редкий номер.', 'One rare plate every day.'), au ? `<div class="gstat"><b>${fmt(au.topBid || au.start)}</b><span>${au.topBid ? L('текущая ставка', 'current bid') : L('стартовая цена', 'starting price')}</span></div>` : '')}
       ${card('#/sets', 1, L('Коллекции', 'Collections'), L(`${CFG.sets.length} сетов`, `${CFG.sets.length} sets`), L('Соберите регионы, узоры и редкие серии — получите PLT и значок в профиль.', 'Collect regions, patterns and rare series to earn PLT and a profile badge.'), `<div class="gstat"><b>${done}/${CFG.sets.length}</b><span>${L('собрано', 'completed')}</span></div>`)}
-      ${card('#/swap', 2, L('Обмен', 'Swaps'), L('Меняйтесь номерами', 'Trade plates'), L('Номера плюс доплата в PLT — напрямую с другим игроком, без комиссии.', 'Plates plus PLT, directly with another player, no fee.'), pend ? `<div class="gstat"><b>${pend}</b><span>${L('новых предложений', 'new offers')}</span></div>` : '')}
       ${card('#/upgrade', 6, L('Апгрейд', 'Upgrade'), L('Рискни ради редкости', 'Risk it for rarity'), L('Поставьте номер и попробуйте превратить его в редкий.', 'Stake a plate and try to turn it into a rarer one.'), '')}
-      ${card('#/hilo', 4, L('Новая игра', 'New game') + ' · <span class="live"></span>', L('Дороже или дешевле?', 'Higher or lower?'), L('Угадай, дороже ли следующий номер. 10 угадал подряд — до 1 000 PLT. Бесплатно, 5 игр в день.', 'Guess if the next plate is worth more. Ten in a row pays up to 1,000 PLT. Free, 5 games a day.'), '', 'g-new')}
       ${card('#/bonus', 1, L('Каждый день', 'Every day'), L('Колесо удачи', 'Wheel of fortune'), L('Один бесплатный спин в день: PLT или номер.', 'One free spin a day: PLT or a plate.'), '')}
     </div><div style="height:80px"></div></div>`;
 };
@@ -1653,7 +1674,7 @@ async function playBattle(ar) {
       const t = col.querySelector('[data-total]'); rollNum(t, totals[x.seat], totals[x.seat] + x.value); totals[x.seat] += x.value;
       col.querySelector('.bdrops').insertAdjacentHTML('beforeend', `<a class="bdrop t-${x.plate.tier} pop" href="#/plate/${x.plate.id}">${Plate(x.plate, { iri: false })}<span class="mono">${fmt(x.value)}</span></a>`);
       if (x.value === best && !btSkip) { col.classList.add('flash'); setTimeout(() => col.classList.remove('flash'), 900); }
-      if (['elite', 'grail'].includes(x.plate.tier) && !btSkip) sfx('grail'); else if (x.plate.tier === 'rare' && !btSkip) sfx('confirm');
+      if (['elite', 'grail', 'mythic'].includes(x.plate.tier) && !btSkip) sfx('grail'); else if (x.plate.tier === 'rare' && !btSkip) sfx('confirm');
     }
     dots[r - 1] && dots[r - 1].classList.add('on');
     await wait(r < b.rounds ? 1100 : 500);
@@ -1866,6 +1887,9 @@ GA.hlcash = async btn => { busy(btn, true, '…'); try { const r = await POST(`/
 
 VIEWS.swap.auth = true;
 
+// «Дороже или дешевле» is retired: old links lead to the games hub
+VIEWS.hilo = async () => { setTimeout(() => { if (parseRoute().name === 'hilo') location.replace('#/games'); }, 0); return ''; };
+
 
 /* ---------- actions ---------- */
 const A = Object.assign({}, ADMIN_ACTS, UA, GA);
@@ -1888,7 +1912,7 @@ A.open = async btn => {
     await burstCase(st); if (st.dead) return;
     if (r.plates && r.plates.length > 1) { await rollMany(st.el, c, r.plates); if (st.dead) return; st.el.querySelectorAll('.st-roll .spin').forEach((sp, i) => celebrate(st.el, r.plates[i], sp)); }
     else { await roll(st.el, c, r.plate); if (st.dead) return; celebrate(st.el, r.plate); }
-    await wait(reduced() ? 0 : ({ common: 800, fine: 1000, rare: 1300, elite: 1600, grail: 2100 })[r.plate.tier]); if (st.dead) return;
+    await wait(reduced() ? 0 : ({ common: 500, fine: 650, rare: 900, elite: 1200, grail: 1900, mythic: 2600 })[r.plate.tier] || 900); if (st.dead) return;
     st.el.querySelector('.st-res').innerHTML = r.plates && r.plates.length > 1 ? resultMulti(c, r.plates, r.count) : resultHtml(c, r.plate); st.el.classList.add('st-done'); st.el.querySelector('.st-skip').hidden = true;
     st.el.querySelector('.st-res [autofocus]')?.focus();
     if ($('#openAct')) { $('#openAct').innerHTML = openAction(c); if ($('#buybox')) $('#buybox').innerHTML = buyBox(c); }
@@ -1922,7 +1946,7 @@ A.detail = async btn => {
   const l = d.listing, p = d.plate; if (!l) return toast(L('Этот номер больше не продаётся.', 'This plate is no longer for sale.'), true);
   const can = ME.balance >= l.price;
   openDialog(`<div class="dlg"><div><p class="eyebrow">${L('Объявление', 'Listing')} ${l.id}</p><h2 class="h3" id="dlgTitle" style="margin-top:6px">${L('Покупка', 'Buy')} ${esc(plateStr(p))}</h2></div><div class="dlg-plate">${Plate(p, { holo: true })}</div>
-    <dl class="kv"><dt>ID</dt><dd><span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Продавец', 'Seller')}</dt><dd>${esc(l.seller)}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
+    <dl class="kv"><dt>ID</dt><dd><span class="pidv"><span class="iri-t">${p.id}</span>${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd>${blatRow(p)}<dt>${L('Продавец', 'Seller')}</dt><dd>${esc(l.seller)}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
       <dt class="tot">${L('К оплате', 'To pay')}</dt><dd class="tot">${fmt(l.price)} PLT</dd><dt>${L('Баланс после', 'Balance after')}</dt><dd>${can ? fmt(ME.balance - l.price) + ' PLT' : '—'}</dd></dl>
     ${can ? '' : `<p class="err">${L(`Не хватает ${fmt(l.price - ME.balance)} PLT.`, `${fmt(l.price - ME.balance)} PLT short.`)}</p>`}
     <div class="dlg-acts">${favBtn(p.id, l.price)}<a class="btn btn-ghost" href="#/plate/${p.id}">${L('Сначала проверить', 'Verify first')}</a><button class="btn btn-chrome" data-act="buy" data-id="${l.id}" data-price="${l.price}" ${can ? '' : 'disabled'} autofocus>${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button></div></div>`);
@@ -1970,7 +1994,7 @@ A.shareplate = async btn => {
     x.font = '700 26px "IBM Plex Mono", ui-monospace, monospace'; x.fillStyle = '#555'; x.fillText('RUS', px + pw * .86, py + ph * .76); }
   // rarity + value
   x.textAlign = 'center';
-  x.fillStyle = ({ common: '#9FB4CC', fine: '#8FD3FF', rare: '#C9A8FF', elite: '#FF7AD9', grail: '#FFD25E' })[p.tier] || '#fff';
+  x.fillStyle = ({ common: '#9FB4CC', fine: '#8FD3FF', rare: '#C9A8FF', elite: '#FF7AD9', grail: '#FFD25E', mythic: '#FF3355' })[p.tier] || '#fff';
   x.font = '800 62px Unbounded, Manrope, system-ui, sans-serif';
   x.fillText(tierName(p.tier).toUpperCase(), W / 2, py + ph + 110);
   x.fillStyle = '#DCE9F7'; x.font = '600 44px Manrope, system-ui, sans-serif';

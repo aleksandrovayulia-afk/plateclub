@@ -36,7 +36,8 @@ const mkReset = () => { MK_SHOW = 24; mkSig = ''; };
 async function loadMarket(silent = false) {
   const box = $('#mres'); if (!box) return; const seq = ++mkSeq;
   const p = new URLSearchParams({ sort: M.sort }); if (M.q) p.set('q', M.q); if (M.tiers.length) p.set('tiers', M.tiers.join(',')); if (M.group) p.set('group', M.group); if (M.min !== '') p.set('min', M.min); if (M.max !== '') p.set('max', M.max); if (M.who) p.set('who', M.who);
-  let d; try { d = await GET('/api/market?' + p); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
+  // a slow or sleepy server gets a second chance before the error is shown
+  let d; try { d = await GET('/api/market?' + p).catch(() => wait(1500).then(() => GET('/api/market?' + p))); } catch (e) { if (!silent) box.innerHTML = Empty(L('Не удалось загрузить рынок', 'Could not load the market'), esc(e.message)); return; }
   if (seq !== mkSeq || !$('#mres')) return;
   // the silent refresh rewrites the grid only when something really changed — rebuilding 120 cards
   // every 12 s used to eat memory on phones and the tab would reload
@@ -77,7 +78,7 @@ VIEWS.plate = async ({ arg }) => {
       <button class="btn btn-ghost" data-act="shareplate" data-id="${p.id}">${L('Поделиться номером', 'Share this plate')}</button></section>
     <section class="split" style="padding-bottom:80px">
       <div class="panel"><h1 class="h2">${esc(plateStr(p))}</h1>
-        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd><span class="pidv">${p.id}${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.copy || 1} ${L('из', 'of')} 2</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
+        <dl class="kv" style="margin-top:18px"><dt>ID</dt><dd><span class="pidv">${p.id}${VB()}</span></dd><dt>${L('Редкость', 'Rarity')}</dt><dd>${tierName(p.tier)}</dd>${perkOf(p).length ? `<dt>${L('Чем хорош', 'Why it’s special')}</dt><dd>${perkOf(p).map(esc).join(', ')}</dd>` : ''}${blatRow(p)}<dt>${L('Экземпляр', 'Copy')}</dt><dd>${p.tier === 'mythic' ? L('1 из 1 — единственный', '1 of 1 — the only one') : `${p.copy || 1} ${L('из', 'of')} 2`}</dd><dt>${L('Регион', 'Region')}</dt><dd>${esc(regionLabel(p))}</dd><dt>${L('Оценка', 'Value')}</dt><dd>${fmt(p.value)} PLT</dd>
           <dt>${L('Создан', 'Created')}</dt><dd>${date(p.created)}</dd><dt>${L('Происхождение', 'Origin')}</dt><dd>${esc(srv(p.origin))}</dd><dt>${L('Владелец', 'Owner')}</dt><dd>${p.owner ? `<a href="#/u/${esc(p.owner)}">${esc(p.owner)}</a>` : '—'}</dd></dl>
         ${l ? `<div class="row" style="margin-top:22px;justify-content:space-between"><div><p class="eyebrow">${L('В продаже', 'For sale')} · ${l.id}</p>${Price(l.price)}<p class="small" style="margin:4px 0 0">${L('Продавец', 'Seller')}: <a href="#/u/${esc(l.seller)}">${esc(l.seller)}</a></p></div>${mine ? `<span class="small">${L('Это ваше объявление', 'This is your listing')}</span>` : `<button class="btn btn-chrome btn-lg" data-act="detail" data-id="${p.id}">${L('Купить за', 'Buy for')} ${fmt(l.price)} PLT</button>`}</div>` : ''}
         ${ME && !mine && !l && p.owner && p.status === 'OWNED' ? `<div class="row" style="margin-top:22px"><a class="btn btn-ghost" href="#/swap/new?to=${encodeURIComponent(p.owner)}&want=${p.id}">${IC.swap}${L('Предложить обмен владельцу', 'Offer the owner a swap')}</a></div>` : ''}

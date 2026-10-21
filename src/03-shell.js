@@ -2,7 +2,7 @@
 /* ---------- routing & chrome ---------- */
 const NAVS = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['top', L('Топ', 'Top'), 'trophy'], ['bonus', L('Бонусы', 'Bonuses'), 'gift']];
 const BNAV = () => [['', L('Главная', 'Home'), 'home'], ['cases', L('Кейсы', 'Cases'), 'cases'], ['games', L('Игры', 'Games'), 'games'], ['market', L('Рынок', 'Market'), 'market'], ['collection', L('Номера', 'Plates'), 'coll']];
-const SECTION_OF = { hilo: 'games', battles: 'games', battle: 'games', sets: 'games', swap: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
+const SECTION_OF = { hilo: 'games', swap: 'market', battles: 'games', battle: 'games', sets: 'games', auction: 'games', upgrade: 'games', support: 'support', case: 'cases', transactions: 'wallet', achievements: 'bonus', rankings: 'top', plate: 'collection', verify: 'collection', u: 'top', trades: 'market' };
 let lastBal = null;
 function parseRoute() { const h = location.hash.replace(/^#\/?/, ''); const [path, qs] = h.split('?'); const seg = path.split('/').filter(Boolean).map(decodeURIComponent); return { name: seg[0] || '', arg: seg[1], query: new URLSearchParams(qs || '') }; }
 const go = h => { if (location.hash === h) render(); else location.hash = h; };
@@ -78,7 +78,7 @@ function countdown(el, ends, onEnd) {
   const t = setInterval(set, 1000); set();
 }
 function after(name) {
-  if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 12000); }
+  if (name === 'market') { loadMarket(); marketTimer = setInterval(() => { if (document.visibilityState === 'visible' && !dlg.open && parseRoute().name === 'market') loadMarket(true); }, 20000); }
   if (name === 'wallet' || name === 'transactions') walletHooks();
   if (name === 'register') regHooks();
   if (name === 'bonus') { loadRef(); loadQuests(); }
