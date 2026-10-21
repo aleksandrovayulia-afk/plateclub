@@ -15,5 +15,7 @@ services:
         generateValue: true
       - key: ADMIN_SETUP_CODE
         sync: false
+      - key: RENDER_DEPLOY_HOOK
+        sync: false
       - key: NODE_VERSION
         value: "20"

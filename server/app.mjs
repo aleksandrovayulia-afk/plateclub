@@ -1491,6 +1491,15 @@ export function createApp({ pool, env = process.env, fetchImpl = fetch, now = ()
 
   // ---- admin: settings & market ----
   R('GET', '/api/admin/settings', async () => { stAt = 0; return { settings: await settings(), defaults: SETTINGS_DEFAULT, cases: CASES.map(({ id, ru, en, name, cat, color, price, ev }) => ({ id, ru, en, name, cat, color, price, ev })) }; }, { admin: true });
+  // one-button update: asks the host (Render deploy hook) to pull the latest code from GitHub and restart
+  R('POST', '/api/admin/deploy', async ({ user }) => {
+    const hook = String(env.RENDER_DEPLOY_HOOK || env.DEPLOY_HOOK || '');
+    if (!/^https:\/\/api\.render\.com\/deploy\//.test(hook) && !/^https:\/\/api\.netlify\.com\/build_hooks\//.test(hook)) throw new HttpError(409, 'Кнопка обновления ещё не подключена: добавьте RENDER_DEPLOY_HOOK в настройках сервера.');
+    const r = await fetchImpl(hook, { method: 'POST' });
+    if (!r.ok) throw new HttpError(502, `Хостинг не принял запрос на обновление (${r.status}).`);
+    await q('INSERT INTO admin_log(admin_id,action,target) VALUES($1,$2,$3)', [user.id, 'deploy', 'latest']).catch(() => {});
+    return { ok: true };
+  }, { admin: true });
   R('POST', '/api/admin/settings', async ({ user, body }) => {
     const cur = await settings(); const next = cleanSettings({ ...cur, ...body, cases: body.cases ? body.cases : cur.cases });
     await tx(async Q => {
