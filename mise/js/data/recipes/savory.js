@@ -3,7 +3,7 @@ export default [
     id: 'borscht', t: 'Борщ', e: '🍲', c: 'savory', f: 'salty', cu: 'ru', min: 120, srv: 6, lv: 2,
     eq: ['pot', 'pan'], tg: ['soup', 'dinner'],
     d: 'Наваристый красный борщ на мясном бульоне. Со сметаной и чесноком.',
-    i: ['meat|500 г', 'beet|2 шт', 'potato|3 шт', 'carrot|1 шт', 'onion|1 шт', 'cabbage|300 г', 'tomatopaste|2 ст. л.', 'oil|3 ст. л.', 'water|2,5 л', 'garlic?|2 зубчика', 'bayleaf?|1 лист', 'greens?|пучок', 'sourcream?|для подачи', 'vinegar?|1 ч. л.'],
+    i: ['meat|500 g', 'beet|2 pc', 'potato|3 pc', 'carrot|1 pc', 'onion|1 pc', 'cabbage|300 g', 'tomatopaste|2 tbsp', 'oil|3 tbsp', 'water|2.5 l', 'garlic?|2 clove', 'bayleaf?|1 pc', 'greens?|~bunch', 'sourcream?|~serve', 'vinegar?|1 tsp'],
     s: [
       'Залейте мясо холодной водой, доведите до кипения, снимите пену. Варите на слабом огне 1,5 часа.|90',
       'Лук нарежьте, морковь и свёклу натрите на крупной тёрке или нарежьте соломкой.',
@@ -20,7 +20,7 @@ export default [
     id: 'chicken-noodle', t: 'Куриный суп с лапшой', e: '🍜', c: 'savory', f: 'salty', cu: 'ru', min: 50, srv: 5, lv: 1,
     eq: ['pot'], tg: ['soup', 'dinner'],
     d: 'Домашний лёгкий суп с прозрачным бульоном. Универсальное лекарство от всего.',
-    i: ['chicken|500 г', 'pasta|100 г', 'potato|2 шт', 'carrot|1 шт', 'onion|1 шт', 'water|2 л', 'salt|по вкусу', 'bayleaf?|1 лист', 'greens?|пучок'],
+    i: ['chicken|500 g', 'pasta|100 g', 'potato|2 pc', 'carrot|1 pc', 'onion|1 pc', 'water|2 l', 'salt|~taste', 'bayleaf?|1 pc', 'greens?|~bunch'],
     s: [
       'Положите курицу в холодную воду, доведите до кипения, снимите пену.',
       'Добавьте целую луковицу и морковь. Варите на слабом огне 30 минут.|30',
@@ -34,7 +34,7 @@ export default [
     id: 'buckwheat-mushroom', t: 'Гречка с грибами и луком', e: '🍄', c: 'savory', f: 'salty', cu: 'ru', min: 35, srv: 3, lv: 1,
     eq: ['pan', 'pot'], tg: ['dinner', 'vegan'],
     d: 'Простой сытный гарнир-блюдо из гречки и жареных грибов. Подходит для поста.',
-    i: ['buckwheat|200 г', 'mushroom|300 г', 'onion|1 шт', 'oil|2 ст. л.', 'water|400 мл', 'salt|по вкусу', 'greens?|пучок'],
+    i: ['buckwheat|200 g', 'mushroom|300 g', 'onion|1 pc', 'oil|2 tbsp', 'water|400 ml', 'salt|~taste', 'greens?|~bunch'],
     s: [
       'Промойте гречку, залейте водой, посолите. Доведите до кипения, накройте и варите на слабом огне 15 минут. Выключите и оставьте под крышкой.|15',
       'Грибы нарежьте пластинками, лук мелко порубите.',
@@ -48,7 +48,7 @@ export default [
     id: 'carbonara', t: 'Паста Карбонара', e: '🍝', c: 'savory', f: 'salty', cu: 'it', min: 25, srv: 2, lv: 2,
     eq: ['pot', 'pan'], tg: ['dinner', 'pasta'],
     d: 'Римская классика без сливок: яйца, сыр, бекон и перец.',
-    i: ['pasta|200 г', 'bacon|100 г', 'egg|3 шт', 'cheese|50 г', 'pepper|много', 'salt|по вкусу'],
+    i: ['pasta|200 g', 'bacon|100 g', 'egg|3 pc', 'cheese|50 g', 'pepper|~plenty', 'salt|~taste'],
     s: [
       'Отварите спагетти в хорошо подсоленной воде на минуту меньше, чем указано на упаковке. Перед сливом оставьте чашку воды от варки.|8',
       'Нарежьте бекон брусочками и обжарьте без масла до хрустящей корочки.|5',
@@ -63,7 +63,7 @@ export default [
     id: 'pasta-tomato', t: 'Паста с томатным соусом и чесноком', e: '🍝', c: 'savory', f: 'salty', cu: 'it', min: 25, srv: 2, lv: 1,
     eq: ['pot', 'pan'], tg: ['dinner', 'pasta', 'vegan'],
     d: 'Свежий томатный соус за 15 минут. Лучший вариант летом.',
-    i: ['pasta|200 г', 'tomato|4 шт', 'garlic|3 зубчика', 'oliveoil|3 ст. л.', 'sugar|щепотка', 'cheese?|для подачи', 'greens?|базилик'],
+    i: ['pasta|200 g', 'tomato|4 pc', 'garlic|3 clove', 'oliveoil|3 tbsp', 'sugar|~pinch', 'cheese?|~serve', 'greens?|~handful'],
     s: [
       'Сварите пасту в подсоленной воде до состояния al dente. Оставьте полстакана воды.|9',
       'Помидоры надрежьте, облейте кипятком на минуту и снимите кожицу. Нарежьте мелко.',
@@ -78,7 +78,7 @@ export default [
     id: 'plov', t: 'Плов с курицей', e: '🍛', c: 'savory', f: 'salty', cu: 'uz', min: 80, srv: 5, lv: 2,
     eq: ['pot'], tg: ['dinner'],
     d: 'Рассыпчатый плов с зирой и чесноком. Готовится в одной толстостенной кастрюле.',
-    i: ['rice|400 г', 'chicken|600 г', 'carrot|3 шт', 'onion|2 шт', 'garlic|1 головка', 'oil|100 мл', 'water|600 мл', 'cumin|1 ч. л.', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['rice|400 g', 'chicken|600 g', 'carrot|3 pc', 'onion|2 pc', 'garlic|1 head', 'oil|100 ml', 'water|600 ml', 'cumin|1 tsp', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Промойте рис до прозрачной воды и замочите на 30 минут в тёплой подсоленной воде.|30',
       'В кастрюле с толстым дном разогрейте масло. Обжарьте курицу до золотистого цвета 8 минут.|8',
@@ -94,7 +94,7 @@ export default [
     id: 'fried-potato', t: 'Жареная картошка с луком', e: '🥔', c: 'savory', f: 'salty', cu: 'ru', min: 35, srv: 3, lv: 1,
     eq: ['pan'], tg: ['dinner', 'vegan'],
     d: 'С хрустящей корочкой. Секрет — сухой картофель и горячая сковорода.',
-    i: ['potato|700 г', 'onion|1 шт', 'oil|4 ст. л.', 'salt|по вкусу', 'greens?|пучок'],
+    i: ['potato|700 g', 'onion|1 pc', 'oil|4 tbsp', 'salt|~taste', 'greens?|~bunch'],
     s: [
       'Очистите картофель, нарежьте брусочками или тонкими ломтиками. Промойте от крахмала и тщательно обсушите полотенцем.',
       'Разогрейте сковороду с маслом. Выложите картофель и жарьте на среднем огне без крышки 10 минут, не перемешивая.|10',
@@ -108,7 +108,7 @@ export default [
     id: 'draniki', t: 'Драники', e: '🥔', c: 'savory', f: 'salty', cu: 'ru', min: 30, srv: 3, lv: 1,
     eq: ['pan', 'grater'], tg: ['dinner', 'breakfast'],
     d: 'Картофельные оладьи с хрустящей корочкой. Подаются со сметаной.',
-    i: ['potato|600 г', 'onion|1/2 шт', 'egg|1 шт', 'flour|2 ст. л.', 'oil|4 ст. л.', 'salt|по вкусу', 'sourcream?|для подачи'],
+    i: ['potato|600 g', 'onion|1/2 pc', 'egg|1 pc', 'flour|2 tbsp', 'oil|4 tbsp', 'salt|~taste', 'sourcream?|~serve'],
     s: [
       'Натрите картофель и лук на мелкой тёрке. Отожмите лишнюю жидкость руками или через марлю.',
       'Добавьте яйцо, муку и соль. Перемешайте.',
@@ -122,7 +122,7 @@ export default [
     id: 'omelet', t: 'Нежный омлет', e: '🍳', c: 'savory', f: 'salty', cu: 'fr', min: 10, srv: 1, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'quick', 'vegetarian'],
     d: 'Пышный и нежный омлет без резины. Главное — слабый огонь.',
-    i: ['egg|3 шт', 'milk|50 мл', 'butter|10 г', 'cheese?|30 г', 'greens?|пучок', 'salt|щепотка'],
+    i: ['egg|3 pc', 'milk|50 ml', 'butter|10 g', 'cheese?|30 g', 'greens?|~bunch', 'salt|~pinch'],
     s: [
       'Взбейте яйца с молоком и солью вилкой до однородности — только до смешивания, без пены.',
       'Растопите масло в сковороде на среднем огне.',
@@ -135,7 +135,7 @@ export default [
     id: 'shakshuka', t: 'Шакшука', e: '🍳', c: 'savory', f: 'salty', cu: 'me', min: 30, srv: 2, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'dinner', 'vegetarian'],
     d: 'Яйца в пряном томатном соусе. Восточный завтрак, который хочется съесть с хлебом.',
-    i: ['egg|4 шт', 'tomato|4 шт', 'bellpepper|1 шт', 'onion|1 шт', 'garlic|2 зубчика', 'paprika|1 ч. л.', 'oil|2 ст. л.', 'greens?|пучок', 'bread?|для подачи'],
+    i: ['egg|4 pc', 'tomato|4 pc', 'bellpepper|1 pc', 'onion|1 pc', 'garlic|2 clove', 'paprika|1 tsp', 'oil|2 tbsp', 'greens?|~bunch', 'bread?|~serve'],
     s: [
       'Лук и перец нарежьте кубиками, обжарьте на масле 7 минут до мягкости.|7',
       'Добавьте чеснок и паприку, жарьте 30 секунд.',
@@ -150,7 +150,7 @@ export default [
     id: 'chicken-cutlets', t: 'Рубленые куриные котлеты', e: '🍗', c: 'savory', f: 'salty', cu: 'ru', min: 45, srv: 4, lv: 1,
     eq: ['pan'], tg: ['dinner'],
     d: 'Сочные котлеты из рубленого филе, не из фарша — поэтому они не пересыхают.',
-    i: ['chicken|600 г', 'onion|1 шт', 'egg|1 шт', 'sourcream|2 ст. л.', 'flour|2 ст. л.', 'oil|3 ст. л.', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['chicken|600 g', 'onion|1 pc', 'egg|1 pc', 'sourcream|2 tbsp', 'flour|2 tbsp', 'oil|3 tbsp', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Нарежьте куриное филе мелкими кубиками размером с горошину. Лук натрите на мелкой тёрке или мелко порубите.',
       'Добавьте яйцо, сметану, муку, соль и перец. Тщательно перемешайте.',
@@ -164,7 +164,7 @@ export default [
     id: 'meatballs-tomato', t: 'Тефтели в томатном соусе', e: '🍅', c: 'savory', f: 'salty', cu: 'ru', min: 50, srv: 4, lv: 2,
     eq: ['pan'], tg: ['dinner'],
     d: 'Мягкие тефтели в сметанно-томатной подливе. Подходят к пюре, рису и макаронам.',
-    i: ['mince|500 г', 'bread|2 ломтика', 'milk|50 мл', 'onion|1 шт', 'egg|1 шт', 'flour|2 ст. л.', 'tomatopaste|2 ст. л.', 'sourcream|2 ст. л.', 'water|300 мл', 'oil|3 ст. л.'],
+    i: ['mince|500 g', 'bread|2 slice', 'milk|50 ml', 'onion|1 pc', 'egg|1 pc', 'flour|2 tbsp', 'tomatopaste|2 tbsp', 'sourcream|2 tbsp', 'water|300 ml', 'oil|3 tbsp'],
     s: [
       'Замочите хлеб в молоке на 5 минут и отожмите.|5',
       'Смешайте фарш с мелко порубленным луком, хлебом, яйцом, солью и перцем. Вымешайте до однородности.',
@@ -179,7 +179,7 @@ export default [
     id: 'roast-chicken', t: 'Курица с картофелем в духовке', e: '🍗', c: 'savory', f: 'salty', cu: 'ru', min: 80, srv: 4, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['dinner', 'party'],
     d: 'Хрустящая кожа и мягкий картофель, пропитанный соком. Почти без усилий.',
-    i: ['chicken|1 кг', 'potato|800 г', 'garlic|4 зубчика', 'paprika|2 ч. л.', 'oil|3 ст. л.', 'salt|по вкусу', 'pepper|по вкусу', 'lemon?|1/2 шт'],
+    i: ['chicken|1 kg', 'potato|800 g', 'garlic|4 clove', 'paprika|2 tsp', 'oil|3 tbsp', 'salt|~taste', 'pepper|~taste', 'lemon?|1/2 pc'],
     s: [
       'Разогрейте духовку до 200 °C.',
       'Курицу натрите смесью масла, паприки, давленого чеснока, соли и перца. По желанию оставьте мариноваться на 15 минут.|15',
@@ -193,7 +193,7 @@ export default [
     id: 'salmon-lemon', t: 'Лосось с лимоном и зеленью', e: '🐟', c: 'savory', f: 'salty', cu: 'int', min: 25, srv: 2, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['dinner', 'quick', 'sport'],
     d: 'Нежная рыба, запечённая с лимоном. Ужин за 25 минут.',
-    i: ['salmon|2 стейка (400 г)', 'lemon|1 шт', 'oliveoil|2 ст. л.', 'garlic?|1 зубчик', 'greens?|пучок', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['salmon|2 steak', 'lemon|1 pc', 'oliveoil|2 tbsp', 'garlic?|1 clove', 'greens?|~bunch', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Разогрейте духовку до 200 °C.',
       'Обсушите рыбу салфеткой, натрите маслом, солью, перцем и чесноком.',
@@ -207,7 +207,7 @@ export default [
     id: 'greek-salad', t: 'Греческий салат', e: '🥗', c: 'savory', f: 'salty', cu: 'gr', min: 10, srv: 2, lv: 1,
     eq: [], tg: ['salad', 'quick', 'noequip', 'vegetarian'],
     d: 'Свежие овощи, фета и оливки. Крупная нарезка — главный секрет.',
-    i: ['tomato|3 шт', 'cucumber|2 шт', 'bellpepper|1 шт', 'onion|1/2 шт', 'feta|150 г', 'olives|10 шт', 'oliveoil|3 ст. л.', 'salt|щепотка'],
+    i: ['tomato|3 pc', 'cucumber|2 pc', 'bellpepper|1 pc', 'onion|1/2 pc', 'feta|150 g', 'olives|10 pc', 'oliveoil|3 tbsp', 'salt|~pinch'],
     s: [
       'Помидоры нарежьте крупными дольками, огурцы — полукружками, перец — полосками, лук — тонкими кольцами.',
       'Выложите овощи в миску, слегка посолите и добавьте оливки.',
@@ -220,7 +220,7 @@ export default [
     id: 'caesar', t: 'Салат Цезарь с курицей', e: '🥗', c: 'savory', f: 'salty', cu: 'us', min: 30, srv: 2, lv: 2,
     eq: ['pan'], tg: ['salad', 'dinner'],
     d: 'Хрустящие сухарики, курица и пряная заправка без сырого яйца.',
-    i: ['chicken|250 г', 'lettuce|1 пучок', 'bread|2 ломтика', 'cheese|40 г', 'garlic|1 зубчик', 'mayo|2 ст. л.', 'mustard?|1 ч. л.', 'lemon?|1/2 шт', 'oil|2 ст. л.'],
+    i: ['chicken|250 g', 'lettuce|~bunch', 'bread|2 slice', 'cheese|40 g', 'garlic|1 clove', 'mayo|2 tbsp', 'mustard?|1 tsp', 'lemon?|1/2 pc', 'oil|2 tbsp'],
     s: [
       'Нарежьте хлеб кубиками, смешайте с маслом и размятым чесноком. Подсушите на сковороде 4–5 минут до хруста.|5',
       'Куриное филе посолите, поперчите и обжарьте по 5–6 минут с каждой стороны. Дайте отдохнуть и нарежьте.|11',
@@ -234,7 +234,7 @@ export default [
     id: 'ratatouille', t: 'Овощное рагу', e: '🍆', c: 'savory', f: 'salty', cu: 'fr', min: 50, srv: 4, lv: 1,
     eq: ['pot'], tg: ['dinner', 'vegan'],
     d: 'Тушёные летние овощи с чесноком и зеленью. Подходит как гарнир или самостоятельное блюдо.',
-    i: ['zucchini|2 шт', 'eggplant|1 шт', 'bellpepper|2 шт', 'tomato|3 шт', 'onion|1 шт', 'garlic|2 зубчика', 'oil|3 ст. л.', 'salt|по вкусу', 'greens?|пучок'],
+    i: ['zucchini|2 pc', 'eggplant|1 pc', 'bellpepper|2 pc', 'tomato|3 pc', 'onion|1 pc', 'garlic|2 clove', 'oil|3 tbsp', 'salt|~taste', 'greens?|~bunch'],
     s: [
       'Нарежьте кабачок, баклажан и перец крупными кубиками. Помидоры нарежьте мелко.',
       'В кастрюле на масле обжарьте лук 3 минуты, добавьте баклажан и жарьте 5 минут.|8',
@@ -248,7 +248,7 @@ export default [
     id: 'fried-rice', t: 'Жареный рис с яйцом и овощами', e: '🍚', c: 'savory', f: 'salty', cu: 'as', min: 20, srv: 2, lv: 1,
     eq: ['pan'], tg: ['dinner', 'quick'],
     d: 'Быстрый ужин из вчерашнего риса. Хорошо спасает, если в холодильнике почти пусто.',
-    i: ['rice|1 стакан готового риса', 'egg|2 шт', 'carrot|1 шт', 'peas?|80 г', 'soy|3 ст. л.', 'garlic|1 зубчик', 'oil|2 ст. л.', 'greens?|пучок'],
+    i: ['rice|200 g', 'egg|2 pc', 'carrot|1 pc', 'peas?|80 g', 'soy|3 tbsp', 'garlic|1 clove', 'oil|2 tbsp', 'greens?|~bunch'],
     s: [
       'Используйте охлаждённый рис, сваренный накануне: свежий слипнется.',
       'Разогрейте масло в сковороде на сильном огне. Обжарьте мелко нарезанную морковь и чеснок 2 минуты.|2',
@@ -262,7 +262,7 @@ export default [
     id: 'avocado-toast', t: 'Тост с авокадо и яйцом', e: '🥑', c: 'savory', f: 'salty', cu: 'us', min: 10, srv: 1, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'quick', 'vegetarian'],
     d: 'Хрустящий хлеб, кремовое авокадо и яйцо. Модный завтрак, который действительно вкусный.',
-    i: ['bread|2 ломтика', 'avocado|1 шт', 'egg|2 шт', 'lemon?|несколько капель', 'oil|1 ч. л.', 'salt|щепотка', 'pepper|щепотка'],
+    i: ['bread|2 slice', 'avocado|1 pc', 'egg|2 pc', 'lemon?|~drops', 'oil|1 tsp', 'salt|~pinch', 'pepper|~pinch'],
     s: [
       'Подсушите хлеб на сухой сковороде или в тостере до хруста.|3',
       'Разомните авокадо вилкой с солью, перцем и каплями лимона.',
@@ -275,7 +275,7 @@ export default [
     id: 'croque', t: 'Горячий бутерброд с сыром и ветчиной', e: '🥪', c: 'savory', f: 'salty', cu: 'fr', min: 10, srv: 2, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'quick', 'snack'],
     d: 'Хрустящий тост с тягучим сыром внутри. Готовится за 10 минут.',
-    i: ['bread|4 ломтика', 'ham|4 ломтика', 'cheese|100 г', 'butter|20 г'],
+    i: ['bread|4 slice', 'ham|4 slice', 'cheese|100 g', 'butter|20 g'],
     s: [
       'Намажьте тонким слоем масла одну сторону каждого ломтика хлеба.',
       'На две части положите ветчину и сыр, накройте оставшимися кусочками маслом наружу.',
@@ -288,7 +288,7 @@ export default [
     id: 'pumpkin-soup', t: 'Крем-суп из тыквы', e: '🎃', c: 'savory', f: 'salty', cu: 'fr', min: 40, srv: 4, lv: 1,
     eq: ['pot', 'blender'], tg: ['soup', 'dinner', 'vegetarian'],
     d: 'Бархатный оранжевый суп со сливками. Согревает осенью.',
-    i: ['pumpkin|600 г', 'onion|1 шт', 'carrot|1 шт', 'cream|100 мл', 'oil|2 ст. л.', 'water|600 мл', 'ginger?|щепотка', 'salt|по вкусу'],
+    i: ['pumpkin|600 g', 'onion|1 pc', 'carrot|1 pc', 'cream|100 ml', 'oil|2 tbsp', 'water|600 ml', 'ginger?|~pinch', 'salt|~taste'],
     s: [
       'Нарежьте тыкву, морковь и лук кубиками.',
       'В кастрюле обжарьте лук на масле 3 минуты, добавьте морковь и тыкву, жарьте 5 минут.|8',
@@ -302,7 +302,7 @@ export default [
     id: 'mushroom-soup', t: 'Грибной крем-суп', e: '🍄', c: 'savory', f: 'salty', cu: 'fr', min: 35, srv: 4, lv: 1,
     eq: ['pot', 'blender'], tg: ['soup', 'dinner', 'vegetarian'],
     d: 'Нежный суп из шампиньонов и картофеля. Насыщенный вкус при простом составе.',
-    i: ['mushroom|400 г', 'potato|2 шт', 'onion|1 шт', 'cream|150 мл', 'butter|20 г', 'water|700 мл', 'salt|по вкусу'],
+    i: ['mushroom|400 g', 'potato|2 pc', 'onion|1 pc', 'cream|150 ml', 'butter|20 g', 'water|700 ml', 'salt|~taste'],
     s: [
       'Нарежьте лук и грибы, картофель — кубиками.',
       'Растопите масло в кастрюле, обжарьте лук 3 минуты, добавьте грибы и жарьте 8 минут, пока не испарится жидкость.|11',
@@ -315,7 +315,7 @@ export default [
     id: 'frittata', t: 'Фриттата с овощами', e: '🍳', c: 'savory', f: 'salty', cu: 'it', min: 25, srv: 2, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'dinner', 'vegetarian'],
     d: 'Итальянский омлет с овощами и сыром. Выходит плотным, как пирог.',
-    i: ['egg|5 шт', 'zucchini|1 шт', 'tomato|1 шт', 'cheese|50 г', 'onion?|1/2 шт', 'oil|1 ст. л.', 'salt|по вкусу'],
+    i: ['egg|5 pc', 'zucchini|1 pc', 'tomato|1 pc', 'cheese|50 g', 'onion?|1/2 pc', 'oil|1 tbsp', 'salt|~taste'],
     s: [
       'Нарежьте кабачок и лук, разогрейте масло и обжарьте их 5 минут.|5',
       'Яйца слегка взбейте с солью, влейте в сковороду. Сверху выложите кружки помидора и посыпьте сыром.',
@@ -328,7 +328,7 @@ export default [
     id: 'shawarma', t: 'Домашняя шаурма', e: '🌯', c: 'savory', f: 'salty', cu: 'me', min: 35, srv: 2, lv: 1,
     eq: ['pan'], tg: ['dinner', 'snack'],
     d: 'Курица, свежие овощи и чесночный соус в тонком лаваше.',
-    i: ['lavash|2 шт', 'chicken|300 г', 'cabbage|150 г', 'tomato|1 шт', 'cucumber|1 шт', 'sourcream|3 ст. л.', 'garlic|1 зубчик', 'mayo?|1 ст. л.', 'paprika?|1 ч. л.', 'oil|2 ст. л.'],
+    i: ['lavash|2 pc', 'chicken|300 g', 'cabbage|150 g', 'tomato|1 pc', 'cucumber|1 pc', 'sourcream|3 tbsp', 'garlic|1 clove', 'mayo?|1 tbsp', 'paprika?|1 tsp', 'oil|2 tbsp'],
     s: [
       'Курицу нарежьте полосками, посыпьте паприкой и солью. Обжарьте на масле 8–10 минут до золотистого цвета.|9',
       'Смешайте сметану, майонез и пропущенный через пресс чеснок.',
@@ -342,7 +342,7 @@ export default [
     id: 'meat-french', t: 'Мясо по-французски', e: '🥩', c: 'savory', f: 'salty', cu: 'ru', min: 75, srv: 4, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['dinner', 'party'],
     d: 'Свинина с картофелем и сыром под майонезом. Праздничное блюдо без лишней возни.',
-    i: ['meat|500 г', 'potato|3 шт', 'onion|2 шт', 'cheese|150 г', 'mayo|4 ст. л.', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['meat|500 g', 'potato|3 pc', 'onion|2 pc', 'cheese|150 g', 'mayo|4 tbsp', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Разогрейте духовку до 190 °C.',
       'Мясо нарежьте ломтиками толщиной 1 см, слегка отбейте, посолите и поперчите.',
@@ -356,7 +356,7 @@ export default [
     id: 'navy-pasta', t: 'Макароны по-флотски', e: '🍝', c: 'savory', f: 'salty', cu: 'ru', min: 30, srv: 3, lv: 1,
     eq: ['pot', 'pan'], tg: ['dinner', 'quick'],
     d: 'Макароны с обжаренным фаршем и луком. Студенческая классика.',
-    i: ['pasta|250 г', 'mince|300 г', 'onion|1 шт', 'oil|2 ст. л.', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['pasta|250 g', 'mince|300 g', 'onion|1 pc', 'oil|2 tbsp', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Отварите макароны в подсоленной воде до готовности.|9',
       'Мелко нарежьте лук и обжарьте на масле 3 минуты.|3',
@@ -369,7 +369,7 @@ export default [
     id: 'mashed-potato', t: 'Картофельное пюре', e: '🥔', c: 'savory', f: 'salty', cu: 'ru', min: 30, srv: 4, lv: 1,
     eq: ['pot'], tg: ['dinner', 'vegetarian'],
     d: 'Воздушное пюре со сливочным маслом. Главное — тёплое молоко.',
-    i: ['potato|1 кг', 'butter|50 г', 'milk|150 мл', 'salt|по вкусу'],
+    i: ['potato|1 kg', 'butter|50 g', 'milk|150 ml', 'salt|~taste'],
     s: [
       'Картофель очистите и нарежьте крупными кусками. Залейте холодной подсоленной водой.',
       'Варите 20 минут после закипания до полной мягкости.|20',
@@ -382,7 +382,7 @@ export default [
     id: 'olivier', t: 'Салат Оливье', e: '🥗', c: 'savory', f: 'salty', cu: 'ru', min: 60, srv: 6, lv: 1,
     eq: ['pot'], tg: ['salad', 'party'],
     d: 'Новогодний салат с колбасой, солёными огурцами и горошком.',
-    i: ['potato|3 шт', 'carrot|2 шт', 'egg|4 шт', 'pickle|3 шт', 'peas|200 г', 'sausage|300 г', 'mayo|5 ст. л.', 'salt|по вкусу'],
+    i: ['potato|3 pc', 'carrot|2 pc', 'egg|4 pc', 'pickle|3 pc', 'peas|200 g', 'sausage|300 g', 'mayo|5 tbsp', 'salt|~taste'],
     s: [
       'Картофель и морковь сварите в кожуре до мягкости (около 25 минут), яйца сварите вкрутую 10 минут.|25',
       'Остудите овощи и яйца, очистите.',
@@ -396,7 +396,7 @@ export default [
     id: 'tuna-corn-salad', t: 'Салат с тунцом и кукурузой', e: '🥗', c: 'savory', f: 'salty', cu: 'int', min: 10, srv: 2, lv: 1,
     eq: [], tg: ['salad', 'quick', 'noequip', 'sport'],
     d: 'Салат из консервов за 10 минут. Без плиты, без духовки.',
-    i: ['tuna|1 банка', 'corn|1/2 банки', 'cucumber|1 шт', 'lettuce?|несколько листьев', 'mayo|2 ст. л.', 'lemon?|1/2 шт', 'pepper|по вкусу'],
+    i: ['tuna|1 can', 'corn|1/2 can', 'cucumber|1 pc', 'lettuce?|~fewleaves', 'mayo|2 tbsp', 'lemon?|1/2 pc', 'pepper|~taste'],
     s: [
       'Слейте жидкость из консервов. Разомните тунец вилкой.',
       'Огурец нарежьте кубиками.',
@@ -409,7 +409,7 @@ export default [
     id: 'tuna-sandwich', t: 'Сэндвич с тунцом', e: '🥪', c: 'savory', f: 'salty', cu: 'us', min: 5, srv: 1, lv: 1,
     eq: [], tg: ['snack', 'quick', 'noequip'],
     d: 'Самый быстрый обед без приготовления. Подойдёт даже без плиты.',
-    i: ['bread|2 ломтика', 'tuna|1/2 банки', 'cucumber|1/2 шт', 'mayo|1 ст. л.', 'lettuce?|1 лист'],
+    i: ['bread|2 slice', 'tuna|1/2 can', 'cucumber|1/2 pc', 'mayo|1 tbsp', 'lettuce?|1 pc'],
     s: [
       'Разомните тунец вилкой, смешайте с майонезом.',
       'Нарежьте огурец тонкими кружками.',
@@ -421,7 +421,7 @@ export default [
     id: 'cabbage-sausage', t: 'Тушёная капуста с сосисками', e: '🥬', c: 'savory', f: 'salty', cu: 'ru', min: 40, srv: 3, lv: 1,
     eq: ['pan'], tg: ['dinner'],
     d: 'Простой ужин из капусты, моркови и сосисок. Сытно и недорого.',
-    i: ['cabbage|600 г', 'sausage|4 шт', 'onion|1 шт', 'carrot|1 шт', 'tomatopaste|1 ст. л.', 'oil|3 ст. л.', 'salt|по вкусу'],
+    i: ['cabbage|600 g', 'sausage|4 pc', 'onion|1 pc', 'carrot|1 pc', 'tomatopaste|1 tbsp', 'oil|3 tbsp', 'salt|~taste'],
     s: [
       'Капусту нашинкуйте, лук нарежьте, морковь натрите.',
       'Обжарьте лук с морковью на масле 5 минут.|5',
@@ -434,7 +434,7 @@ export default [
     id: 'khachapuri', t: 'Хачапури на сковороде', e: '🥘', c: 'savory', f: 'salty', cu: 'ge', min: 40, srv: 3, lv: 2,
     eq: ['pan'], tg: ['dinner', 'snack'],
     d: 'Ленивые лепёшки с сыром. Тесто без дрожжей, на кефире.',
-    i: ['kefir|200 мл', 'flour|300 г', 'soda|1/2 ч. л.', 'cheese|250 г', 'egg|1 шт', 'butter|20 г', 'salt|щепотка'],
+    i: ['kefir|200 ml', 'flour|300 g', 'soda|1/2 tsp', 'cheese|250 g', 'egg|1 pc', 'butter|20 g', 'salt|~pinch'],
     s: [
       'Смешайте кефир с содой и солью. Постепенно подсыпая муку, замесите мягкое тесто. Оставьте на 15 минут под полотенцем.|15',
       'Натрите сыр, смешайте с яйцом.',
@@ -448,7 +448,7 @@ export default [
     id: 'airfryer-wings', t: 'Куриные крылья в аэрогриле', e: '🍗', c: 'savory', f: 'salty', cu: 'int', min: 55, srv: 3, lv: 1,
     eq: ['airfryer'], tg: ['dinner', 'snack'],
     d: 'Хрустящие крылья с мёдом и соевым соусом без капли лишнего масла.',
-    i: ['chicken|800 г', 'soy|2 ст. л.', 'honey|1 ст. л.', 'garlic|2 зубчика', 'paprika|1 ч. л.'],
+    i: ['chicken|800 g', 'soy|2 tbsp', 'honey|1 tbsp', 'garlic|2 clove', 'paprika|1 tsp'],
     s: [
       'Смешайте соевый соус, мёд, измельчённый чеснок и паприку.',
       'Залейте крылья маринадом и оставьте на 30 минут.|30',
@@ -461,7 +461,7 @@ export default [
     id: 'lasagna-pan', t: 'Ленивая лазанья на сковороде', e: '🍝', c: 'savory', f: 'salty', cu: 'it', min: 45, srv: 4, lv: 2,
     eq: ['pan'], tg: ['dinner'],
     d: 'Всё в одной сковороде: фарш, томатный соус, макароны и сыр. Вкус лазаньи без духовки.',
-    i: ['pasta|250 г', 'mince|300 г', 'onion|1 шт', 'tomatopaste|3 ст. л.', 'cheese|150 г', 'water|500 мл', 'garlic?|2 зубчика', 'oil|2 ст. л.', 'salt|по вкусу'],
+    i: ['pasta|250 g', 'mince|300 g', 'onion|1 pc', 'tomatopaste|3 tbsp', 'cheese|150 g', 'water|500 ml', 'garlic?|2 clove', 'oil|2 tbsp', 'salt|~taste'],
     s: [
       'Обжарьте на масле лук 3 минуты, добавьте фарш и жарьте 8 минут, разбивая комки.|11',
       'Добавьте чеснок, томатную пасту и воду, посолите. Доведите до кипения.',

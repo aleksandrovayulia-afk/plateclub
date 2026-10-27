@@ -1,14 +1,13 @@
 {
-  "name": "Mise — кухня с помощником",
+  "name": "Mise — recetas · рецепты · recipes",
   "short_name": "Mise",
-  "description": "Что в холодильнике? Подберу рецепт под вашу кухню и проведу по готовке шаг за шагом.",
-  "lang": "ru",
-  "start_url": "./#/",
+  "description": "Русский · English · Español. Что в холодильнике? / What's in the fridge? / ¿Qué hay en la nevera?",
+    "start_url": "./#/",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6f4ef",
-  "theme_color": "#f6f4ef",
+  "background_color": "#f7f2ea",
+  "theme_color": "#f7f2ea",
   "categories": ["food", "lifestyle"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
@@ -17,8 +16,8 @@
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
   ],
   "shortcuts": [
-    { "name": "Что в холодильнике", "url": "./#/" },
-    { "name": "Помощник", "url": "./#/assistant" },
-    { "name": "Рецепты", "url": "./#/recipes" }
+    { "name": "Fridge / Холодильник / Nevera", "url": "./#/fridge" },
+    { "name": "Assistant / Помощник / Asistente", "url": "./#/assistant" },
+    { "name": "Recipes / Рецепты / Recetas", "url": "./#/recipes" }
   ]
 }

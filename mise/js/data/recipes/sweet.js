@@ -3,7 +3,7 @@ export default [
     id: 'syrniki', t: 'Сырники', e: '🥞', c: 'sweet', f: 'sweet', cu: 'ru', min: 25, srv: 3, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'vegetarian'],
     d: 'Румяные снаружи, нежные внутри. Главный завтрак из творога.',
-    i: ['tvorog|500 г', 'egg|1 шт', 'sugar|2 ст. л.', 'flour|4 ст. л.', 'vanilla?|щепотка', 'oil|3 ст. л.', 'sourcream?|для подачи'],
+    i: ['tvorog|500 g', 'egg|1 pc', 'sugar|2 tbsp', 'flour|4 tbsp', 'vanilla?|~pinch', 'oil|3 tbsp', 'sourcream?|~serve'],
     s: [
       'Разомните творог вилкой или протрите через сито, чтобы не осталось крупных комков.',
       'Добавьте яйцо, сахар, ваниль и 3 ст. л. муки. Перемешайте — масса должна держать форму, но не быть тугой.',
@@ -17,7 +17,7 @@ export default [
     id: 'blini', t: 'Тонкие блины', e: '🥞', c: 'sweet', f: 'sweet', cu: 'ru', min: 40, srv: 4, lv: 2,
     eq: ['pan', 'whisk'], tg: ['breakfast', 'vegetarian'],
     d: 'Кружевные блины на молоке: тонкие, эластичные, не рвутся.',
-    i: ['milk|500 мл', 'egg|2 шт', 'flour|200 г', 'sugar|2 ст. л.', 'salt|1/2 ч. л.', 'oil|3 ст. л.', 'butter?|20 г для смазывания'],
+    i: ['milk|500 ml', 'egg|2 pc', 'flour|200 g', 'sugar|2 tbsp', 'salt|1/2 tsp', 'oil|3 tbsp', 'butter?|~grease'],
     s: [
       'Взбейте венчиком яйца с сахаром и солью.',
       'Влейте половину молока, понемногу подсыпая муку и размешивая до отсутствия комков.',
@@ -33,7 +33,7 @@ export default [
     id: 'oladyi', t: 'Оладьи на кефире', e: '🥞', c: 'sweet', f: 'sweet', cu: 'ru', min: 25, srv: 4, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'vegetarian', 'quick'],
     d: 'Пышные оладьи за 15 минут. Кефир и сода делают их воздушными.',
-    i: ['kefir|250 мл', 'egg|1 шт', 'flour|200 г', 'sugar|2 ст. л.', 'soda|1/2 ч. л.', 'salt|щепотка', 'oil|3 ст. л.'],
+    i: ['kefir|250 ml', 'egg|1 pc', 'flour|200 g', 'sugar|2 tbsp', 'soda|1/2 tsp', 'salt|~pinch', 'oil|3 tbsp'],
     s: [
       'Смешайте кефир, яйцо, сахар и соль.',
       'Добавьте муку с содой и размешайте до консистенции густой сметаны.',
@@ -47,7 +47,7 @@ export default [
     id: 'sharlotka', t: 'Шарлотка с яблоками', e: '🍎', c: 'sweet', f: 'sweet', cu: 'ru', min: 60, srv: 6, lv: 1,
     eq: ['oven', 'bakeform', 'mixer'], tg: ['dessert', 'vegetarian'],
     d: 'Воздушный бисквит с кислыми яблоками. Тесто — всего три основных ингредиента.',
-    i: ['apple|4 шт', 'egg|4 шт', 'sugar|200 г', 'flour|200 г', 'cinnamon?|1 ч. л.', 'butter|10 г'],
+    i: ['apple|4 pc', 'egg|4 pc', 'sugar|200 g', 'flour|200 g', 'cinnamon?|1 tsp', 'butter|10 g'],
     s: [
       'Разогрейте духовку до 180 °C. Форму смажьте маслом.',
       'Яблоки нарежьте дольками и выложите на дно формы, посыпьте корицей.',
@@ -61,7 +61,7 @@ export default [
     id: 'oat-cookies', t: 'Овсяное печенье из банана', e: '🍪', c: 'sweet', f: 'sweet', cu: 'us', min: 30, srv: 12, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['vegan', 'sport'],
     d: 'Два основных ингредиента: банан и овсянка. Без муки, без сахара и яиц.',
-    i: ['oats|200 г', 'banana|2 шт', 'raisin?|50 г', 'cinnamon?|1 ч. л.', 'nuts?|40 г'],
+    i: ['oats|200 g', 'banana|2 pc', 'raisin?|50 g', 'cinnamon?|1 tsp', 'nuts?|40 g'],
     s: [
       'Разогрейте духовку до 180 °C и застелите противень пергаментом.',
       'Разомните бананы вилкой в мягкое пюре.',
@@ -76,7 +76,7 @@ export default [
     id: 'brownie', t: 'Брауни', e: '🍫', c: 'sweet', f: 'sweet', cu: 'us', min: 50, srv: 9, lv: 1,
     eq: ['oven', 'bakeform', 'pot', 'whisk'], tg: ['dessert'],
     d: 'Плотный шоколадный десерт с хрустящей корочкой и липкой серединой.',
-    i: ['chocolate|200 г', 'butter|150 г', 'sugar|180 г', 'egg|3 шт', 'flour|100 г', 'cocoa|2 ст. л.', 'nuts?|80 г'],
+    i: ['chocolate|200 g', 'butter|150 g', 'sugar|180 g', 'egg|3 pc', 'flour|100 g', 'cocoa|2 tbsp', 'nuts?|80 g'],
     s: [
       'Разогрейте духовку до 170 °C. Квадратную форму 20×20 см застелите пергаментом.',
       'Растопите шоколад с маслом на водяной бане, помешивая. Остудите 5 минут.|5',
@@ -91,7 +91,7 @@ export default [
     id: 'mug-cake', t: 'Кекс в кружке', e: '☕', c: 'sweet', f: 'sweet', cu: 'us', min: 5, srv: 1, lv: 1,
     eq: ['microwave'], tg: ['dessert', 'quick'],
     d: 'Шоколадный кекс за 5 минут в микроволновке. Для внезапной тяги к сладкому.',
-    i: ['flour|4 ст. л.', 'sugar|3 ст. л.', 'cocoa|2 ст. л.', 'bakingpowder|1/4 ч. л.', 'milk|4 ст. л.', 'oil|2 ст. л.', 'egg|1 шт', 'chocolate?|2 кубика'],
+    i: ['flour|4 tbsp', 'sugar|3 tbsp', 'cocoa|2 tbsp', 'bakingpowder|1/4 tsp', 'milk|4 tbsp', 'oil|2 tbsp', 'egg|1 pc', 'chocolate?|2 square'],
     s: [
       'В большой кружке (300–350 мл) смешайте муку, сахар, какао и разрыхлитель.',
       'Добавьте яйцо, молоко и масло. Размешайте вилкой до гладкости.',
@@ -105,7 +105,7 @@ export default [
     id: 'panna-cotta', t: 'Панна-котта', e: '🍮', c: 'sweet', f: 'sweet', cu: 'it', min: 25, srv: 4, lv: 2,
     eq: ['pot'], tg: ['dessert', 'nobake'],
     d: 'Итальянский сливочный десерт, дрожащий на ложке. Подаётся с ягодным соусом.',
-    i: ['cream|400 мл', 'milk|100 мл', 'sugar|60 г', 'gelatin|6 г', 'vanilla|1 ч. л.', 'berry|150 г'],
+    i: ['cream|400 ml', 'milk|100 ml', 'sugar|60 g', 'gelatin|6 g', 'vanilla|1 tsp', 'berry|150 g'],
     s: [
       'Залейте желатин 3 ст. л. холодной воды на 10 минут.|10',
       'Нагрейте сливки с молоком и сахаром до растворения сахара, но не доводите до кипения.|5',
@@ -119,7 +119,7 @@ export default [
     id: 'fondant', t: 'Шоколадный фондан', e: '🍫', c: 'sweet', f: 'sweet', cu: 'fr', min: 25, srv: 4, lv: 3,
     eq: ['oven', 'pot', 'whisk', 'bakeform'], tg: ['dessert', 'party'],
     d: 'Тёплый кекс с жидкой шоколадной серединой. Ресторанный десерт дома.',
-    i: ['chocolate|120 г', 'butter|100 г', 'egg|2 шт', 'sugar|4 ст. л.', 'flour|2 ст. л.', 'cocoa?|для формочек'],
+    i: ['chocolate|120 g', 'butter|100 g', 'egg|2 pc', 'sugar|4 tbsp', 'flour|2 tbsp', 'cocoa?|~grease'],
     s: [
       'Разогрейте духовку до 220 °C. Четыре небольшие формочки смажьте маслом и присыпьте какао или мукой.',
       'Растопите шоколад с маслом на водяной бане до гладкости.|4',
@@ -134,7 +134,7 @@ export default [
     id: 'baked-apples', t: 'Запечённые яблоки с мёдом', e: '🍎', c: 'sweet', f: 'sweet', cu: 'ru', min: 30, srv: 4, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['dessert', 'vegetarian'],
     d: 'Мягкие яблоки с мёдом, корицей и орехами. Почти полезный десерт.',
-    i: ['apple|4 шт', 'honey|2 ст. л.', 'cinnamon|1 ч. л.', 'nuts?|40 г', 'raisin?|2 ст. л.', 'water|3 ст. л.'],
+    i: ['apple|4 pc', 'honey|2 tbsp', 'cinnamon|1 tsp', 'nuts?|40 g', 'raisin?|2 tbsp', 'water|3 tbsp'],
     s: [
       'Разогрейте духовку до 190 °C.',
       'У яблок аккуратно вырежьте сердцевину, оставив дно.',
@@ -148,7 +148,7 @@ export default [
     id: 'banana-pancakes', t: 'Банановые панкейки из двух ингредиентов', e: '🍌', c: 'sweet', f: 'sweet', cu: 'us', min: 15, srv: 2, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'quick', 'sport'],
     d: 'Без муки и сахара: только банан и яйцо. Мягкие и ароматные.',
-    i: ['banana|2 шт', 'egg|2 шт', 'cinnamon?|щепотка', 'oil|1 ч. л.'],
+    i: ['banana|2 pc', 'egg|2 pc', 'cinnamon?|~pinch', 'oil|1 tsp'],
     s: [
       'Разомните бананы вилкой в совершенно гладкое пюре.',
       'Добавьте яйца и корицу, тщательно взбейте вилкой.',
@@ -162,7 +162,7 @@ export default [
     id: 'truffles', t: 'Шоколадные трюфели', e: '🍫', c: 'sweet', f: 'sweet', cu: 'fr', min: 30, srv: 20, lv: 1,
     eq: ['pot'], tg: ['dessert', 'gift'],
     d: 'Конфеты из шоколада и сливок, обваленные в какао. Отличный подарок.',
-    i: ['chocolate|200 г', 'cream|100 мл', 'butter|20 г', 'cocoa|3 ст. л.'],
+    i: ['chocolate|200 g', 'cream|100 ml', 'butter|20 g', 'cocoa|3 tbsp'],
     s: [
       'Поломайте шоколад на мелкие кусочки и положите в миску.',
       'Нагрейте сливки в кастрюле почти до кипения и залейте ими шоколад. Через минуту размешайте до глянцевой массы.|1',
@@ -176,7 +176,7 @@ export default [
     id: 'choc-mousse', t: 'Шоколадный мусс на сливках', e: '🍮', c: 'sweet', f: 'sweet', cu: 'fr', min: 20, srv: 4, lv: 2,
     eq: ['pot', 'whisk'], tg: ['dessert', 'nobake'],
     d: 'Воздушный мусс без сырых яиц. Всего два ингредиента.',
-    i: ['chocolate|150 г', 'cream|300 мл', 'sugar?|1 ст. л.'],
+    i: ['chocolate|150 g', 'cream|300 ml', 'sugar?|1 tbsp'],
     s: [
       'Нагрейте 80 мл сливок в кастрюле до горячих, залейте ими поломанный шоколад и размешайте до гладкости. Остудите до комнатной температуры.|10',
       'Оставшиеся холодные сливки взбейте с сахаром до мягких пиков.',
@@ -189,7 +189,7 @@ export default [
     id: 'banana-icecream', t: 'Банановое мороженое', e: '🍨', c: 'sweet', f: 'sweet', cu: 'int', min: 10, srv: 2, lv: 1,
     eq: ['blender'], tg: ['dessert', 'vegan', 'sport'],
     d: 'Мороженое из одного замороженного банана. Текстура как у пломбира.',
-    i: ['banana|3 шт', 'cocoa?|1 ст. л.', 'peanutbutter?|1 ст. л.', 'milk?|2 ст. л.'],
+    i: ['banana|3 pc', 'cocoa?|1 tbsp', 'peanutbutter?|1 tbsp', 'milk?|2 tbsp'],
     s: [
       'Очистите бананы, нарежьте кружками и заморозьте минимум на 4 часа.|240',
       'Положите замороженные кусочки в блендер с добавками. Взбивайте импульсами, соскребая стенки.',
@@ -201,7 +201,7 @@ export default [
     id: 'lazy-vareniki', t: 'Ленивые вареники', e: '🥟', c: 'sweet', f: 'sweet', cu: 'ru', min: 30, srv: 3, lv: 1,
     eq: ['pot'], tg: ['breakfast', 'vegetarian'],
     d: 'Творожное тесто, которое не надо раскатывать и лепить. Варится за три минуты.',
-    i: ['tvorog|400 г', 'egg|1 шт', 'flour|6 ст. л.', 'sugar|2 ст. л.', 'salt|щепотка', 'sourcream?|для подачи'],
+    i: ['tvorog|400 g', 'egg|1 pc', 'flour|6 tbsp', 'sugar|2 tbsp', 'salt|~pinch', 'sourcream?|~serve'],
     s: [
       'Разомните творог вилкой, добавьте яйцо, сахар и соль.',
       'Подсыпая муку, замесите мягкое тесто, которое слегка липнет к рукам.',
@@ -215,7 +215,7 @@ export default [
     id: 'mannik', t: 'Манник на кефире', e: '🥧', c: 'sweet', f: 'sweet', cu: 'ru', min: 70, srv: 8, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['dessert', 'vegetarian'],
     d: 'Пышный и влажный пирог из манки. Вкус детства.',
-    i: ['semolina|200 г', 'kefir|250 мл', 'sugar|150 г', 'egg|2 шт', 'flour|100 г', 'bakingpowder|2 ч. л.', 'butter|20 г'],
+    i: ['semolina|200 g', 'kefir|250 ml', 'sugar|150 g', 'egg|2 pc', 'flour|100 g', 'bakingpowder|2 tsp', 'butter|20 g'],
     s: [
       'Смешайте манку с кефиром и оставьте на 30 минут, чтобы крупа набухла.|30',
       'Разогрейте духовку до 180 °C, форму смажьте маслом.',
@@ -229,7 +229,7 @@ export default [
     id: 'meringues', t: 'Меренги', e: '🍬', c: 'sweet', f: 'sweet', cu: 'fr', min: 150, srv: 20, lv: 2,
     eq: ['oven', 'mixer', 'bakeform'], tg: ['dessert', 'gluten-free'],
     d: 'Лёгкие хрустящие безе из белков и сахара. Тают во рту.',
-    i: ['egg|3 шт', 'sugar|180 г', 'lemon?|несколько капель сока'],
+    i: ['egg|3 pc', 'sugar|180 g', 'lemon?|~drops'],
     s: [
       'Разогрейте духовку до 100 °C. Противень застелите пергаментом.',
       'Отделите белки от желтков. В белках не должно быть ни капли желтка, а посуда должна быть сухой и чистой.',
@@ -244,7 +244,7 @@ export default [
     id: 'choc-salami', t: 'Шоколадная колбаска', e: '🍫', c: 'sweet', f: 'sweet', cu: 'ru', min: 30, srv: 8, lv: 1,
     eq: ['pot'], tg: ['dessert', 'nobake'],
     d: 'Десерт из печенья, какао и сгущёнки. Не требует выпечки.',
-    i: ['cookies|400 г', 'butter|150 г', 'condensed|200 г', 'cocoa|4 ст. л.', 'nuts?|80 г'],
+    i: ['cookies|400 g', 'butter|150 g', 'condensed|200 g', 'cocoa|4 tbsp', 'nuts?|80 g'],
     s: [
       'Раскрошите печенье в мелкую крошку скалкой или руками.',
       'Растопите масло в кастрюле, добавьте какао и сгущёнку. Прогрейте 3 минуты, помешивая, до гладкости.|3',
@@ -258,7 +258,7 @@ export default [
     id: 'french-toast', t: 'Французские тосты', e: '🍞', c: 'sweet', f: 'sweet', cu: 'fr', min: 15, srv: 2, lv: 1,
     eq: ['pan'], tg: ['breakfast', 'quick', 'vegetarian'],
     d: 'Хлеб, пропитанный яйцом и молоком. Хрустит снаружи, нежный внутри.',
-    i: ['bread|4 ломтика', 'egg|2 шт', 'milk|100 мл', 'sugar|1 ст. л.', 'cinnamon?|1/2 ч. л.', 'butter|20 г', 'honey?|для подачи'],
+    i: ['bread|4 slice', 'egg|2 pc', 'milk|100 ml', 'sugar|1 tbsp', 'cinnamon?|1/2 tsp', 'butter|20 g', 'honey?|~serve'],
     s: [
       'Взбейте яйца с молоком, сахаром и корицей в мелкой тарелке.',
       'Обмакните ломтики хлеба в смесь на 10–15 секунд с каждой стороны.',

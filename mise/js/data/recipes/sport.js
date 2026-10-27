@@ -4,7 +4,7 @@ export default [
     id: 'protein-shake', t: 'Протеиновый коктейль «шоколад-банан»', e: '💪', c: 'sport', f: 'sweet', cu: 'int', min: 5, srv: 1, lv: 1,
     eq: [['blender', 'shaker']], tg: ['sport', 'drink', 'quick', 'postworkout'],
     d: 'Классика после тренировки: около 30 г белка. Шейкер или блендер на выбор.',
-    i: ['protein|1 мерная ложка (30 г)', 'milk|300 мл', 'banana|1 шт', 'cocoa?|1 ч. л.', 'ice?|3–4 кубика'],
+    i: ['protein|1 scoop', 'milk|300 ml', 'banana|1 pc', 'cocoa?|1 tsp', 'ice?|3-4 icecube'],
     s: [
       'Сначала налейте молоко в шейкер или блендер: так порошок не прилипнет ко дну.',
       'Добавьте протеин, банан (в блендере) и какао.',
@@ -17,7 +17,7 @@ export default [
     id: 'tvorog-smoothie', t: 'Творожно-ягодный смузи', e: '🫐', c: 'sport', f: 'sweet', cu: 'int', min: 5, srv: 1, lv: 1,
     eq: ['blender'], tg: ['sport', 'drink', 'quick', 'breakfast'],
     d: 'Около 25 г белка из обычного творога. Сытный завтрак в стакане.',
-    i: ['tvorog|150 г', 'berry|150 г', 'milk|150 мл', 'honey?|1 ч. л.'],
+    i: ['tvorog|150 g', 'berry|150 g', 'milk|150 ml', 'honey?|1 tsp'],
     s: [
       'Положите творог, ягоды и молоко в блендер.',
       'Взбейте до гладкости около минуты.|1',
@@ -29,7 +29,7 @@ export default [
     id: 'overnight-oats', t: 'Овсянка на ночь', e: '🥣', c: 'sport', f: 'sweet', cu: 'int', min: 5, srv: 1, lv: 1,
     eq: [], tg: ['sport', 'breakfast', 'quick', 'noequip', 'vegetarian'],
     d: 'Не требует плиты: вечером смешать, утром съесть. Идеально, когда нет времени.',
-    i: ['oats|50 г', 'yogurt|100 г', 'milk|100 мл', 'chia?|1 ч. л.', 'berry?|горсть', 'honey?|1 ч. л.'],
+    i: ['oats|50 g', 'yogurt|100 g', 'milk|100 ml', 'chia?|1 tsp', 'berry?|~handful', 'honey?|1 tsp'],
     s: [
       'В банку или контейнер всыпьте овсяные хлопья и чиа.',
       'Добавьте йогурт и молоко, перемешайте.',
@@ -42,7 +42,7 @@ export default [
     id: 'protein-pancakes', t: 'Белковые панкейки', e: '🥞', c: 'sport', f: 'sweet', cu: 'us', min: 20, srv: 2, lv: 1,
     eq: ['pan'], tg: ['sport', 'breakfast'],
     d: 'Панкейки с овсянкой и бананом. Сытно, и белка около 20 г на порцию.',
-    i: ['oats|60 г', 'banana|1 шт', 'egg|2 шт', 'milk|50 мл', 'cinnamon?|щепотка', 'oil|1 ч. л.'],
+    i: ['oats|60 g', 'banana|1 pc', 'egg|2 pc', 'milk|50 ml', 'cinnamon?|~pinch', 'oil|1 tsp'],
     s: [
       'Разомните банан вилкой. Добавьте яйца, молоко и хлопья.',
       'Дайте тесту постоять 5–10 минут, чтобы хлопья набухли.|7',
@@ -55,7 +55,7 @@ export default [
     id: 'tvorog-casserole', t: 'Творожная запеканка без муки', e: '🍰', c: 'sport', f: 'sweet', cu: 'ru', min: 55, srv: 4, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['sport', 'breakfast', 'dessert'],
     d: 'Нежная запеканка с большим количеством белка и минимумом сахара.',
-    i: ['tvorog|500 г', 'egg|2 шт', 'semolina|2 ст. л.', 'honey|1 ст. л.', 'vanilla?|щепотка', 'berry?|горсть'],
+    i: ['tvorog|500 g', 'egg|2 pc', 'semolina|2 tbsp', 'honey|1 tbsp', 'vanilla?|~pinch', 'berry?|~handful'],
     s: [
       'Разогрейте духовку до 180 °C. Форму смажьте и присыпьте манкой.',
       'Протрите творог через сито или разомните вилкой.',
@@ -70,7 +70,7 @@ export default [
     id: 'chicken-buckwheat', t: 'Курица с гречкой и овощами', e: '🍗', c: 'sport', f: 'salty', cu: 'ru', min: 35, srv: 2, lv: 1,
     eq: ['pan', 'pot'], tg: ['sport', 'dinner', 'lunch'],
     d: 'Базовый спортивный обед: белок, сложные углеводы и клетчатка. Около 45 г белка.',
-    i: ['chicken|300 г', 'buckwheat|100 г', 'zucchini|1 шт', 'bellpepper|1 шт', 'oil|1 ст. л.', 'salt|по вкусу', 'pepper|по вкусу'],
+    i: ['chicken|300 g', 'buckwheat|100 g', 'zucchini|1 pc', 'bellpepper|1 pc', 'oil|1 tbsp', 'salt|~taste', 'pepper|~taste'],
     s: [
       'Промойте гречку, залейте двумя объёмами воды, посолите и варите под крышкой 15 минут.|15',
       'Нарежьте курицу кубиками, а кабачок и перец — соломкой.',
@@ -84,7 +84,7 @@ export default [
     id: 'protein-bars', t: 'Протеиновые батончики без выпечки', e: '🍫', c: 'sport', f: 'sweet', cu: 'us', min: 20, srv: 8, lv: 1,
     eq: [], tg: ['sport', 'snack', 'nobake', 'noequip'],
     d: 'Овсянка, арахисовая паста и протеин. Перекус, который не нужно запекать.',
-    i: ['oats|100 г', 'peanutbutter|3 ст. л.', 'honey|3 ст. л.', 'protein|60 г', 'chocolate?|50 г для глазури'],
+    i: ['oats|100 g', 'peanutbutter|3 tbsp', 'honey|3 tbsp', 'protein|60 g', 'chocolate?|50 g'],
     s: [
       'Смешайте арахисовую пасту с мёдом. Если масса густая, подогрейте 20 секунд в микроволновке или на водяной бане.',
       'Добавьте хлопья и протеин, перемешайте до однородности. Масса должна лепиться.',
@@ -98,7 +98,7 @@ export default [
     id: 'spinach-omelet', t: 'Омлет со шпинатом и творогом', e: '🥬', c: 'sport', f: 'salty', cu: 'int', min: 12, srv: 1, lv: 1,
     eq: ['pan'], tg: ['sport', 'breakfast', 'quick'],
     d: 'Белковый завтрак из яиц, шпината и творога. Готовится за 10 минут.',
-    i: ['egg|3 шт', 'spinach|50 г', 'tvorog|50 г', 'oil|1 ч. л.', 'salt|щепотка'],
+    i: ['egg|3 pc', 'spinach|50 g', 'tvorog|50 g', 'oil|1 tsp', 'salt|~pinch'],
     s: [
       'Взбейте яйца с солью.',
       'Разогрейте сковороду с маслом. Выложите шпинат и прогрейте 1 минуту до увядания.|1',
@@ -111,7 +111,7 @@ export default [
     id: 'green-smoothie', t: 'Зелёный смузи', e: '🥬', c: 'sport', f: 'sweet', cu: 'int', min: 5, srv: 1, lv: 1,
     eq: ['blender'], tg: ['sport', 'drink', 'quick', 'vegan'],
     d: 'Шпинат, банан и яблоко. Витамины и клетчатка в стакане.',
-    i: ['spinach|50 г', 'banana|1 шт', 'apple|1 шт', 'water|150 мл', 'lemon?|несколько капель', 'ginger?|кусочек'],
+    i: ['spinach|50 g', 'banana|1 pc', 'apple|1 pc', 'water|150 ml', 'lemon?|~drops', 'ginger?|~bit'],
     s: [
       'Яблоко нарежьте, банан очистите.',
       'Положите всё в блендер: сначала воду, затем шпинат, яблоко и банан.',
@@ -124,7 +124,7 @@ export default [
     id: 'chia-pudding', t: 'Чиа-пудинг', e: '🌱', c: 'sport', f: 'sweet', cu: 'int', min: 5, srv: 1, lv: 1,
     eq: [], tg: ['sport', 'breakfast', 'nobake', 'noequip'],
     d: 'Семена чиа набухают в молоке и превращаются в нежный пудинг.',
-    i: ['chia|3 ст. л.', 'milk|200 мл', 'honey|1 ч. л.', 'berry?|горсть'],
+    i: ['chia|3 tbsp', 'milk|200 ml', 'honey|1 tsp', 'berry?|~handful'],
     s: [
       'Смешайте чиа, молоко и мёд в банке.',
       'Через 10 минут перемешайте ещё раз, чтобы семена не слиплись.|10',
@@ -137,7 +137,7 @@ export default [
     id: 'tuna-bowl', t: 'Боул с тунцом и рисом', e: '🍚', c: 'sport', f: 'salty', cu: 'as', min: 25, srv: 2, lv: 1,
     eq: ['pot'], tg: ['sport', 'lunch', 'dinner'],
     d: 'Рис, тунец и свежие овощи. Сбалансированный белковый обед.',
-    i: ['rice|100 г', 'tuna|1 банка', 'cucumber|1 шт', 'avocado?|1/2 шт', 'corn?|3 ст. л.', 'soy|1 ст. л.'],
+    i: ['rice|100 g', 'tuna|1 can', 'cucumber|1 pc', 'avocado?|1/2 pc', 'corn?|3 tbsp', 'soy|1 tbsp'],
     s: [
       'Сварите рис по инструкции на упаковке (обычно 15 минут) и остудите.|15',
       'Нарежьте огурец и авокадо.',
@@ -150,7 +150,7 @@ export default [
     id: 'yogurt-nuts', t: 'Йогурт с орехами и мёдом', e: '🍯', c: 'sport', f: 'sweet', cu: 'gr', min: 3, srv: 1, lv: 1,
     eq: [], tg: ['sport', 'breakfast', 'snack', 'quick', 'noequip'],
     d: 'Самый быстрый перекус: густой йогурт, орехи и ложка мёда.',
-    i: ['yogurt|200 г', 'nuts|30 г', 'honey|1 ч. л.', 'berry?|горсть'],
+    i: ['yogurt|200 g', 'nuts|30 g', 'honey|1 tsp', 'berry?|~handful'],
     s: [
       'Выложите йогурт в миску.',
       'Крупно порубите орехи ножом.',

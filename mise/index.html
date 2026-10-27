@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mise — кухня с помощником</title>
-<meta name="description" content="Что в холодильнике? Напишите — Mise подберёт рецепт с учётом вашей техники и пошагово проведёт по готовке.">
-<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
+<title>Mise</title>
+<meta name="description" content="Mise — recipes, fridge match, meal plan and a kitchen assistant. Русский · English · Español.">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110f" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,12 +18,13 @@
 </head>
 <body>
 <div id="app">
-  <main id="view" tabindex="-1" aria-live="polite"></main>
-  <nav id="tabbar" aria-label="Разделы"></nav>
+  <div id="timerbar" hidden></div>
+  <main id="view" tabindex="-1"></main>
+  <nav id="tabbar" aria-label="Main"></nav>
   <div id="sheet-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
-<noscript>Для работы Mise нужен JavaScript.</noscript>
+<noscript>Mise needs JavaScript. / Mise necesita JavaScript.</noscript>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

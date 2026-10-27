@@ -1,5 +1,7 @@
-// Мини-ИИ помощник: чат, который понимает продукты, настроение, время и технику
-import { BY_ID, answer, SUGGESTIONS } from '../engine.js';
+// Мини-ИИ помощник: чат, который понимает продукты, настроение, время и технику на трёх языках
+import { BY_ID, rtext } from '../engine.js';
+import { answer, suggestions } from '../assistant-core.js';
+import { t } from '../i18n.js';
 import * as store from '../store.js';
 import { esc, md, $, recipeRow, icons } from '../ui.js';
 
@@ -14,33 +16,30 @@ function partHtml(p) {
       return r ? recipeRow(r, { note: it.note ? esc(it.note) : '', best: it.best }) : '';
     }).join('')}</div>`;
   }
-  if (p.type === 'chips') return `<div class="qchips">${p.items.map((t) => `<button class="chip small" data-act="ask" data-q="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
+  if (p.type === 'chips') return `<div class="qchips">${p.items.map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
   return '';
 }
-
-function msgHtml(m) {
-  if (m.r === 'u') return `<div class="msg u"><div class="bubble u">${esc(m.text)}</div></div>`;
-  return `<div class="msg a">${m.parts.map(partHtml).join('')}</div>`;
-}
-
+const msgHtml = (m) => (m.r === 'u' ? `<div class="msg u"><div class="bubble u">${esc(m.text)}</div></div>` : `<div class="msg a">${m.parts.map(partHtml).join('')}</div>`);
 const typing = '<div class="msg a typing"><div class="bubble a"><i></i><i></i><i></i></div></div>';
 
+// Сохраняем разговор без языка: рецепты и подсказки перерисовываются на текущем языке
+const greeting = () => ({ r: 'a', parts: answer('hello', { have: [], pantry: [], owned: [], diet: {}, cooked: {} }, 1) });
+
 export function render(s) {
-  const chat = s.chat.length ? s.chat : [{ r: 'a', parts: answer('привет', {}, 1) }];
-  return `<header class="top compact"><h1>Помощник</h1><p class="sub">Спросите, что приготовить. Всё считается на вашем устройстве.</p></header>
+  const chat = s.chat.length ? s.chat : [greeting()];
+  return `<header class="top compact"><h1>${t('ai.title')}</h1><p class="sub">${t('ai.sub')}</p></header>
     <div class="chat" id="chat" aria-live="polite">${chat.map(msgHtml).join('')}</div>
     <div class="composer-fixed">
-      <div class="hscroll tight" id="suggest">${SUGGESTIONS.map((t) => `<button class="chip small" data-act="ask" data-q="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+      <div class="hscroll tight" id="suggest">${suggestions().map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>
       <form id="chat-form" class="composer" autocomplete="off">
-        <input id="chat-input" type="text" enterkeyhint="send" placeholder="Например: сладкое без духовки…" aria-label="Сообщение помощнику">
-        <button class="btn primary round" type="submit" aria-label="Отправить">${icons.send}</button>
+        <input id="chat-input" type="text" enterkeyhint="send" placeholder="${t('ai.placeholder')}" aria-label="${t('ai.placeholder')}">
+        <button class="btn primary round" type="submit" aria-label="${t('ai.send')}">${icons.send}</button>
       </form>
+      ${s.chat.length ? `<button class="link clear-chat" data-act="chat-clear">${t('ai.clear')}</button>` : ''}
     </div>`;
 }
 
-function scrollDown() {
-  requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
-}
+const scrollDown = () => requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
 
 export function send(text) {
   text = text.trim();
@@ -52,15 +51,14 @@ export function send(text) {
   chat.insertAdjacentHTML('beforeend', msgHtml(user));
   chat.insertAdjacentHTML('beforeend', typing);
   scrollDown();
-  const seed = Math.floor(Math.random() * 100000);
-  const parts = answer(text, { have: s.have, pantry: s.pantry, owned: s.owned, diet: s.diet, cooked: s.cooked, last: lastQuery }, seed);
-  if (!/^(ещ[её]|другое|другие|дальше)/i.test(text)) lastQuery = text;
+  const parts = answer(text, { have: s.have, pantry: s.pantry, owned: s.owned, diet: s.diet, cooked: s.cooked, liked: s.ratings, last: lastQuery }, Math.floor(Math.random() * 100000));
+  if (!/^(ещ[её]|другое|другие|дальше|more|another|next|otra|otro|mas|siguiente)/i.test(text.trim())) lastQuery = text;
   setTimeout(() => {
-    const t = chat.querySelector('.typing');
-    if (t) t.remove();
+    const el = chat.querySelector('.typing');
+    if (el) el.remove();
     const msg = { r: 'a', parts };
     chat.insertAdjacentHTML('beforeend', msgHtml(msg));
-    store.set((st) => ({ chat: [...(st.chat.length ? st.chat : [{ r: 'a', parts: answer('привет', {}, 1) }]), user, msg].slice(-40) }), { silent: true });
+    store.set((st) => ({ chat: [...(st.chat.length ? st.chat : [greeting()]), user, msg].slice(-40) }), { silent: true });
     busy = false;
     scrollDown();
   }, 380 + Math.random() * 280);
@@ -69,15 +67,11 @@ export function send(text) {
 export function bind(root) {
   const form = $('#chat-form', root);
   const input = $('#chat-input', root);
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const v = input.value;
-    input.value = '';
-    send(v);
-  });
+  form.addEventListener('submit', (e) => { e.preventDefault(); const v = input.value; input.value = ''; send(v); });
 }
 
 export function onClick(act, el) {
   if (act === 'ask') { send(el.dataset.q); return true; }
+  if (act === 'chat-clear') { lastQuery = ''; store.set({ chat: [] }); return true; }
   return false;
 }

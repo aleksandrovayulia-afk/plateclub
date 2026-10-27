@@ -4,7 +4,7 @@ export default [
     id: 'home-bread', t: 'Домашний хлеб', e: '🍞', c: 'other', f: 'salty', cu: 'int', min: 180, srv: 10, lv: 2,
     eq: ['oven', 'bakeform'], tg: ['bread', 'vegan'],
     d: 'Простой дрожжевой хлеб с хрустящей корочкой. Запах на весь дом.',
-    i: ['flour|500 г', 'yeast|7 г', 'water|320 мл', 'salt|1,5 ч. л.', 'sugar|1 ч. л.', 'oil|1 ст. л.'],
+    i: ['flour|500 g', 'yeast|7 g', 'water|320 ml', 'salt|1.5 tsp', 'sugar|1 tsp', 'oil|1 tbsp'],
     s: [
       'Смешайте муку, дрожжи, сахар и соль. Влейте тёплую воду и масло.',
       'Замесите тесто и вымешивайте руками 10 минут до гладкости и эластичности.|10',
@@ -20,7 +20,7 @@ export default [
     id: 'thin-pizza', t: 'Пицца на тонком тесте', e: '🍕', c: 'other', f: 'salty', cu: 'it', min: 60, srv: 2, lv: 2,
     eq: ['oven', 'bakeform', 'rolling'], tg: ['dinner', 'party'],
     d: 'Хрустящая домашняя пицца с томатным соусом и сыром.',
-    i: ['flour|250 г', 'yeast|5 г', 'water|150 мл', 'oil|2 ст. л.', 'tomatopaste|3 ст. л.', 'cheese|200 г', 'sausage?|100 г', 'salt|1/2 ч. л.'],
+    i: ['flour|250 g', 'yeast|5 g', 'water|150 ml', 'oil|2 tbsp', 'tomatopaste|3 tbsp', 'cheese|200 g', 'sausage?|100 g', 'salt|1/2 tsp'],
     s: [
       'Смешайте муку, дрожжи и соль. Добавьте тёплую воду и масло, замесите упругое тесто.',
       'Накройте и оставьте на 30–40 минут расстаиваться.|35',
@@ -34,7 +34,7 @@ export default [
     id: 'granola', t: 'Домашняя гранола', e: '🥣', c: 'other', f: 'sweet', cu: 'us', min: 40, srv: 10, lv: 1,
     eq: ['oven', 'bakeform'], tg: ['breakfast', 'vegan'],
     d: 'Хрустящая овсянка с мёдом и орехами. Хранится месяц.',
-    i: ['oats|300 г', 'honey|4 ст. л.', 'oil|3 ст. л.', 'nuts|80 г', 'raisin?|50 г', 'cinnamon?|1 ч. л.'],
+    i: ['oats|300 g', 'honey|4 tbsp', 'oil|3 tbsp', 'nuts|80 g', 'raisin?|50 g', 'cinnamon?|1 tsp'],
     s: [
       'Разогрейте духовку до 160 °C.',
       'Смешайте хлопья, рубленые орехи и корицу.',
@@ -49,7 +49,7 @@ export default [
     id: 'tomato-sauce', t: 'Томатный соус', e: '🍅', c: 'other', f: 'salty', cu: 'it', min: 40, srv: 6, lv: 1,
     eq: ['pot'], tg: ['sauce', 'vegan'],
     d: 'Универсальный соус для пасты, пиццы и мяса. Можно заморозить.',
-    i: ['tomato|1 кг', 'onion|1 шт', 'garlic|3 зубчика', 'oliveoil|3 ст. л.', 'sugar|1 ч. л.', 'salt|по вкусу', 'greens?|базилик'],
+    i: ['tomato|1 kg', 'onion|1 pc', 'garlic|3 clove', 'oliveoil|3 tbsp', 'sugar|1 tsp', 'salt|~taste', 'greens?|~handful'],
     s: [
       'Помидоры надрежьте, облейте кипятком и снимите кожицу. Нарежьте.',
       'Обжарьте мелко нарезанный лук на масле 5 минут. Добавьте чеснок на 1 минуту.|6',
@@ -62,7 +62,7 @@ export default [
     id: 'guacamole', t: 'Гуакамоле', e: '🥑', c: 'other', f: 'salty', cu: 'me', min: 10, srv: 4, lv: 1,
     eq: [], tg: ['sauce', 'snack', 'noequip', 'vegan', 'quick'],
     d: 'Мексиканская закуска из авокадо. Подаётся с чипсами или лавашем.',
-    i: ['avocado|2 шт', 'tomato|1 шт', 'onion|1/4 шт', 'lemon|1/2 шт', 'greens?|кинза', 'salt|по вкусу'],
+    i: ['avocado|2 pc', 'tomato|1 pc', 'onion|1/4 pc', 'lemon|1/2 pc', 'greens?|~handful', 'salt|~taste'],
     s: [
       'Разрежьте авокадо, достаньте косточку и выложите мякоть в миску.',
       'Разомните вилкой, оставив небольшие кусочки.',
@@ -75,7 +75,7 @@ export default [
     id: 'hummus', t: 'Хумус', e: '🫘', c: 'other', f: 'salty', cu: 'me', min: 15, srv: 4, lv: 1,
     eq: ['blender'], tg: ['sauce', 'snack', 'vegan'],
     d: 'Паста из нута. Идеальна с овощами, лавашем и хлебом.',
-    i: ['chickpea|400 г (банка)', 'lemon|1 шт', 'garlic|1 зубчик', 'oliveoil|3 ст. л.', 'water|3 ст. л.', 'salt|по вкусу'],
+    i: ['chickpea|1 can', 'lemon|1 pc', 'garlic|1 clove', 'oliveoil|3 tbsp', 'water|3 tbsp', 'salt|~taste'],
     s: [
       'Слейте нут из банки, оставив 3 ст. л. жидкости.',
       'Положите нут, сок лимона, чеснок, масло и жидкость в блендер.',
@@ -88,7 +88,7 @@ export default [
     id: 'home-mayo', t: 'Домашний майонез', e: '🥫', c: 'other', f: 'salty', cu: 'fr', min: 10, srv: 8, lv: 2,
     eq: ['blender'], tg: ['sauce'],
     d: 'Нежный майонез за 2 минуты в блендере. Свежие яйца обязательны.',
-    i: ['egg|1 шт', 'oil|200 мл', 'mustard|1 ч. л.', 'lemon|1 ст. л.', 'salt|1/2 ч. л.', 'sugar|1/2 ч. л.'],
+    i: ['egg|1 pc', 'oil|200 ml', 'mustard|1 tsp', 'lemon|1 tbsp', 'salt|1/2 tsp', 'sugar|1/2 tsp'],
     s: [
       'В высокий стакан положите яйцо, горчицу, соль, сахар и лимонный сок.',
       'Влейте масло сверху. Опустите погружной блендер на дно.',
@@ -101,7 +101,7 @@ export default [
     id: 'berry-jam', t: 'Ягодное варенье', e: '🍓', c: 'other', f: 'sweet', cu: 'ru', min: 50, srv: 10, lv: 1,
     eq: ['pot'], tg: ['jam', 'vegetarian'],
     d: 'Густое варенье из любых ягод. Лимон помогает загустеть.',
-    i: ['berry|1 кг', 'sugar|700 г', 'lemon?|1/2 шт'],
+    i: ['berry|1 kg', 'sugar|700 g', 'lemon?|1/2 pc'],
     s: [
       'Пересыпьте ягоды сахаром и оставьте на 2 часа, пока не выделится сок.|120',
       'Поставьте на средний огонь, доведите до кипения, снимайте пену.',
@@ -115,7 +115,7 @@ export default [
     id: 'home-tvorog', t: 'Домашний творог', e: '🧀', c: 'other', f: 'salty', cu: 'ru', min: 60, srv: 4, lv: 1,
     eq: ['pot', 'sieve'], tg: ['dairy', 'vegetarian'],
     d: 'Творог из молока и кефира. Всего два ингредиента и немного терпения.',
-    i: ['milk|2 л', 'kefir|500 мл'],
+    i: ['milk|2 l', 'kefir|500 ml'],
     s: [
       'Нагрейте молоко в кастрюле до 40 °C.|5',
       'Влейте кефир, перемешайте и доведите до почти кипения (около 85 °C), но не кипятите.|10',
@@ -129,7 +129,7 @@ export default [
     id: 'tzatziki', t: 'Цацики', e: '🥒', c: 'other', f: 'salty', cu: 'gr', min: 10, srv: 4, lv: 1,
     eq: ['grater'], tg: ['sauce', 'snack', 'vegetarian', 'quick'],
     d: 'Греческий йогуртовый соус с огурцом и чесноком. Освежает и подходит к мясу.',
-    i: ['yogurt|250 г', 'cucumber|1 шт', 'garlic|1 зубчик', 'oliveoil|1 ст. л.', 'greens?|укроп', 'salt|по вкусу'],
+    i: ['yogurt|250 g', 'cucumber|1 pc', 'garlic|1 clove', 'oliveoil|1 tbsp', 'greens?|~handful', 'salt|~taste'],
     s: [
       'Огурец натрите на крупной тёрке и отожмите от лишней жидкости.',
       'Смешайте йогурт с огурцом, давлёным чесноком и маслом.',

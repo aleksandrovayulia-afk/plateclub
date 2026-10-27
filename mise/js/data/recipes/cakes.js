@@ -6,7 +6,7 @@ export default [
     id: 'napoleon', t: 'Наполеон из слоёного теста', e: '🍰', c: 'cakes', f: 'sweet', cu: 'fr', min: 90, srv: 8, lv: 2,
     eq: ['oven', 'pot', 'whisk', 'rolling'], tg: ['dessert', 'party'],
     d: 'Хрустящие пласты и нежный заварной крем. Быстрая версия на готовом тесте — выглядит как из кондитерской.',
-    i: ['puff|500 г', 'milk|800 мл', 'egg|4 шт', 'sugar|200 г', 'flour|4 ст. л.', 'butter|150 г', 'vanilla|1 ч. л.'],
+    i: ['puff|500 g', 'milk|800 ml', 'egg|4 pc', 'sugar|200 g', 'flour|4 tbsp', 'butter|150 g', 'vanilla|1 tsp'],
     s: [
       'Разогрейте духовку до 220 °C. Разморозьте тесто, раскатайте на 6–8 пластов размером с противень и наколите вилкой по всей поверхности.',
       'Выпекайте пласты по одному 8–10 минут до золотистого цвета.|10',
@@ -23,7 +23,7 @@ export default [
     id: 'medovik', t: 'Медовик', e: '🍯', c: 'cakes', f: 'sweet', cu: 'ru', min: 120, srv: 10, lv: 2,
     eq: ['oven', 'pot', 'rolling', 'whisk'], tg: ['dessert', 'party'],
     d: 'Тонкие медовые коржи и сметанный крем. Классика, которая набирает вкус за ночь.',
-    i: ['butter|100 г', 'sugar|150 г', 'honey|3 ст. л.', 'egg|2 шт', 'soda|1 ч. л.', 'flour|450 г', 'sourcream|600 г', 'powder|120 г'],
+    i: ['butter|100 g', 'sugar|150 g', 'honey|3 tbsp', 'egg|2 pc', 'soda|1 tsp', 'flour|450 g', 'sourcream|600 g', 'powder|120 g'],
     s: [
       'Поставьте миску над кастрюлей с кипящей водой. Растопите в ней масло с сахаром и мёдом, помешивая, пока сахар не растворится.|5',
       'Всыпьте соду: масса вспенится и посветлеет. Прогрейте ещё 2 минуты и снимите с водяной бани.|2',
@@ -40,7 +40,7 @@ export default [
     id: 'choc-cake', t: 'Шоколадный торт', e: '🎂', c: 'cakes', f: 'sweet', cu: 'us', min: 90, srv: 10, lv: 2,
     eq: ['oven', 'bakeform', 'mixer', 'pot'], tg: ['dessert', 'party'],
     d: 'Влажный шоколадный бисквит и глянцевый ганаш из шоколада и сливок.',
-    i: ['flour|250 г', 'sugar|250 г', 'cocoa|60 г', 'bakingpowder|2 ч. л.', 'egg|3 шт', 'milk|250 мл', 'oil|100 мл', 'vanilla?|1 ч. л.', 'chocolate|200 г', 'cream|200 мл'],
+    i: ['flour|250 g', 'sugar|250 g', 'cocoa|60 g', 'bakingpowder|2 tsp', 'egg|3 pc', 'milk|250 ml', 'oil|100 ml', 'vanilla?|1 tsp', 'chocolate|200 g', 'cream|200 ml'],
     s: [
       'Разогрейте духовку до 175 °C. Форму диаметром 22 см смажьте и застелите пергаментом.',
       'Просейте вместе муку, сахар, какао и разрыхлитель.',
@@ -57,7 +57,7 @@ export default [
     id: 'ny-cheesecake', t: 'Чизкейк Нью-Йорк', e: '🍰', c: 'cakes', f: 'sweet', cu: 'us', min: 100, srv: 10, lv: 3,
     eq: ['oven', 'bakeform', 'mixer'], tg: ['dessert', 'party'],
     d: 'Плотный и бархатный запечённый чизкейк на песочной основе. Главное — медленное остывание.',
-    i: ['cookies|250 г', 'butter|100 г', 'creamcheese|700 г', 'sugar|180 г', 'egg|3 шт', 'sourcream|150 г', 'vanilla|1 ч. л.', 'starch|1 ст. л.', 'lemon?|1/2 шт'],
+    i: ['cookies|250 g', 'butter|100 g', 'creamcheese|700 g', 'sugar|180 g', 'egg|3 pc', 'sourcream|150 g', 'vanilla|1 tsp', 'starch|1 tbsp', 'lemon?|1/2 pc'],
     s: [
       'Измельчите печенье в крошку (блендером или скалкой в плотном пакете) и смешайте с растопленным маслом.',
       'Утрамбуйте основу на дно формы диаметром 20–22 см с небольшими бортиками. Уберите в холодильник на 15 минут.|15',
@@ -74,7 +74,7 @@ export default [
     id: 'nobake-cheesecake', t: 'Чизкейк без выпечки', e: '🍓', c: 'cakes', f: 'sweet', cu: 'us', min: 30, srv: 8, lv: 1,
     eq: ['bakeform', 'whisk'], tg: ['dessert', 'nobake'],
     d: 'Нежный сливочный десерт без духовки — только холодильник. Ягоды сверху.',
-    i: ['cookies|250 г', 'butter|100 г', 'creamcheese|400 г', 'cream|200 мл', 'powder|80 г', 'gelatin|10 г', 'water|80 мл', 'berry|200 г'],
+    i: ['cookies|250 g', 'butter|100 g', 'creamcheese|400 g', 'cream|200 ml', 'powder|80 g', 'gelatin|10 g', 'water|80 ml', 'berry|200 g'],
     s: [
       'Измельчите печенье, смешайте с растопленным маслом и утрамбуйте на дно разъёмной формы. Уберите в холодильник.',
       'Залейте желатин холодной водой на 10 минут, затем растворите, прогревая на слабом огне (или 15–20 секунд в микроволновке), не доводя до кипения.|10',
@@ -89,7 +89,7 @@ export default [
     id: 'tiramisu', t: 'Тирамису', e: '☕', c: 'cakes', f: 'sweet', cu: 'it', min: 30, srv: 6, lv: 2,
     eq: ['whisk'], tg: ['dessert', 'nobake'],
     d: 'Кофейный десерт с маскарпоне — без сырых яиц, на сливках. Готовится за полчаса, дальше работает холодильник.',
-    i: ['creamcheese|500 г', 'cream|200 мл', 'powder|80 г', 'coffee|250 мл', 'cookies|200 г', 'cocoa|2 ст. л.'],
+    i: ['creamcheese|500 g', 'cream|200 ml', 'powder|80 g', 'coffee|250 ml', 'cookies|200 g', 'cocoa|2 tbsp'],
     s: [
       'Сварите крепкий кофе и остудите до комнатной температуры.',
       'Холодные сливки взбейте венчиком до мягких пиков, добавьте пудру.|5',
@@ -104,7 +104,7 @@ export default [
     id: 'carrot-cake', t: 'Морковный торт', e: '🥕', c: 'cakes', f: 'sweet', cu: 'us', min: 80, srv: 10, lv: 1,
     eq: ['oven', 'bakeform', 'grater', 'whisk'], tg: ['dessert'],
     d: 'Очень влажный и ароматный торт с корицей и кремом из сливочного сыра.',
-    i: ['carrot|300 г', 'flour|250 г', 'sugar|200 г', 'egg|3 шт', 'oil|150 мл', 'bakingpowder|2 ч. л.', 'cinnamon|1 ч. л.', 'nuts?|80 г', 'creamcheese|300 г', 'powder|80 г', 'butter|60 г'],
+    i: ['carrot|300 g', 'flour|250 g', 'sugar|200 g', 'egg|3 pc', 'oil|150 ml', 'bakingpowder|2 tsp', 'cinnamon|1 tsp', 'nuts?|80 g', 'creamcheese|300 g', 'powder|80 g', 'butter|60 g'],
     s: [
       'Разогрейте духовку до 180 °C. Форму смажьте и присыпьте мукой.',
       'Морковь натрите на мелкой тёрке.',
@@ -119,7 +119,7 @@ export default [
     id: 'smetannik', t: 'Сметанник', e: '🥧', c: 'cakes', f: 'sweet', cu: 'ru', min: 90, srv: 10, lv: 1,
     eq: ['oven', 'bakeform', 'whisk'], tg: ['dessert'],
     d: 'Мягкий бисквит и сметанный крем. Простой торт, который прощает ошибки.',
-    i: ['sourcream|600 г', 'sugar|250 г', 'egg|2 шт', 'flour|250 г', 'soda|1 ч. л.'],
+    i: ['sourcream|600 g', 'sugar|250 g', 'egg|2 pc', 'flour|250 g', 'soda|1 tsp'],
     s: [
       'Для теста смешайте 200 г сметаны, 150 г сахара и яйца. Всыпьте муку с содой и перемешайте.',
       'Вылейте тесто в смазанную форму и выпекайте при 180 °C 35–40 минут до сухой шпажки.|40',
@@ -134,7 +134,7 @@ export default [
     id: 'lazy-cake', t: 'Ленивый торт из печенья', e: '🍪', c: 'cakes', f: 'sweet', cu: 'ru', min: 20, srv: 6, lv: 1,
     eq: [], tg: ['dessert', 'nobake', 'noequip'],
     d: 'Не нужны ни плита, ни духовка, ни миксер: только миска, ложка и холодильник.',
-    i: ['cookies|400 г', 'sourcream|500 г', 'sugar|4 ст. л.', 'banana|2 шт', 'milk|100 мл', 'cocoa?|для посыпки'],
+    i: ['cookies|400 g', 'sourcream|500 g', 'sugar|4 tbsp', 'banana|2 pc', 'milk|100 ml', 'cocoa?|~dust'],
     s: [
       'Смешайте сметану с сахаром ложкой, пока сахар не растворится.',
       'Налейте молоко в плоскую тарелку. Печенье окунайте на секунду с каждой стороны.',
@@ -148,7 +148,7 @@ export default [
     id: 'icecream-cake', t: 'Торт-мороженое', e: '🍨', c: 'cakes', f: 'sweet', cu: 'int', min: 25, srv: 8, lv: 1,
     eq: [], tg: ['dessert', 'nobake', 'noequip'],
     d: 'Слои печенья и пломбира, застывшие в морозилке. Идеально для лета.',
-    i: ['icecream|600 г', 'cookies|250 г', 'chocolate|100 г', 'milk|50 мл', 'nuts?|50 г'],
+    i: ['icecream|600 g', 'cookies|250 g', 'chocolate|100 g', 'milk|50 ml', 'nuts?|50 g'],
     s: [
       'Выложите мороженое из морозилки в миску на 10–15 минут, чтобы оно слегка размякло.',
       'Раскрошите печенье руками. Выстелите контейнер пищевой плёнкой.',
