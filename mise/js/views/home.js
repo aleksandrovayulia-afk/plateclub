@@ -3,7 +3,7 @@ import { RECIPES, BY_ID, COLLECTIONS, collectionCount, recipeOfTheDay, missingGe
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang, LANGS } from '../i18n.js';
 import * as store from '../store.js';
-import { esc, icons, tile, timeLabel, levelLabel, recipeCard } from '../ui.js';
+import { esc, icons, photo, tile, timeLabel, levelLabel, recipeCard } from '../ui.js';
 import * as recipes from './recipes.js';
 
 const counts = {};
@@ -48,7 +48,7 @@ export function render(s) {
 
     <h2 class="sec">${t('home.rotd')}</h2>
     <a class="rotd" href="#/r/${rotd.id}" style="--t:${CATEGORIES.find((c) => c.id === rotd.c).tint}">
-      <span class="rotd-e" aria-hidden="true">${rotd.e}</span>
+      <span class="rotd-e" aria-hidden="true">${photo(rotd)}</span>
       <span class="rotd-body">
         <span class="rotd-t">${esc(tx.t)}</span>
         <span class="rotd-d">${esc(tx.d)}</span>

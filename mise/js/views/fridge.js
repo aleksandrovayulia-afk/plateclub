@@ -4,7 +4,7 @@ import { extractIngredients, suggestIngredients, fridgeSearch, rtext, gearName }
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
-import { esc, $, recipeRow, timeLabel, levelLabel, toast, icons } from '../ui.js';
+import { esc, $, recipeRow, timeLabel, levelLabel, toast, icons, photo } from '../ui.js';
 
 const MOODS = ['any', 'salty', 'sweet', 'sport', 'new'];
 let group = 'common';
@@ -39,7 +39,7 @@ function results(s) {
   const hero = `<article class="hero" style="--t:${tint(r)}">
     <div class="hero-top"><span class="eyebrow">${s.mood === 'new' ? t('fridge.bestnew') : t('fridge.best')}</span>${pool.length > 1 ? `<button class="link" data-act="next-hero">${t('fridge.next')}</button>` : ''}</div>
     <a class="hero-main" href="#/r/${r.id}">
-      <span class="hero-e" aria-hidden="true">${r.e}</span>
+      <span class="hero-e" aria-hidden="true">${photo(r)}</span>
       <span class="hero-t">${esc(tx.t)}</span>
       <span class="hero-d">${esc(tx.d)}</span>
     </a>

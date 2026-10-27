@@ -5,6 +5,8 @@ import { fmtQty } from '../qty.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import * as timers from '../timers.js';
+import * as music from '../music.js';
+import { buzz } from '../haptics.js';
 import { esc, icons, openSheet } from '../ui.js';
 
 let cur = null; // { id, i, done }
@@ -101,11 +103,13 @@ export function render(s, id) {
     <div class="cook-bar">
       <button class="icon-btn" data-act="cook-exit" aria-label="${t('cook.exit')}">${icons.close}</button>
       <div class="cook-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${cur.i + 1}"><i style="width:${((cur.i + 1) / total) * 100}%"></i></div>
+      <button class="icon-btn${music.isOn() ? ' on' : ''}" data-act="cook-music" aria-pressed="${music.isOn()}" aria-label="${t('cook.music')}">${icons.music}</button>
       <button class="icon-btn${s.voice ? ' on' : ''}" data-act="cook-voice" aria-pressed="${s.voice}" aria-label="${t('cook.voice')}">${icons.volume}</button>
       <button class="icon-btn" data-act="cook-ings" aria-label="${t('recipe.ings')}">${icons.cart}</button>
     </div>
     <p class="cook-count">${t('cook.stepOf', { n: cur.i + 1, total })} · ${esc(tx.t)}</p>
     <div class="cook-step"><p>${esc(stepText(r, s))}</p></div>
+    ${last ? '' : `<p class="cook-next-hint"><b>${t('cook.upnext')}</b> ${esc(tx.steps[cur.i + 1].text)}</p>`}
     ${tm ? `<div class="timer">
       <div class="timer-big${tm.done ? ' done' : ''}" data-timer-big>${timers.fmt(tm.left)}</div>
       <button class="btn" data-act="timer-toggle">${timerLabel(tm)}</button>
@@ -127,12 +131,13 @@ export function onClick(act, el) {
   switch (act) {
     case 'cook-next':
       if (cur.i >= n - 1) {
-        cur.done = true;
+        cur.done = true; buzz('done');
         store.set({ cooked: { ...s.cooked, [cur.id]: Date.now() } });
         stopSpeech();
-      } else { cur.i++; store.set({}); }
+      } else { cur.i++; buzz('step'); store.set({}); }
       return true;
-    case 'cook-prev': if (cur.i > 0) { cur.i--; store.set({}); } return true;
+    case 'cook-prev': if (cur.i > 0) { cur.i--; buzz('back'); store.set({}); } return true;
+    case 'cook-music': music.toggle(); store.set({ music: music.isOn() }); buzz('tap'); return true;
     case 'goto-step': cur.i = Number(el.dataset.i); store.set({}); return true;
     case 'cook-exit': { const id = cur.id; cur = null; stop(); location.hash = `#/r/${id}`; return true; }
     case 'cook-voice': store.set({ voice: !s.voice }); if (s.voice) stopSpeech(); return true;
@@ -145,6 +150,7 @@ export function onClick(act, el) {
     case 'timer-toggle': {
       const step = rtext(r).steps[cur.i];
       const tm = timers.find(timerKey());
+      buzz('start');
       if (!tm) timers.start(`${rtext(r).t} · ${t('cook.step', { n: cur.i + 1 })}`, step.min * 60, timerKey());
       else if (tm.done) timers.reset(tm.id);
       else if (tm.running) timers.pause(tm.id);

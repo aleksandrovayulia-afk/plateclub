@@ -2,6 +2,7 @@
 import { CATEGORIES, CUISINES } from './data/recipes/index.js';
 import { rtext } from './engine.js';
 import { t, currentLang } from './i18n.js';
+import { photoKey, photoUrl, photoPos } from './data/photos.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
@@ -20,7 +21,8 @@ export function timeLabel(min) {
   return m ? t('common.hourmin', { h, m }) : t('common.hour', { h });
 }
 
-export const tile = (r, cls = '') => `<span class="tile ${cls}" style="--t:${catOf(r).tint}" aria-hidden="true">${r.e}</span>`;
+export const photo = (r) => `<img class="ph" src="${photoUrl(photoKey(r, r.text.ru.t + ' ' + r.text.en.t))}" style="object-position:${photoPos(r.id)}" alt="" loading="lazy" decoding="async" draggable="false">`;
+export const tile = (r, cls = '') => `<span class="tile ${cls}" style="--t:${catOf(r).tint}" aria-hidden="true">${photo(r)}</span>`;
 
 export function recipeRow(r, { note = '', locked = null, fav = false, best = false, sub = null } = {}) {
   const tx = rtext(r);
@@ -55,6 +57,7 @@ export const icons = {
   fridge: svg('<rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M5 10h14M9 6v1.5M9 13v3"/>'),
   spark: svg('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>'),
   menu: svg('<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>'),
+  music: svg('<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>'),
   search: svg('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>'),
   globe: svg('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.500 3.500 8.500S14.500 18 12 20.500C9.500 18 8.500 15 8.500 12S9.500 6 12 3.500z"/>'),
   calendar: svg('<rect x="4" y="5.5" width="16" height="14.500" rx="3"/><path d="M4 10h16M8.500 3.500v4M15.500 3.500v4"/>'),

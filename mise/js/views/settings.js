@@ -1,6 +1,8 @@
 // Настройки: язык, единицы, тема, размер текста, данные
 import { LANGS, t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
+import * as music from '../music.js';
+import { buzz } from '../haptics.js';
 import { icons, toast, openSheet, closeSheet } from '../ui.js';
 
 export function render(s) {
@@ -24,11 +26,18 @@ export function render(s) {
     <h2 class="sec">${t('settings.cooking')}</h2>
     <label class="switch"><input type="checkbox" data-act="opt-wake" ${s.wake ? 'checked' : ''}><span class="knob"></span><span>${t('settings.wake')}</span></label>
     <label class="switch"><input type="checkbox" data-act="opt-voice" ${s.voice ? 'checked' : ''}><span class="knob"></span><span>${t('settings.voice')}</span></label>
+    <label class="switch"><input type="checkbox" data-act="opt-haptics" ${s.haptics ? 'checked' : ''}><span class="knob"></span><span>${t('settings.haptics')}</span></label>
+    <p class="muted small">${t('settings.haptics.note')}</p>
+    <h2 class="sec">${t('settings.music')}</h2>
+    <label class="switch"><input type="checkbox" data-act="opt-music" ${s.music ? 'checked' : ''}><span class="knob"></span><span>${t('settings.music')}</span></label>
+    ${seg('vol', String(s.musicVol), [['0.25', t('vol.low')], ['0.5', t('vol.mid')], ['0.8', t('vol.high')]])}
+    <p class="muted small">${t('settings.music.note')}</p>
 
     <h2 class="sec">${t('settings.data')}</h2>
     <div class="plan-actions"><button class="btn" data-act="data-export">${icons.download} ${t('settings.export')}</button><label class="btn file">${icons.upload} ${t('settings.import')}<input type="file" accept="application/json,.json" id="import-file" hidden></label></div>
     <p class="muted small">${t('settings.data.note')}</p>
     <button class="link danger" data-act="reset">${t('settings.reset')}</button>
+    <p class="muted small">${t('settings.credits')}</p>
     <p class="muted small center about-line">${t('settings.about')}</p>`;
 }
 
@@ -44,6 +53,7 @@ export function onClick(act, el) {
   switch (act) {
     case 'set-units': store.set({ units: el.dataset.v }); return true;
     case 'set-theme': store.set({ theme: el.dataset.v }); return true;
+    case 'set-vol': { const v = Number(el.dataset.v); music.setVolume(v); store.set({ musicVol: v }); return true; }
     case 'set-size': store.set({ textSize: el.dataset.v }); return true;
     case 'data-export': {
       const blob = new Blob([store.exportData()], { type: 'application/json' });
@@ -64,6 +74,8 @@ export function onClick(act, el) {
 
 export function onChange(act, el) {
   if (act === 'opt-wake') { store.set({ wake: el.checked }); return true; }
+  if (act === 'opt-haptics') { store.set({ haptics: el.checked }); if (el.checked) buzz('done'); return true; }
+  if (act === 'opt-music') { store.set({ music: el.checked }); el.checked ? music.start() : music.stop(); return true; }
   if (act === 'opt-voice') { store.set({ voice: el.checked }); return true; }
   return false;
 }

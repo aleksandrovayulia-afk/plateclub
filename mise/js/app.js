@@ -3,6 +3,8 @@ import { PRESETS } from './data/equipment.js';
 import { RECIPES } from './engine.js';
 import { LANGS, t, setLang, currentLang } from './i18n.js';
 import * as timers from './timers.js';
+import * as music from './music.js';
+import { buzz } from './haptics.js';
 import { $, icons, closeSheet, openSheet, toast, esc } from './ui.js';
 import * as home from './views/home.js';
 import * as fridge from './views/fridge.js';
@@ -127,6 +129,8 @@ function onboarding() {
 const BACK_FALLBACK = { recipe: '#/recipes', plan: '#/more', shop: '#/more', tools: '#/more', kitchen: '#/more', settings: '#/more', saved: '#/more' };
 
 document.addEventListener('click', (e) => {
+  if (store.get().music && !music.isOn()) { music.setVolume(store.get().musicVol); music.start(); }
+  if (e.target.closest('button, a, .chip, .tab')) buzz('tap');
   const el = e.target.closest('[data-act]');
   if (!el || el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
   const act = el.dataset.act;

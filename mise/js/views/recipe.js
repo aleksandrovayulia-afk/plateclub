@@ -8,7 +8,7 @@ import { fmtQty } from '../qty.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import * as timers from '../timers.js';
-import { esc, md, icons, timeLabel, levelLabel, cuisine, toast, recipeRow, openSheet } from '../ui.js';
+import { esc, md, icons, timeLabel, levelLabel, cuisine, toast, recipeRow, openSheet, photo } from '../ui.js';
 
 const servings = {};
 const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -75,7 +75,7 @@ export function render(s, id) {
         <button class="icon-btn${fav ? ' on' : ''}" data-act="fav" data-id="${id}" aria-pressed="${fav}" aria-label="${t('recipe.fav')}">${icons.heart}</button>
       </span>
     </div>
-    <section class="d-hero" style="--t:${tint}"><span class="d-e" aria-hidden="true">${r.e}</span></section>
+    <section class="d-hero" style="--t:${tint}">${photo(r)}</section>
     <h1 class="d-title">${esc(tx.t)}</h1>
     <p class="d-desc">${esc(tx.d)}</p>
     <div class="facts">
@@ -87,7 +87,6 @@ export function render(s, id) {
 
     <div class="d-actions">
       <button class="btn small${planned ? ' on' : ''}" data-act="plan-sheet" data-id="${id}">${icons.calendar} ${t('recipe.plan')}</button>
-      <button class="btn small" data-act="cook" data-id="${id}">${icons.play} ${t('recipe.start')}</button>
     </div>
 
     <h2 class="sec">${t('recipe.equip.title')}</h2>

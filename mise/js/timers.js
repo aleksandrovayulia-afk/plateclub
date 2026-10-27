@@ -1,3 +1,4 @@
+import { buzz } from './haptics.js';
 // Общие таймеры кухни: работают в фоне, на любом экране. Используются режимом готовки и разделом «Инструменты».
 let seq = 0;
 const timers = new Map();
@@ -33,7 +34,7 @@ export function beep() {
       o.stop(t0 + d + 0.25);
     });
   } catch { /* */ }
-  try { navigator.vibrate && navigator.vibrate([200, 100, 200, 100, 300]); } catch { /* */ }
+  try { buzz('alarm'); } catch { /* */ }
 }
 
 let onDone = () => {};
