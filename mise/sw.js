@@ -1,5 +1,5 @@
 // Офлайн-кэш: приложение работает без сети после первого открытия.
-const CACHE = 'mise-v2';
+const CACHE = 'mise-v3';
 // Минимум для первого офлайн-старта; остальные файлы попадают в кэш при первом обращении (см. fetch ниже).
 const ASSETS = ['./', 'index.html', 'css/app.css', 'manifest.webmanifest', 'icons/icon.svg', 'js/app.js'];
 

@@ -1,7 +1,7 @@
 // Настройки: язык, единицы, тема, размер текста, данные
 import { LANGS, t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
-import * as music from '../music.js';
+import * as musicui from '../musicui.js';
 import { buzz } from '../haptics.js';
 import { icons, toast, openSheet, closeSheet } from '../ui.js';
 
@@ -53,7 +53,7 @@ export function onClick(act, el) {
   switch (act) {
     case 'set-units': store.set({ units: el.dataset.v }); return true;
     case 'set-theme': store.set({ theme: el.dataset.v }); return true;
-    case 'set-vol': { const v = Number(el.dataset.v); music.setVolume(v); store.set({ musicVol: v }); return true; }
+    case 'set-vol': { const v = Number(el.dataset.v); musicui.setVolume(v); return true; }
     case 'set-size': store.set({ textSize: el.dataset.v }); return true;
     case 'data-export': {
       const blob = new Blob([store.exportData()], { type: 'application/json' });
@@ -75,7 +75,7 @@ export function onClick(act, el) {
 export function onChange(act, el) {
   if (act === 'opt-wake') { store.set({ wake: el.checked }); return true; }
   if (act === 'opt-haptics') { store.set({ haptics: el.checked }); if (el.checked) buzz('done'); return true; }
-  if (act === 'opt-music') { store.set({ music: el.checked }); el.checked ? music.start() : music.stop(); return true; }
+  if (act === 'opt-music') { musicui.setOn(el.checked); return true; }
   if (act === 'opt-voice') { store.set({ voice: el.checked }); return true; }
   return false;
 }

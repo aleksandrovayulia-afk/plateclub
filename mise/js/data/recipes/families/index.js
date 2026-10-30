@@ -9,5 +9,8 @@ import sweet2 from './sweet2.js';
 import drinks from './drinks.js';
 import sport from './sport.js';
 import other from './other.js';
+import combo1 from './combo1.js';
+import combo2 from './combo2.js';
+import combo3 from './combo3.js';
 
-export default [...soups, ...cakes, ...pasta, ...meat, ...eggs, ...salads, ...sweet1, ...sweet2, ...drinks, ...sport, ...other];
+export default [...soups, ...cakes, ...pasta, ...meat, ...eggs, ...salads, ...sweet1, ...sweet2, ...drinks, ...sport, ...other, ...combo1, ...combo2, ...combo3];

@@ -41,7 +41,12 @@ function latForms(w) {
 }
 
 /** Ключ слова для сопоставления: кириллица — основа, латиница — набор форм */
-const tok = (w) => (isCyr(w) ? { c: true, k: stem(w) } : { c: false, k: latForms(w) });
+const tokMemo = new Map();
+const tok = (w) => {
+  let t = tokMemo.get(w);
+  if (!t) { t = isCyr(w) ? { c: true, k: stem(w) } : { c: false, k: latForms(w) }; tokMemo.set(w, t); }
+  return t;
+};
 const tokEq = (a, b) => {
   if (a.c !== b.c) return false;
   if (a.c) return a.k === b.k;
@@ -122,7 +127,7 @@ export const BY_ID = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
 /** Тексты рецепта на нужном языке: {t, d, s:[{text,min}], k:[]} */
 export function rtext(r, lang = currentLang()) {
   const tx = r.text[lang] || r.text.ru;
-  return { t: tx.t, d: tx.d, k: tx.k, steps: tx.s.map((text, i) => ({ text, min: r.stepMin[i] || 0 })) };
+  return { t: tx.t, d: tx.d, k: tx.k, steps: tx.s.map((text, i) => ({ text, min: (r.stepMin ? r.stepMin[i] : tx.sm?.[i]) || 0 })) };
 }
 
 /* ───────── Техника ───────── */
@@ -227,22 +232,45 @@ export function fridgeSearch({ have, pantry, owned, mood = 'any', diet = {}, max
 
 /* ───────── Поиск по названию ───────── */
 
+const LANGS3 = ['ru', 'en', 'es'];
+const ingTokMemo = {};
+const ingTokens = (id, l) => {
+  const k = `${id}:${l}`;
+  return ingTokMemo[k] || (ingTokMemo[k] = tokens(ING[id].n[l]));
+};
+
+// Индекс собирается лениво и без описаний: так первый поиск по 15 000+ рецептам занимает доли секунды.
+// Описания проверяются только если по названиям и продуктам ничего не нашлось.
 function indexOf(r) {
   if (r.idx) return r.idx;
   const idx = {};
-  for (const l of ['ru', 'en', 'es']) {
-    const title = tokens(r.text[l].t);
-    const body = tokens(`${r.text[l].d}`);
-    const ings = r.ing.flatMap((x) => tokens(ING[x.id].n[l]));
-    idx[l] = { title, body, ings };
+  for (const l of LANGS3) {
+    const tx = r.text[l];
+    idx[l] = {
+      title: tokens(tx.t),
+      ings: r.ing.flatMap((x) => ingTokens(x.id, l)),
+      get body() { return this._b || (this._b = tokens(tx.d)); },
+    };
   }
   r.idx = idx;
   return idx;
 }
 
-export function searchRecipes(q, list = RECIPES) {
-  const qs = tokens(q).filter((x) => (x.c ? x.k.length : [...x.k][0].length) >= 2);
-  if (!qs.length) return list;
+/** Прогрев индекса поиска в простое: порциями по 1500 рецептов, чтобы не блокировать интерфейс */
+export function warmIndex() {
+  const idle = (f, ms) => (typeof window !== 'undefined' && window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: ms + 2000 }) : setTimeout(f, ms));
+  let i = 0;
+  const next = () => {
+    const end = Math.min(i + 1500, RECIPES.length);
+    for (; i < end; i++) indexOf(RECIPES[i]);
+    if (i < RECIPES.length) idle(next, 50);
+  };
+  idle(next, 800);
+}
+
+const prefixMatch = (a, b) => (a.c && b.c ? (a.k.length >= 4 && (b.k.startsWith(a.k) || (a.k.startsWith(b.k) && b.k.length >= 4))) : (!a.c && !b.c ? [...a.k].some((x) => x.length >= 4 && [...b.k].some((y) => y.startsWith(x) || x.startsWith(y))) : false));
+
+function scoreList(qs, list, useBody, lang) {
   const scored = [];
   for (const r of list) {
     const idx = indexOf(r);
@@ -250,19 +278,26 @@ export function searchRecipes(q, list = RECIPES) {
     let hits = 0;
     for (const t of qs) {
       let best = 0;
-      for (const l of ['ru', 'en', 'es']) {
-        const { title, body, ings } = idx[l];
-        const pre = (a, b) => (a.c && b.c ? (a.k.length >= 4 && (b.k.startsWith(a.k) || a.k.startsWith(b.k) && b.k.length >= 4)) : (!a.c && !b.c ? [...a.k].some((x) => x.length >= 4 && [...b.k].some((y) => y.startsWith(x) || x.startsWith(y))) : false));
+      for (const l of LANGS3) {
+        const { title, ings } = idx[l];
         if (title.some((x) => tokEq(t, x))) best = Math.max(best, 10);
-        else if (title.some((x) => pre(t, x))) best = Math.max(best, 6);
+        else if (title.some((x) => prefixMatch(t, x))) best = Math.max(best, 6);
         else if (ings.some((x) => tokEq(t, x))) best = Math.max(best, 3);
-        else if (body.some((x) => tokEq(t, x))) best = Math.max(best, 2);
       }
+      if (!best && useBody && idx[lang].body.some((x) => tokEq(t, x))) best = 2;
       if (best) hits++;
       sc += best;
     }
     if (hits === qs.length && sc) scored.push([sc, r]);
   }
+  return scored;
+}
+
+export function searchRecipes(q, list = RECIPES) {
+  const qs = tokens(q).filter((x) => (x.c ? x.k.length : [...x.k][0].length) >= 2);
+  if (!qs.length) return list;
+  let scored = scoreList(qs, list, false, currentLang());
+  if (!scored.length) scored = scoreList(qs, list, true, currentLang());
   return scored.sort((a, b) => b[0] - a[0]).map((x) => x[1]);
 }
 

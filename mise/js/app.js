@@ -1,9 +1,10 @@
 import * as store from './store.js';
 import { PRESETS } from './data/equipment.js';
-import { RECIPES } from './engine.js';
+import { RECIPES, warmIndex } from './engine.js';
 import { LANGS, t, setLang, currentLang } from './i18n.js';
 import * as timers from './timers.js';
 import * as music from './music.js';
+import * as musicui from './musicui.js';
 import { buzz } from './haptics.js';
 import { $, icons, closeSheet, openSheet, toast, esc } from './ui.js';
 import * as home from './views/home.js';
@@ -21,7 +22,7 @@ import * as settings from './views/settings.js';
 import * as saved from './views/saved.js';
 
 const VIEWS = { home, fridge, recipes, recipe, cook, assistant, more, plan, shop, tools, kitchen, settings, saved };
-const HANDLERS = [home, fridge, recipes, recipe, cook, assistant, plan, shop, tools, kitchen, settings, saved];
+const HANDLERS = [musicui, home, fridge, recipes, recipe, cook, assistant, plan, shop, tools, kitchen, settings, saved];
 const MORE_ROUTES = new Set(['more', 'plan', 'shop', 'tools', 'kitchen', 'settings', 'saved']);
 
 const view = $('#view');
@@ -31,6 +32,7 @@ let current = { name: '', id: null };
 let lastTab = 'home';
 const scrolls = {};
 let navCount = 0;
+let enterT;
 
 /* ───────── Маршруты ───────── */
 function parse() {
@@ -95,12 +97,14 @@ function draw(routeChanged) {
   current = r;
   paintTabs(r.tab, r.name === 'cook');
   paintTimerBar();
+  musicui.paintMini();
   document.title = TITLES[r.name] ? `Mise — ${t(TITLES[r.name])}` : 'Mise';
 
   if (routeChanged) {
     view.classList.remove('enter');
     void view.offsetWidth;
     view.classList.add('enter');
+    clearTimeout(enterT); enterT = setTimeout(() => view.classList.remove('enter'), 800);
     window.scrollTo(0, ['home', 'recipes', 'fridge'].includes(r.name) ? scrolls[key] || 0 : 0);
     if (r.name === 'assistant') window.scrollTo(0, document.documentElement.scrollHeight);
   } else window.scrollTo(0, keepY);
@@ -122,6 +126,9 @@ function onboarding() {
   openSheet(`<h2>${t('onb.title')}</h2>
     <div class="lang-row">${LANGS.map((l) => `<button class="lang-pill${currentLang() === l.id ? ' on' : ''}" data-act="set-lang" data-v="${l.id}" data-onb="1">${l.name}</button>`).join('')}</div>
     <p class="muted">${t('onb.text')}</p>
+    <h3 class="sub-h">${t('onb.diet')}</h3>
+    <div class="chips">${['vegetarian', 'vegan', 'glutenFree', 'dairyFree', 'eggFree', 'nutFree'].map((k) => `<button class="chip small${store.get().diet[k] ? ' on' : ''}" data-act="onb-diet" data-k="${k}" aria-pressed="${!!store.get().diet[k]}">${t(`diet.${k}`)}</button>`).join('')}</div>
+    <h3 class="sub-h">${t('onb.kitchen')}</h3>
     <div class="presets">${Object.keys(PRESETS).map((id) => `<button class="preset" data-act="onb-preset" data-p="${id}"><b>${t(`preset.${id}`)}</b><span>${t(`preset.${id}.d`)}</span></button>`).join('')}</div>`, { onClose: () => store.set({ onboarded: true }, { silent: true }) });
 }
 
@@ -129,7 +136,7 @@ function onboarding() {
 const BACK_FALLBACK = { recipe: '#/recipes', plan: '#/more', shop: '#/more', tools: '#/more', kitchen: '#/more', settings: '#/more', saved: '#/more' };
 
 document.addEventListener('click', (e) => {
-  if (store.get().music && !music.isOn()) { music.setVolume(store.get().musicVol); music.start(); }
+  if (store.get().music && !music.isOn()) musicui.setOn(true);
   if (e.target.closest('button, a, .chip, .tab')) buzz('tap');
   const el = e.target.closest('[data-act]');
   if (!el || el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
@@ -137,12 +144,17 @@ document.addEventListener('click', (e) => {
   switch (act) {
     case 'back': if (navCount > 0) history.back(); else location.hash = BACK_FALLBACK[current.name] || '#/'; return;
     case 'close-sheet': closeSheet(); return;
-    case 'cook': timers.unlockAudio(); location.hash = `#/cook/${el.dataset.id}`; return;
+    case 'cook': timers.unlockAudio(); if (store.get().musicCook && !music.isOn()) musicui.setOn(true); location.hash = `#/cook/${el.dataset.id}`; return;
     case 'lang-sheet': langSheet(); return;
     case 'set-lang': {
       changeLang(el.dataset.v);
       if (el.dataset.onb) onboarding(); else closeSheet();
       return;
+    }
+    case 'onb-diet': {
+      const k = el.dataset.k; const d = { ...store.get().diet, [k]: !store.get().diet[k] };
+      if (k === 'vegan' && d.vegan) d.vegetarian = true;
+      store.set({ diet: d }, { silent: true }); onboarding(); return;
     }
     case 'onb-preset': store.set({ owned: PRESETS[el.dataset.p].eq, onboarded: true }); closeSheet(); return;
     default:
@@ -156,6 +168,11 @@ document.addEventListener('change', (e) => {
   for (const h of HANDLERS) if (h.onChange && h.onChange(el.dataset.act, el)) return;
 });
 
+document.addEventListener('input', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (el) musicui.onInput(el.dataset.act, el);
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSheet();
   cook.onKey(e);
@@ -166,6 +183,7 @@ window.addEventListener('hashchange', () => { navCount++; draw(true); });
 /* ───────── Старт ───────── */
 store.init();
 setLang(store.get().lang);
+musicui.init();
 store.subscribe(() => draw(false));
 timers.subscribe(() => {
   paintTimerBar();
@@ -180,6 +198,7 @@ timers.setOnDone((tm) => {
 
 draw(true);
 onboarding();
+warmIndex();
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

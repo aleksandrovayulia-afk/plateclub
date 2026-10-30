@@ -6,6 +6,7 @@ import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import * as timers from '../timers.js';
 import * as music from '../music.js';
+import * as musicui from '../musicui.js';
 import { buzz } from '../haptics.js';
 import { esc, icons, openSheet } from '../ui.js';
 
@@ -137,7 +138,7 @@ export function onClick(act, el) {
       } else { cur.i++; buzz('step'); store.set({}); }
       return true;
     case 'cook-prev': if (cur.i > 0) { cur.i--; buzz('back'); store.set({}); } return true;
-    case 'cook-music': music.toggle(); store.set({ music: music.isOn() }); buzz('tap'); return true;
+    case 'cook-music': musicui.setOn(!music.isOn()); store.set({}); buzz('tap'); return true;
     case 'goto-step': cur.i = Number(el.dataset.i); store.set({}); return true;
     case 'cook-exit': { const id = cur.id; cur = null; stop(); location.hash = `#/r/${id}`; return true; }
     case 'cook-voice': store.set({ voice: !s.voice }); if (s.voice) stopSpeech(); return true;

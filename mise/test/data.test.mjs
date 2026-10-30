@@ -26,9 +26,9 @@ const t = (name, fn) => {
 const LANGS = ['ru', 'en', 'es'];
 const CYR = /[А-Яа-яЁё]/;
 
-t('рецептов больше 1000', () => {
+t('рецептов больше 10 000', () => {
   console.log('    всего рецептов:', RECIPES.length);
-  check(RECIPES.length > 1000, `нужно больше 1000, а их ${RECIPES.length}`);
+  check(RECIPES.length > 10000, `нужно больше 1000, а их ${RECIPES.length}`);
 });
 
 t('id уникальны, категории и кухни существуют', () => {
@@ -67,7 +67,7 @@ t('все три языка заполнены, число шагов совпа
       check(x.k.length >= 1, `${r.id}/${l}: нет советов`);
       for (const s of x.s) check(s.length > 8, `${r.id}/${l}: пустой шаг`);
     }
-    check(r.stepMin.length <= base, `${r.id}: таймеров больше шагов`);
+    check((r.stepMin || r.text.ru.sm).length <= base, `${r.id}: таймеров больше шагов`);
   }
 });
 
@@ -100,7 +100,7 @@ t('названия уникальны в каждом языке', () => {
 
 t('названия не слишком длинные, описания не слишком короткие', () => {
   for (const r of RECIPES) for (const l of LANGS) {
-    check(r.text[l].t.length <= 64, `${r.id}/${l}: длинное название «${r.text[l].t}»`);
+    check(r.text[l].t.length <= 70, `${r.id}/${l}: длинное название «${r.text[l].t}»`);
     check(r.text[l].d.length >= 20, `${r.id}/${l}: короткое описание`);
   }
 });

@@ -50,6 +50,27 @@ function pickSheet(slot) {
     <a class="btn full ghost" href="#/recipes" data-act="close-sheet">${t('plan.browse')}</a>`, { tall: true });
 }
 
+/** Заполняет пустые приёмы пищи на неделю вперёд с учётом техники и питания (используют и экран плана, и помощник) */
+export function fillWeek() {
+  const s = store.get();
+  const owned = new Set(s.owned);
+  const plan = { ...s.plan };
+  const used = new Set();
+  days().forEach((d, di) => {
+    const dk = key(d);
+    const cur = { ...(plan[dk] || {}) };
+    for (const sl of ['breakfast', 'lunch', 'dinner']) {
+      if (cur[sl]) continue;
+      const pool = RECIPES.filter((r) => SLOT_TAGS[sl](r) && passesDiet(r, s.diet) && !missingGear(r, owned).length && !used.has(r.id));
+      if (!pool.length) continue;
+      const r = pool[Math.floor(jitter(`${dk}${sl}`, s.seed + di) * pool.length)];
+      cur[sl] = r.id; used.add(r.id);
+    }
+    plan[dk] = cur;
+  });
+  store.set({ plan, seed: s.seed + 1 });
+}
+
 export function onClick(act, el) {
   const s = store.get();
   const ds = days();
@@ -60,26 +81,7 @@ export function onClick(act, el) {
     case 'plan-choose': store.set({ plan: { ...s.plan, [k]: { ...(s.plan[k] || {}), [pickFor]: el.dataset.id } } }); closeSheet(); return true;
     case 'plan-remove': { const d = { ...(s.plan[k] || {}) }; delete d[el.dataset.slot]; store.set({ plan: { ...s.plan, [k]: d } }); return true; }
     case 'plan-clear': store.set({ plan: {} }); return true;
-    case 'plan-fill': {
-      const owned = new Set(s.owned);
-      const plan = { ...s.plan };
-      const used = new Set();
-      ds.forEach((d, di) => {
-        const dk = key(d);
-        const cur = { ...(plan[dk] || {}) };
-        for (const sl of ['breakfast', 'lunch', 'dinner']) {
-          if (cur[sl]) continue;
-          const pool = RECIPES.filter((r) => SLOT_TAGS[sl](r) && passesDiet(r, s.diet) && !missingGear(r, owned).length && !used.has(r.id));
-          if (!pool.length) continue;
-          const r = pool[Math.floor(jitter(`${dk}${sl}`, s.seed + di) * pool.length)];
-          cur[sl] = r.id; used.add(r.id);
-        }
-        plan[dk] = cur;
-      });
-      store.set({ plan, seed: s.seed + 1 });
-      toast(t('plan.filled'));
-      return true;
-    }
+    case 'plan-fill': fillWeek(); toast(t('plan.filled')); return true;
     case 'plan-cart': {
       const next = [...s.shop];
       let added = 0;

@@ -1,12 +1,15 @@
 // Мини-ИИ помощник: чат, который понимает продукты, настроение, время и технику на трёх языках
 import { BY_ID, rtext } from '../engine.js';
-import { answer, suggestions } from '../assistant-core.js';
+import { answer, suggestions, isMoreText } from '../assistant-core.js';
 import { t } from '../i18n.js';
 import * as store from '../store.js';
 import { esc, md, $, recipeRow, icons } from '../ui.js';
+import * as timers from '../timers.js';
+import { fillWeek } from './plan.js';
 
 let busy = false;
 let lastQuery = '';
+let page = 0;
 
 function partHtml(p) {
   if (p.type === 'text') return `<div class="bubble a">${md(p.text)}</div>`;
@@ -16,6 +19,7 @@ function partHtml(p) {
       return r ? recipeRow(r, { note: it.note ? esc(it.note) : '', best: it.best }) : '';
     }).join('')}</div>`;
   }
+  if (p.type === 'link') return `<a class="btn small ai-link" href="${esc(p.href)}">${esc(p.label)} ${icons.chev}</a>`;
   if (p.type === 'chips') return `<div class="qchips">${p.items.map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
   return '';
 }
@@ -23,7 +27,7 @@ const msgHtml = (m) => (m.r === 'u' ? `<div class="msg u"><div class="bubble u">
 const typing = '<div class="msg a typing"><div class="bubble a"><i></i><i></i><i></i></div></div>';
 
 // Сохраняем разговор без языка: рецепты и подсказки перерисовываются на текущем языке
-const greeting = () => ({ r: 'a', parts: answer('hello', { have: [], pantry: [], owned: [], diet: {}, cooked: {} }, 1) });
+const greeting = () => ({ r: 'a', parts: answer('hello', { have: [], pantry: [], owned: [], diet: {}, cooked: {} }, 1).filter((p) => p.type !== 'chips') });
 
 export function render(s) {
   const chat = s.chat.length ? s.chat : [greeting()];
@@ -41,6 +45,21 @@ export function render(s) {
 
 const scrollDown = () => requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
 
+
+// действия помощника: таймер, список покупок, план недели
+function runActions(parts) {
+  for (const p of parts) {
+    if (p.type !== 'action') continue;
+    if (p.kind === 'timer') timers.start(t('tools.timers.label', { n: p.min }), p.min * 60);
+    if (p.kind === 'shop') {
+      const next = [...store.get().shop];
+      for (const id of p.ids) if (!next.some((x) => x.id === id && !x.done)) next.push({ id, qs: [], done: false });
+      store.set({ shop: next }, { silent: true });
+    }
+    if (p.kind === 'plan') fillWeek();
+  }
+}
+
 export function send(text) {
   text = text.trim();
   if (!text || busy) return;
@@ -51,8 +70,10 @@ export function send(text) {
   chat.insertAdjacentHTML('beforeend', msgHtml(user));
   chat.insertAdjacentHTML('beforeend', typing);
   scrollDown();
-  const parts = answer(text, { have: s.have, pantry: s.pantry, owned: s.owned, diet: s.diet, cooked: s.cooked, liked: s.ratings, last: lastQuery }, Math.floor(Math.random() * 100000));
-  if (!/^(ещ[её]|другое|другие|дальше|more|another|next|otra|otro|mas|siguiente)/i.test(text.trim())) lastQuery = text;
+  const isMore = isMoreText(text);
+  page = isMore ? page + 1 : 0;
+  const parts = answer(text, { have: s.have, pantry: s.pantry, owned: s.owned, diet: s.diet, cooked: s.cooked, liked: s.ratings, last: lastQuery, page: page - 1 }, Math.floor(Math.random() * 100000));
+  if (!isMore && parts.query) lastQuery = parts.query;
   setTimeout(() => {
     const el = chat.querySelector('.typing');
     if (el) el.remove();
@@ -60,6 +81,7 @@ export function send(text) {
     chat.insertAdjacentHTML('beforeend', msgHtml(msg));
     store.set((st) => ({ chat: [...(st.chat.length ? st.chat : [greeting()]), user, msg].slice(-40) }), { silent: true });
     busy = false;
+    runActions(parts);
     scrollDown();
   }, 380 + Math.random() * 280);
 }

@@ -7,6 +7,7 @@ import { CATEGORIES } from '../data/recipes/index.js';
 import { fmtQty } from '../qty.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
+import * as music from '../music.js';
 import * as timers from '../timers.js';
 import { esc, md, icons, timeLabel, levelLabel, cuisine, toast, recipeRow, openSheet, photo } from '../ui.js';
 
@@ -71,6 +72,7 @@ export function render(s, id) {
     <div class="bar">
       <button class="icon-btn" data-act="back" aria-label="${t('common.back')}">${icons.back}</button>
       <span class="bar-r">
+        <button class="icon-btn${music.isOn() ? ' on' : ''}" data-act="music-toggle" aria-pressed="${music.isOn()}" aria-label="${t('music.title')}">${icons.music}</button>
         <button class="icon-btn" data-act="share" data-id="${id}" aria-label="${t('recipe.share')}">${icons.share}</button>
         <button class="icon-btn${fav ? ' on' : ''}" data-act="fav" data-id="${id}" aria-pressed="${fav}" aria-label="${t('recipe.fav')}">${icons.heart}</button>
       </span>

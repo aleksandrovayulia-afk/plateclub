@@ -2,7 +2,7 @@
 import { CATEGORIES, CUISINES } from './data/recipes/index.js';
 import { rtext } from './engine.js';
 import { t, currentLang } from './i18n.js';
-import { photoKey, photoUrl, photoPos } from './data/photos.js';
+import { photoSrc, photoPos } from './data/photos.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
@@ -21,7 +21,7 @@ export function timeLabel(min) {
   return m ? t('common.hourmin', { h, m }) : t('common.hour', { h });
 }
 
-export const photo = (r) => `<img class="ph" src="${photoUrl(photoKey(r, r.text.ru.t + ' ' + r.text.en.t))}" style="object-position:${photoPos(r.id)}" alt="" loading="lazy" decoding="async" draggable="false">`;
+export const photo = (r) => `<img class="ph" src="${photoSrc(r, r.text.ru.t + ' ' + r.text.en.t)}" style="object-position:${photoPos(r.id)}" alt="" loading="lazy" decoding="async" draggable="false">`;
 export const tile = (r, cls = '') => `<span class="tile ${cls}" style="--t:${catOf(r).tint}" aria-hidden="true">${photo(r)}</span>`;
 
 export function recipeRow(r, { note = '', locked = null, fav = false, best = false, sub = null } = {}) {
@@ -74,6 +74,7 @@ export const icons = {
   share: svg('<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.500A1.500 1.500 0 0 0 6.500 20h11a1.500 1.500 0 0 0 1.500-1.500V12"/>'),
   star: svg('<path d="M12 3.500l2.600 5.400 5.900.8-4.300 4.100 1 5.800L12 16.800 6.800 19.600l1-5.800-4.300-4.100 5.900-.8z"/>'),
   play: svg('<path d="M8 5.500v13l11-6.500z"/>'),
+  skip: svg('<path d="M6 5.500l9 6.500-9 6.500z"/><path d="M18 5.500v13"/>'),
   pause: svg('<path d="M8 5.500v13M16 5.500v13"/>', 'stroke-width="2.6"'),
   volume: svg('<path d="M4 9.500v5h3.500l5 4v-13l-5 4z"/><path d="M16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/>'),
   timer: svg('<circle cx="12" cy="13.500" r="7.500"/><path d="M12 9.500v4l2.500 1.500M9.500 2.500h5"/>'),
@@ -114,6 +115,20 @@ export function openSheet(html, { onClose, tall = false } = {}) {
   root.onClose = onClose;
   const first = root.querySelector('[autofocus]');
   if (first) first.focus({ preventScroll: true });
+  dragToClose(root.querySelector('.sheet'));
+}
+
+/** Закрытие шторки свайпом вниз: тянуть можно за верх шторки, пока содержимое не прокручено */
+function dragToClose(sheet) {
+  let y0 = null; let dy = 0;
+  sheet.addEventListener('touchstart', (e) => { if (sheet.scrollTop <= 0 && e.touches[0].clientY - sheet.getBoundingClientRect().top < 72) { y0 = e.touches[0].clientY; dy = 0; sheet.style.transition = 'none'; } }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); sheet.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null; sheet.style.transition = ''; sheet.style.transform = '';
+    if (dy > 90) closeSheet();
+  };
+  sheet.addEventListener('touchend', end); sheet.addEventListener('touchcancel', end);
 }
 export function closeSheet() {
   const root = $('#sheet-root');

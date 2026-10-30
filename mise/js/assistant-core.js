@@ -5,6 +5,7 @@ import { SUBS } from './data/subs.js';
 import { EQUIP } from './data/equipment.js';
 import { norm, extractIngredients, fridgeSearch, searchRecipes, rtext, RECIPES } from './engine.js';
 import { t, currentLang } from './i18n.js';
+import { CUISINES } from './data/recipes/index.js';
 
 const has = (s, re) => re.test(s);
 
@@ -19,6 +20,17 @@ const GEAR_WITHOUT = {
   en: { oven: 'an oven', microwave: 'a microwave', blender: 'a blender', mixer: 'a mixer', stove: 'a stove', pan: 'a pan', pot: 'a pot', airfryer: 'an air fryer' },
   es: { oven: 'horno', microwave: 'microondas', blender: 'batidora', mixer: 'batidora de varillas', stove: 'fuego', pan: 'sartén', pot: 'olla', airfryer: 'freidora de aire' },
 };
+
+const CUISINE_WORDS = [
+  ['it', /итальян|italian|italian[ao]\b/], ['fr', /француз|french|frances/], ['us', /американск|american|estadounidens/], ['gr', /грече|greek|griega/], ['ge', /грузин|georgian|georgian[ao]/],
+  ['uz', /узбек|uzbek/], ['me', /ближневосточ|middle eastern|oriente medio|libanes|lebanese/], ['as', /азиатск|asian|asiatic/], ['in', /индийск|indian\b|\bindia\b/], ['mx', /мексикан|mexican/],
+  ['es', /испанск|spanish|espanol/], ['jp', /японск|japanese|japones/], ['de', /немецк|german|aleman/], ['tr', /турецк|turkish|turc[ao]\b/], ['ma', /марокканск|moroccan|marroqu/],
+  ['th', /тайск|thai\b|tailandes/], ['cn', /китайск|chinese|\bchin[ao]\b/], ['kr', /корейск|korean|corean/], ['ru', /русск|russian|\brus[ao]\b/],
+];
+const CUISINE_GROUP = { as: ['as', 'cn', 'jp', 'kr', 'th'] };
+
+/** «Ещё», «more», «más opciones»: просьба показать следующие варианты (а не «более быстрые», «más rápido») */
+export const isMoreText = (text) => /^(ещ[её]|другое|другие|дальше|more|another|next|otra|otro|mas|siguiente)( (вариант|рецепт|идеи|options|recipes|ideas|opciones|recetas)\w*)?$/.test(norm(text));
 
 export function parseQuery(text) {
   const n = norm(text);
@@ -79,8 +91,16 @@ export function parseQuery(text) {
   const greet = has(n, /^(привет|здравствуй|добр|хай|hello|hi |hi$|hey|good (morning|evening)|hola|buenas|buenos)/);
   const help = has(n, /что ты умеешь|помощь|помоги|what can you do|help|how do you work|que sabes hacer|ayuda|ayudame/);
   const asksRecipe = has(n, /рецепт|как приготовить|как сделать|как испечь|как сварить|how (do|to) (i )?(make|cook|bake)|recipe|receta|como hacer|como se hace|como preparar/);
-  const more = has(n, /^(ещ[её]|другое|другие|дальше|more|another|next|otra|otro|mas|siguiente)/);
-  return { raw: text, n, ing, without, noGear, mood, cat, tags, maxMin, diet, useFridge, wantsAny, sub, greet, help, asksRecipe, more };
+  const cuisine = CUISINE_WORDS.find(([, re]) => re.test(n))?.[0] || null;
+  const level = has(n, /сложн|впечатл|challenging|impress|difficil|complicad|lucirme/) ? 'hard' : has(n, /прост|легк|попрощ|для начинающих|easy|simple|beginner|facil|sencill|principiante/) ? 'easy' : null;
+  const tm = n.match(/(\d{1,3})\s*(мин|min|час|hour|hora|h\b)/);
+  const timerWord = has(n, /таймер|засеки|timer|temporizador|cronometr|alarma/);
+  const timer = timerWord ? (tm ? (/^(час|hour|hora|h)/.test(tm[2]) ? +tm[1] * 60 : +tm[1]) : -1) : 0;
+  const shopAdd = has(n, /(добав|запиш|положи).*(списк|покупк|корзин)|в списк\w* покупок|список покупок|add .*(shopping|grocery) list|shopping list|grocery list|lista de la compra|lista de compras|anade|agrega/) && !timerWord;
+  const planWeek = has(n, /меню на недел|план на недел|составь (мне )?(меню|план)|plan (for )?(my|the) week|meal plan|weekly (menu|plan)|menu semanal|planifica|plan semanal/);
+  const addMore = has(n, /^(а |и |ещ[её] |also |and |plus |y |ademas|tambien)/);
+  const more = isMoreText(text);
+  return { raw: text, n, ing, without, noGear, mood, cat, tags, maxMin, diet, useFridge, wantsAny, sub, greet, help, asksRecipe, more, cuisine, level, timer, shopAdd, planWeek, addMore };
 }
 
 const pick = (arr, seed) => arr[Math.abs(seed) % arr.length];
@@ -95,11 +115,40 @@ export const suggestions = () => [0, 1, 2, 3, 4, 5, 6, 7].map((i) => t(`ai.sg${i
  * Ответ помощника: массив частей {type:'text'|'recipes'|'chips'}.
  * state: { have, pantry, owned, diet, cooked, last }
  */
+const isMain = (q) => q.ing.length || q.mood !== 'any' || q.cat || q.tags.length || q.asksRecipe || q.sub || q.wantsAny || q.useFridge || q.cuisine || q.timer || q.shopAdd || q.planWeek || q.greet || q.help;
+const isModifier = (q) => q.maxMin || q.noGear.size || q.without.length || q.level || Object.values(q.diet).some(Boolean);
+
 export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
-  const q = parseQuery(text);
-  if (q.more && state.last) return answer(state.last, state, seed, offset + 4);
+  let q = parseQuery(text);
+  if (q.more && state.last) return answer(state.last, state, seed, 4 * ((state.page || 0) + 1));
   const lang = currentLang();
+  // уточнение: «а быстрее», «без духовки», «а с курицей» достраивают предыдущий запрос
+  let merged = null;
+  if (state.last && !q.more && ((!isMain(q) && isModifier(q)) || (q.addMore && q.ing.length))) {
+    merged = `${state.last} ${text}`.slice(-240);
+    q = parseQuery(merged);
+  }
   const parts = [];
+  parts.query = merged || text;
+
+  if (q.timer) {
+    if (q.timer < 0) return Object.assign([{ type: 'text', text: t('ai.timer.ask') }], { query: state.last || text });
+    parts.push({ type: 'action', kind: 'timer', min: q.timer }, { type: 'text', text: t('ai.timer.set', { n: q.timer }) }, { type: 'link', href: '#/tools', label: t('ai.link.timers') });
+    parts.query = state.last || text;
+    return parts;
+  }
+  if (q.shopAdd) {
+    const ids = q.ing;
+    if (!ids.length) return Object.assign([{ type: 'text', text: t('ai.shop.ask') }], { query: state.last || text });
+    parts.push({ type: 'action', kind: 'shop', ids }, { type: 'text', text: t('ai.shop.added', { list: list(names(ids)) }) }, { type: 'link', href: '#/shop', label: t('ai.link.shop') });
+    parts.query = state.last || text;
+    return parts;
+  }
+  if (q.planWeek) {
+    parts.push({ type: 'action', kind: 'plan' }, { type: 'text', text: t('ai.plan.done') }, { type: 'link', href: '#/plan', label: t('ai.link.plan') });
+    parts.query = state.last || text;
+    return parts;
+  }
 
   if (q.sub && q.ing.length) {
     for (const id of q.ing.slice(0, 2)) {
@@ -131,6 +180,9 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
 
   const filter = (r) => {
     if (q.cat && r.c !== q.cat) return false;
+    if (q.cuisine && !(CUISINE_GROUP[q.cuisine] || [q.cuisine]).includes(r.cu)) return false;
+    if (q.level === 'easy' && r.lv > 1) return false;
+    if (q.level === 'hard' && r.lv < 2) return false;
     for (const tg of ['breakfast', 'soup', 'salad', 'snack', 'party']) if (q.tags.includes(tg) && !r.tags.includes(tg)) return false;
     if (q.tags.includes('postworkout') && !r.tags.includes('postworkout') && !r.tags.includes('sport')) return false;
     if (q.tags.includes('nobake') && (r.eq.includes('oven') || r.eq.includes('pan') || r.eq.includes('pot'))) return false;
@@ -141,14 +193,18 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
 
   const res = fridgeSearch({ have, pantry: state.pantry, owned: [...owned], mood: q.mood, diet, maxMin: q.maxMin, cooked: state.cooked, liked: state.liked || {}, seed, filter });
   const { ready, almost, other, locked } = res;
-  let pool = have.length ? [...ready, ...almost] : [...ready, ...almost, ...other];
-  if (have.length && pool.length < 3) pool = [...pool, ...other.slice(0, 3 - pool.length)];
+  // назвали продукт в запросе: показываем все блюда с ним, лучшие по совпадению выше; «холодильник» — только то, что реально можно приготовить
+  const explicit = q.ing.length > 0;
+  let pool = have.length && !explicit ? [...ready, ...almost] : [...ready, ...almost, ...other];
+  if (have.length && !explicit && pool.length < 3) pool = [...pool, ...other.slice(0, 3 - pool.length)];
 
   const bits = [];
   if (have.length) bits.push(t('ai.bit.have', { list: list(names(have)) }));
   if (q.cat === 'cakes') bits.push(t('ai.bit.cakes'));
   else if (q.cat === 'shakes') bits.push(t('ai.bit.drinks'));
   else if (q.mood !== 'any') bits.push(t(`ai.bit.${q.mood}`));
+  if (q.cuisine) bits.push(t('ai.bit.cuisine', { name: CUISINES[q.cuisine][lang].toLowerCase() }));
+  if (q.level) bits.push(t(`ai.bit.${q.level}`));
   if (q.maxMin) bits.push(t('ai.bit.max', { n: q.maxMin }));
   if (q.noGear.size) bits.push(t('ai.bit.without', { gear: list([...q.noGear].map((g) => GEAR_WITHOUT[lang][g])) }));
   const header = bits.length ? t('ai.intro', { bits: bits.join(', ') }) : t('ai.intro.default');
@@ -188,5 +244,6 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
   }
   const rest = pool.length - offset - 4;
   if (rest > 0) parts.push({ type: 'text', text: t('ai.more', { n: rest }) });
+  parts.push({ type: 'chips', items: [t('ai.fu.quick'), t('ai.fu.nooven'), t('ai.fu.veg'), t('ai.fu.easy'), ...(rest > 0 ? [t('ai.fu.more')] : [])] });
   return parts;
 }

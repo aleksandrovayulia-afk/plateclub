@@ -3,6 +3,8 @@ import { RECIPES, BY_ID, COLLECTIONS, collectionCount, recipeOfTheDay, missingGe
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang, LANGS } from '../i18n.js';
 import * as store from '../store.js';
+import * as music from '../music.js';
+import { photoTag, COLLECTION_PHOTO, CATEGORY_PHOTO } from '../data/photos.js';
 import { esc, icons, photo, tile, timeLabel, levelLabel, recipeCard } from '../ui.js';
 import * as recipes from './recipes.js';
 
@@ -29,7 +31,8 @@ export function render(s) {
 
   return `<header class="home-head">
       <div><p class="eyebrow">${esc(date)}</p><h1>${greeting()}</h1></div>
-      <button class="pill-btn" data-act="lang-sheet" aria-label="${t('settings.language')}">${icons.globe}<span>${LANGS.find((l) => l.id === lang).short}</span></button>
+      <span class="head-btns"><button class="pill-btn${music.isOn() ? ' on' : ''}" data-act="music-toggle" aria-pressed="${music.isOn()}" aria-label="${t('music.title')}">${icons.music}</button>
+      <button class="pill-btn" data-act="lang-sheet" aria-label="${t('settings.language')}">${icons.globe}<span>${LANGS.find((l) => l.id === lang).short}</span></button></span>
     </header>
     <a class="searchbar" href="#/recipes" data-act="focus-search">${icons.search}<span>${t('home.search', { n: RECIPES.length })}</span></a>
 
@@ -63,10 +66,10 @@ export function render(s) {
       <div class="hscroll cards">${viewed.map((r) => `<div class="hc">${recipeCard(r, { fav: s.favs.includes(r.id) })}</div>`).join('')}</div>` : ''}
 
     <h2 class="sec">${t('home.collections')}</h2>
-    <div class="bento">${COLLECTIONS.map((c) => `<button class="bento-i" data-act="open-collection" data-id="${c.id}"><span class="bi-e">${c.e}</span><span class="bi-t">${t(`col.${c.id}`)}</span><span class="bi-n">${cnt(c.id)}</span></button>`).join('')}</div>
+    <div class="bento">${COLLECTIONS.map((c) => `<button class="bento-i" data-act="open-collection" data-id="${c.id}">${photoTag(COLLECTION_PHOTO[c.id], c.id)}<span class="bi-t">${t(`col.${c.id}`)}</span><span class="bi-n">${cnt(c.id)}</span></button>`).join('')}</div>
 
     <h2 class="sec">${t('home.categories')}</h2>
-    <div class="cat-row">${CATEGORIES.map((c) => `<button class="cat-i" style="--t:${c.tint}" data-act="open-cat" data-id="${c.id}"><span>${c.e}</span><b>${esc(c.n[lang])}</b></button>`).join('')}</div>`;
+    <div class="cat-row">${CATEGORIES.map((c) => `<button class="cat-i" data-act="open-cat" data-id="${c.id}"><span class="cat-ph">${photoTag(CATEGORY_PHOTO[c.id], c.id)}</span><b>${esc(c.n[lang])}</b></button>`).join('')}</div>`;
 }
 
 export function onClick(act, el) {

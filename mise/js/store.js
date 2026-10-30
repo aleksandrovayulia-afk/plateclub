@@ -17,6 +17,8 @@ const DEFAULTS = () => ({
   haptics: true,
   music: false,
   musicVol: 0.5,
+  musicStyle: 'jazz',
+  musicCook: false,
   wake: true,
   onboarded: false,
   have: [],

@@ -70,9 +70,17 @@ export function detectMin(ru) {
   return best;
 }
 
+/** Все сочетания пулов продуктов; ok(...слоты) отсекает неудачные пары */
+function cartesian(pools, ok) {
+  let acc = [[]];
+  for (const pool of pools) acc = acc.flatMap((a) => pool.map((x) => [...a, x]));
+  return ok ? acc.filter((c) => ok(...c)) : acc;
+}
+
 export function expand(fam) {
   const out = [];
-  for (const raw of fam.v) {
+  const variants = fam.cross ? cartesian(fam.cross.pools, fam.cross.ok).map((s) => ({ s })) : fam.v;
+  for (const raw of variants) {
     const v = typeof raw === 'string' ? { s: [raw] } : Array.isArray(raw) ? { s: raw } : raw;
     const slots = v.s;
     const id = v.id || `${fam.id}-${slots.join('-')}`;
@@ -102,16 +110,19 @@ export function expand(fam) {
       }
     }
 
+    // название и описание собираем сразу, шаги и советы только при первом обращении: так 10 000+ рецептов не тормозят запуск
     const text = {};
     for (const l of LANGS) {
       const tpl = v.t?.[l] ?? fam.t[l];
       const F = (x) => post(cap(fill(l === 'es' ? agreeEs(x, slots) : x, slots, l, where, cook)), l);
-      text[l] = {
-        t: F(tpl),
-        d: F(v.d?.[l] ?? fam.d[l]),
-        s: (v.s2?.[l] ?? fam.s[l]).map(F),
-        k: [...(fam.k[l] || []).map(F), ...(v.x?.[l] ? [F(v.x[l])] : [])],
-      };
+      const o = { t: F(tpl), d: F(v.d?.[l] ?? fam.d[l]) };
+      let steps; let tips; let sm;
+      Object.defineProperties(o, {
+        s: { enumerable: true, get() { return steps || (steps = (v.s2?.[l] ?? fam.s[l]).map(F)); } },
+        k: { enumerable: true, get() { return tips || (tips = [...(fam.k[l] || []).map(F), ...(v.x?.[l] ? [F(v.x[l])] : [])]); } },
+        sm: { enumerable: true, get() { return sm || (sm = this.s.map(detectMin)); } },
+      });
+      text[l] = o;
     }
     out.push({
       id,
@@ -125,7 +136,6 @@ export function expand(fam) {
       e: v.e || (fam.e === 'auto' ? ING[slots[0]].e : fam.e),
       tg: [...new Set([...(fam.tg || []), ...(v.tg || [])])],
       ing,
-      stepMin: text.ru.s.map(detectMin),
       text,
       fam: fam.id,
     });
