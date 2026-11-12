@@ -281,3 +281,28 @@ body.has-timers #view { padding-top: 10px; }
 .sheet { touch-action: pan-y; } .grab { padding: 0; }
 .btn, .chip, .rrow, .rc, .menu-i, .icon-btn, .tab { transition-timing-function: cubic-bezier(.2,.8,.2,1); }
 .rc:active, .rrow:active, .bento-i:active { transform: scale(.98); }
+
+/* Лимми: персонаж-помощник (плоский минимализм) */
+.mc { display: block; flex: none; overflow: visible; } .mc-all { transform-origin: 50px 90px; }
+.mc-lemon { fill: #f7cf45; } .mc-shine { fill: none; stroke: #fff; stroke-opacity: .55; stroke-width: 3.5; stroke-linecap: round; }
+.mc-leaf { fill: #6ab85a; transform-origin: 52px 20px; animation: leaf 4s ease-in-out infinite; } .mc-stem { fill: none; stroke: #4f8f43; stroke-width: 2.4; stroke-linecap: round; }
+.mc-cheek { fill: #ff8f7e; opacity: .5; } .mc-eye { fill: #2b2118; } .mc-glint { fill: #fff; }
+.mc-shadow { fill: #000; opacity: .12; } .mc-body { animation: mc-bob 3.4s ease-in-out infinite; transform-origin: 50px 90px; }
+.mc-eyes-in { transform-origin: 50px 50px; transform-box: view-box; animation: mc-blink 4.6s infinite; }
+.mc-m { display: none; fill: none; stroke: #2b2118; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.mc[data-s="idle"] .mc-m-idle, .mc[data-s="sad"] .mc-m-sad, .mc[data-s="think"] .mc-m-think { display: block; } .mc[data-s="talk"] .mc-m-talk, .mc[data-s="happy"] .mc-m-happy { display: block; }
+.mc-m-talk { fill: #2b2118; transform-origin: 50px 65px; animation: mc-talk .32s ease-in-out infinite alternate; } .mc-m-happy { fill: #2b2118; } .mc-m-think { fill: #2b2118; stroke: none; }
+.mc[data-s="think"] .mc-eyes-in { animation: mc-look 1.6s ease-in-out infinite; } .mc[data-s="happy"] .mc-all { animation: mc-hop .7s cubic-bezier(.2,.8,.2,1); } .mc[data-s="sad"] .mc-body { animation: none; transform: translateY(2px); }
+@keyframes mc-bob { 50% { transform: translateY(-2.5px) scale(1.01); } } @keyframes mc-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+@keyframes mc-talk { to { transform: scaleY(.45); } } @keyframes mc-look { 0%, 100% { transform: translate(-3px, -3px); } 50% { transform: translate(3px, -3px); } }
+@keyframes mc-hop { 40% { transform: translateY(-9px) rotate(-4deg); } 70% { transform: translateY(0) rotate(3deg); } } @keyframes leaf { 50% { transform: rotate(5deg); } }
+.tab .mc-all { transform: none; }
+.bot-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; } .bot-head h1 { font-size: 1.6rem; } .bot-head .sub { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; }
+.live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; flex: none; }
+.msg.a { flex-direction: row; align-items: flex-end; gap: 8px; } .msg.a .av { flex: none; align-self: flex-end; } .msg-c { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; } .msg-c .bubble.a { align-self: flex-start; }
+.typing .msg-c .bubble { display: inline-flex; width: auto; }
+.composer .mic { width: 48px; height: 48px; border-radius: 50%; } .composer .mic.on { background: var(--accent); color: var(--accent-ink); animation: pulse 1s infinite; }
+.bot-card { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 14px; border-radius: 20px; background: var(--soft); }
+.bot-say { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; } .say-bubble { position: relative; display: block; padding: 10px 14px; border-radius: 16px; border-top-left-radius: 4px; background: var(--surface); font-weight: 600; line-height: 1.35; }
+.bot-sheet-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; } .bot-sheet-h h2 { margin: 0; } #cook-tip { margin-top: 12px; }
+.bot-btn { background: #f7cf45; }

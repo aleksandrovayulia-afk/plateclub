@@ -2,6 +2,7 @@
 import { ING } from '../data/ingredients.js';
 import { SUBS } from '../data/subs.js';
 import { norm } from '../engine.js';
+import { VOL, MASS, DENS } from '../data/measures.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import * as timers from '../timers.js';
@@ -16,10 +17,7 @@ const TABS = ['timers', 'convert', 'words', 'subs'];
 const PRESETS = [1, 3, 5, 10, 15, 20, 30, 45, 60];
 
 /* Меры: в миллилитрах и граммах */
-const VOL = { ml: 1, l: 1000, cup: 240, tbsp: 15, tsp: 5, floz: 29.57 };
-const MASS = { g: 1, kg: 1000, oz: 28.35, lb: 453.6 };
 // Плотность, г/мл — для перевода стаканов и ложек в граммы
-const DENS = { water: 1, milk: 1.03, flour: 0.53, sugar: 0.84, powder: 0.5, butter: 0.95, honey: 1.42, rice: 0.77, oats: 0.38, cocoa: 0.35, oil: 0.92, salt: 1.2, yogurt: 1.03, sourcream: 1.03, breadcrumbs: 0.45, semolina: 0.7, starch: 0.6 };
 const UNIT_NAMES = { ml: 'ml', l: 'l', cup: 'cup', tbsp: 'tbsp', tsp: 'tsp', floz: 'fl oz', g: 'g', kg: 'kg', oz: 'oz', lb: 'lb' };
 
 let conv = { v: 1, from: 'cup', to: 'g', ing: 'flour' };

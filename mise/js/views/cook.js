@@ -8,7 +8,9 @@ import * as timers from '../timers.js';
 import * as music from '../music.js';
 import * as musicui from '../musicui.js';
 import { buzz } from '../haptics.js';
-import { esc, icons, openSheet } from '../ui.js';
+import { esc, icons, openSheet, toast } from '../ui.js';
+import { mascot } from '../mascot.js';
+import { SUBS } from '../data/subs.js';
 
 let cur = null; // { id, i, done }
 let wake = null;
@@ -106,6 +108,7 @@ export function render(s, id) {
       <div class="cook-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${cur.i + 1}"><i style="width:${((cur.i + 1) / total) * 100}%"></i></div>
       <button class="icon-btn${music.isOn() ? ' on' : ''}" data-act="cook-music" aria-pressed="${music.isOn()}" aria-label="${t('cook.music')}">${icons.music}</button>
       <button class="icon-btn${s.voice ? ' on' : ''}" data-act="cook-voice" aria-pressed="${s.voice}" aria-label="${t('cook.voice')}">${icons.volume}</button>
+      <button class="icon-btn bot-btn" data-act="cook-ask" aria-label="${t('cook.ask')}">${mascot('idle', 30)}</button>
       <button class="icon-btn" data-act="cook-ings" aria-label="${t('recipe.ings')}">${icons.cart}</button>
     </div>
     <p class="cook-count">${t('cook.stepOf', { n: cur.i + 1, total })} · ${esc(tx.t)}</p>
@@ -142,6 +145,22 @@ export function onClick(act, el) {
     case 'goto-step': cur.i = Number(el.dataset.i); store.set({}); return true;
     case 'cook-exit': { const id = cur.id; cur = null; stop(); location.hash = `#/r/${id}`; return true; }
     case 'cook-voice': store.set({ voice: !s.voice }); if (s.voice) stopSpeech(); return true;
+    case 'cook-ask': {
+      const lang = currentLang();
+      const chips = r.ing.filter((x) => !x.opt).map((x) => `<button class="chip small" data-act="cook-sub" data-id="${x.id}"><span class="chip-e">${ING[x.id].e}</span>${esc(ING[x.id].n[lang])}</button>`).join('');
+      openSheet(`<div class="bot-sheet-h">${mascot('happy', 56, 'mc-md')}<div><h2>${t('cook.ask.title')}</h2><p class="muted small">${t('cook.ask.sub')}</p></div></div>
+        <div class="chips">${chips}</div><p class="say-bubble" id="cook-tip" hidden></p>
+        <div class="row"><button class="btn" data-act="cook-ask-timer">${icons.timer} ${t('cook.ask.timer')}</button><button class="btn" data-act="cook-ask-read">${icons.volume} ${t('cook.ask.read')}</button></div>`);
+      return true;
+    }
+    case 'cook-sub': {
+      const lang = currentLang();
+      const tip = document.getElementById('cook-tip');
+      if (tip) { tip.hidden = false; tip.textContent = SUBS[el.dataset.id]?.[lang] ? `${ING[el.dataset.id].n[lang]}: ${SUBS[el.dataset.id][lang]}` : t('cook.ask.none'); }
+      return true;
+    }
+    case 'cook-ask-timer': timers.start(`${rtext(r).t} · ${t('cook.step', { n: cur.i + 1 })}`, 300); toast(t('timers.started')); return true;
+    case 'cook-ask-read': speak(stepText(r, s)); return true;
     case 'cook-ings': {
       const k = 1;
       const rows = r.ing.map((x) => `<li class="ing${x.opt ? ' opt' : ''}"><span class="ing-n">${ING[x.id].e} ${esc(ING[x.id].n[currentLang()])}${x.opt ? ` <em>${t('recipe.optional')}</em>` : ''}</span><span class="ing-q">${esc(fmtQty(x.q, { scale: k, imp: s.units === 'imperial' }))}</span></li>`).join('');

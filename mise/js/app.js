@@ -5,6 +5,7 @@ import { LANGS, t, setLang, currentLang } from './i18n.js';
 import * as timers from './timers.js';
 import * as music from './music.js';
 import * as musicui from './musicui.js';
+import { mascot } from './mascot.js';
 import { buzz } from './haptics.js';
 import { $, icons, closeSheet, openSheet, toast, esc } from './ui.js';
 import * as home from './views/home.js';
@@ -47,7 +48,7 @@ const TABS = () => [
   ['home', '#/', icons.home, t('nav.home')],
   ['recipes', '#/recipes', icons.book, t('nav.recipes')],
   ['fridge', '#/fridge', icons.fridge, t('nav.fridge')],
-  ['assistant', '#/assistant', icons.spark, t('nav.assistant')],
+  ['assistant', '#/assistant', mascot('idle', 30, 'mc-tab'), t('nav.assistant')],
   ['more', '#/more', icons.menu, t('nav.more')],
 ];
 

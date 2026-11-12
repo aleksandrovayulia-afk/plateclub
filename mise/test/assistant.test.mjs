@@ -34,5 +34,21 @@ for (const [lang, c] of Object.entries({
   const m2 = recipes(answer(c.more, { ...base, last: c.ref, page: 0 }, 1)).map((r) => r.id);
   ok(m2.length && !m2.some((id) => m1.includes(id)), `${lang}: «ещё» даёт новые рецепты`);
 }
+const textOf = (parts) => parts.filter((p) => p.type === 'text').map((p) => p.text).join(' ');
+for (const [lang, c] of Object.entries({
+  ru: { thanks: 'спасибо', fact: 'расскажи интересный факт', term: 'что такое аль денте', conv: 'сколько граммов в стакане муки', conv2: '2 ст. л. сахара в граммах', recipe: 'добавь ингредиенты для тирамису в список покупок', who: 'кто ты' },
+  en: { thanks: 'thank you', fact: 'tell me a fun fact', term: 'what does blanching mean', conv: 'how many grams in a cup of flour', conv2: '2 tbsp of sugar in grams', recipe: 'add the ingredients for tiramisu to my shopping list', who: 'who are you' },
+  es: { thanks: 'gracias', fact: 'cuéntame un dato curioso', term: 'qué es escaldar', conv: 'cuántos gramos hay en una taza de harina', conv2: '2 cucharadas de azúcar en gramos', recipe: 'añade los ingredientes de tiramisú a la lista de la compra', who: 'quién eres' },
+})) {
+  setLang(lang);
+  ok(textOf(answer(c.thanks, base, 1)).length > 5, `${lang}: спасибо`);
+  ok(textOf(answer(c.fact, base, 3)).length > 20, `${lang}: факт`);
+  ok(textOf(answer(c.who, base, 1)).includes('Limmy') || textOf(answer(c.who, base, 1)).includes('Лимми'), `${lang}: кто ты`);
+  ok(/\*\*/.test(textOf(answer(c.term, base, 1))), `${lang}: термин → ${textOf(answer(c.term, base, 1)).slice(0, 60)}`);
+  ok(/12[05]/.test(textOf(answer(c.conv, base, 1))), `${lang}: меры → ${textOf(answer(c.conv, base, 1))}`);
+  ok(/(2[05]|3[05])/.test(textOf(answer(c.conv2, base, 1))), `${lang}: меры 2 ложки → ${textOf(answer(c.conv2, base, 1))}`);
+  const act = action(answer(c.recipe, base, 1), 'shop-recipe');
+  ok(act && BY_ID[act.id].text.ru.t.toLowerCase().includes('тирамису'), `${lang}: ингредиенты рецепта → ${JSON.stringify(act)}`);
+}
 console.log(fails ? `${fails} проблем` : 'помощник: все проверки пройдены');
 process.exit(fails ? 1 : 0);

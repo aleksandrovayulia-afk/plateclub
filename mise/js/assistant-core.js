@@ -6,6 +6,8 @@ import { EQUIP } from './data/equipment.js';
 import { norm, extractIngredients, fridgeSearch, searchRecipes, rtext, RECIPES } from './engine.js';
 import { t, currentLang } from './i18n.js';
 import { CUISINES } from './data/recipes/index.js';
+import { findTerm } from './data/terms.js';
+import { VOL, MASS, DENS } from './data/measures.js';
 
 const has = (s, re) => re.test(s);
 
@@ -99,8 +101,16 @@ export function parseQuery(text) {
   const shopAdd = has(n, /(добав|запиш|положи).*(списк|покупк|корзин)|в списк\w* покупок|список покупок|add .*(shopping|grocery) list|shopping list|grocery list|lista de la compra|lista de compras|anade|agrega/) && !timerWord;
   const planWeek = has(n, /меню на недел|план на недел|составь (мне )?(меню|план)|plan (for )?(my|the) week|meal plan|weekly (menu|plan)|menu semanal|planifica|plan semanal/);
   const addMore = has(n, /^(а |и |ещ[её] |also |and |plus |y |ademas|tambien)/);
+  const low = String(text).toLowerCase().replace(',', '.');
+  const thanks = has(n, /спасиб|благодар|thanks|thank you|gracias/);
+  const how = has(n, /как дела|как ты|как жизнь|how are you|how s it going|que tal|como estas/);
+  const who = has(n, /как тебя зовут|кто ты|ты кто|who are you|your name|como te llamas|quien eres/);
+  const fact = has(n, /шутк|анекдот|факт|расскажи что нибудь|интересн|joke|fun fact|tell me something|chiste|dato curioso|cuentame algo/);
+  const termAsk = has(n, /что такое|что значит|объясни|what is|what s|what does|meaning of|explain|que es|que significa|explica/);
+  const convertWord = has(n, /сколько (грамм|г |мл|миллилитр|стакан|ложек)|в граммах|в миллилитрах|переведи|how many (grams|ml|cups|tbsp|tsp)|in grams|in ml|convert|cuantos (gramos|ml|vasos)|en gramos|equivale/);
+  const recipeIngredients = has(n, /ингредиент|ingredients|ingredientes/);
   const more = isMoreText(text);
-  return { raw: text, n, ing, without, noGear, mood, cat, tags, maxMin, diet, useFridge, wantsAny, sub, greet, help, asksRecipe, more, cuisine, level, timer, shopAdd, planWeek, addMore };
+  return { raw: text, n, ing, without, noGear, mood, cat, tags, maxMin, diet, useFridge, wantsAny, sub, greet, help, asksRecipe, more, cuisine, level, timer, shopAdd, planWeek, addMore, low, thanks, how, who, fact, termAsk, convertWord, recipeIngredients };
 }
 
 const pick = (arr, seed) => arr[Math.abs(seed) % arr.length];
@@ -109,13 +119,39 @@ const list = (arr) => (arr.length <= 1 ? arr.join('') : `${arr.slice(0, -1).join
 const names = (ids) => ids.map((id) => ING[id].n[currentLang()].toLowerCase());
 const time = (min) => t('common.min', { n: min });
 
-export const suggestions = () => [0, 1, 2, 3, 4, 5, 6, 7].map((i) => t(`ai.sg${i}`));
+const UNIT_RE = [
+  ['cup', /(\d+(?:\.\d+)?)?\s*(стакан\w*|чаш\w*|cups?|tazas?|vasos?)/], ['tbsp', /(\d+(?:\.\d+)?)?\s*(ст\.? ?л\.?|столов\w*|tbsp|tablespoons?|cucharadas?)(?!ita)/],
+  ['tsp', /(\d+(?:\.\d+)?)?\s*(ч\.? ?л\.?|чайн\w*|tsp|teaspoons?|cucharaditas?)/], ['ml', /(\d+(?:\.\d+)?)\s*(мл|миллилитр\w*|ml)/], ['l', /(\d+(?:\.\d+)?)\s*(литр\w*|л|l|liters?|litros?)(?![a-zа-я])/],
+  ['kg', /(\d+(?:\.\d+)?)\s*(кг|килограмм\w*|kg)/], ['oz', /(\d+(?:\.\d+)?)\s*(унц\w*|oz|ounces?|onzas?)/], ['g', /(\d+(?:\.\d+)?)\s*(г|гр|грамм\w*|g|grams?|gramos?)(?![a-zа-я])/],
+];
+const TARGET = [['g', /в граммах|грамм|in grams|grams|gramos/], ['ml', /в мл|миллилитр|in ml|milliliters|mililitros/], ['cup', /в стакан|in cups|en tazas|en vasos/], ['tbsp', /в ложк|in tablespoons|en cucharadas/]];
+
+/** «Сколько граммов в стакане муки», «2 ст. л. сахара в граммах»: перевод мер с учётом плотности продукта */
+function convertQuery(q) {
+  const from = UNIT_RE.map(([u, re]) => [u, q.low.match(re)]).find(([, m]) => m);
+  if (!from) return null;
+  const ingId = q.ing.find((id) => DENS[id]);
+  const volume = ['cup', 'tbsp', 'tsp'].includes(from[0]);
+  if (!q.convertWord && !(volume && ingId)) return null;
+  const qty = from[1][1] ? parseFloat(from[1][1]) : 1;
+  const to = TARGET.find(([, re]) => re.test(q.n))?.[0] || (volume || from[0] === 'ml' || from[0] === 'l' ? 'g' : 'cup');
+  const d = DENS[ingId] || 1;
+  const ml = VOL[from[0]] ? qty * VOL[from[0]] : (qty * MASS[from[0]]) / d;
+  const val = VOL[to] ? ml / VOL[to] : ml * d / MASS[to];
+  const r = val >= 50 ? Math.round(val / 5) * 5 : Math.round(val * 10) / 10;
+  const lang = currentLang();
+  const name = ingId ? ING[ingId].n[lang] : t('ai.conv.water');
+  const text = t('ai.conv.res', { qty: String(qty).replace('.', ','), from: t(`unit.${from[0]}`), ing: name, val: String(r).replace('.', ','), to: t(`unit.${to}`) });
+  return ingId || !volume ? text : `${text} ${t('ai.conv.noing')}`;
+}
+
+export const suggestions = () => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => t(`ai.sg${i}`));
 
 /**
  * Ответ помощника: массив частей {type:'text'|'recipes'|'chips'}.
  * state: { have, pantry, owned, diet, cooked, last }
  */
-const isMain = (q) => q.ing.length || q.mood !== 'any' || q.cat || q.tags.length || q.asksRecipe || q.sub || q.wantsAny || q.useFridge || q.cuisine || q.timer || q.shopAdd || q.planWeek || q.greet || q.help;
+const isMain = (q) => q.thanks || q.how || q.who || q.fact || q.termAsk || q.convertWord || q.ing.length || q.mood !== 'any' || q.cat || q.tags.length || q.asksRecipe || q.sub || q.wantsAny || q.useFridge || q.cuisine || q.timer || q.shopAdd || q.planWeek || q.greet || q.help;
 const isModifier = (q) => q.maxMin || q.noGear.size || q.without.length || q.level || Object.values(q.diet).some(Boolean);
 
 export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
@@ -130,6 +166,30 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
   }
   const parts = [];
   parts.query = merged || text;
+
+  const reply = (...ps) => Object.assign(ps, { query: state.last || text });
+  const rnd = (key, n) => t(`${key}.${Math.abs(seed) % n}`);
+
+  if (q.thanks && !q.ing.length) return reply({ type: 'text', text: rnd('ai.thanks', 3), mood: 'happy' });
+  if (q.who) return reply({ type: 'text', text: t('ai.who'), mood: 'happy' }, { type: 'chips', items: suggestions().slice(0, 4) });
+  if (q.how && !q.ing.length) return reply({ type: 'text', text: rnd('ai.how', 2), mood: 'happy' });
+  if (q.fact && !q.ing.length) return reply({ type: 'text', text: rnd('ai.fact', 10), mood: 'happy' }, { type: 'chips', items: [t('ai.fu.fact'), t('ai.sg0')] });
+  if (q.termAsk) {
+    const term = findTerm(q.n);
+    if (term) return reply({ type: 'text', text: `**${term[lang][0]}.** ${term[lang][1]}`, mood: 'happy' });
+    if (!q.ing.length) return reply({ type: 'text', text: t('ai.term.none'), mood: 'sad' }, { type: 'chips', items: [t('ai.sg9')] });
+  }
+  const conv = convertQuery(q);
+  if (conv) return reply({ type: 'text', text: conv, mood: 'happy' });
+  if (q.shopAdd && q.recipeIngredients) {
+    const stripped = q.n.replace(/добав\w*|запиш\w*|положи\w*|ингредиент\w*|для|в список\w*|покупок|список|add|ingredients|for|to|my|shopping|list|anade|agrega|ingredientes|de|a la|lista|compra|la/g, ' ');
+    const found = searchRecipes(stripped);
+    if (found.length && found.length < RECIPES.length) {
+      const r = found[0];
+      return reply({ type: 'action', kind: 'shop-recipe', id: r.id }, { type: 'text', text: t('ai.shop.recipe', { title: rtext(r).t }), mood: 'happy' }, { type: 'link', href: '#/shop', label: t('ai.link.shop') });
+    }
+    return reply({ type: 'text', text: t('ai.shop.recipe.none'), mood: 'sad' });
+  }
 
   if (q.timer) {
     if (q.timer < 0) return Object.assign([{ type: 'text', text: t('ai.timer.ask') }], { query: state.last || text });
@@ -216,7 +276,7 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
       const title = rtext(g.recipe).t;
       return [{ type: 'text', text: `${header} ${t('ai.locked', { title, gear })}` }, { type: 'recipes', items: [{ id: g.recipe.id, note: t('ai.gear.note', { gear }) }] }];
     }
-    return [{ type: 'text', text: `${header} ${t('ai.none')}` }, { type: 'chips', items: suggestions() }];
+    return [{ type: 'text', text: `${header} ${t('ai.none')}`, mood: 'sad' }, { type: 'chips', items: suggestions() }];
   }
 
   if (offset >= pool.length) offset = 0;
@@ -227,7 +287,7 @@ export function answer(text, state, seed = Date.now() % 100000, offset = 0) {
   if (!have.length) verdict = t('ai.verdict.blind', { base, time: time(top.recipe.min) });
   else if (!top.total || !top.missing.length) verdict = t('ai.verdict.ready', { base, time: time(top.recipe.min) });
   else verdict = t('ai.verdict.need', { base, list: list(names(top.missing.map((x) => x.id))) });
-  parts.push({ type: 'text', text: `${header} ${verdict}` });
+  parts.push({ type: 'text', text: `${header} ${verdict}`, mood: 'happy' });
 
   const items = pool.slice(offset, offset + 4).map((a, i) => ({
     id: a.recipe.id,

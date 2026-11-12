@@ -1,15 +1,27 @@
 // Главная: приветствие, рецепт дня, подборки, быстрые действия
-import { RECIPES, BY_ID, COLLECTIONS, collectionCount, recipeOfTheDay, missingGear, passesDiet, rtext } from '../engine.js';
+import { RECIPES, BY_ID, COLLECTIONS, collectionCount, recipeOfTheDay, missingGear, passesDiet, rtext, SLOT_TAGS, jitter } from '../engine.js';
+import { mascot } from '../mascot.js';
+import { fillWeek } from './plan.js';
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang, LANGS } from '../i18n.js';
 import * as store from '../store.js';
 import * as music from '../music.js';
 import { photoTag, COLLECTION_PHOTO, CATEGORY_PHOTO } from '../data/photos.js';
-import { esc, icons, photo, tile, timeLabel, levelLabel, recipeCard } from '../ui.js';
+import { esc, icons, photo, tile, timeLabel, levelLabel, recipeCard, toast } from '../ui.js';
 import * as recipes from './recipes.js';
 
 const counts = {};
 const cnt = (id) => (counts[id] ??= collectionCount(id));
+
+/** Лимми предлагает блюдо под время суток: завтрак утром, обед днём, ужин вечером */
+function botSuggestion(s) {
+  const h = new Date().getHours();
+  const slot = h < 11 ? 'breakfast' : h < 16 ? 'lunch' : 'dinner';
+  const owned = new Set(s.owned);
+  const pool = RECIPES.filter((r) => SLOT_TAGS[slot](r) && passesDiet(r, s.diet) && !missingGear(r, owned).length);
+  const r = pool.length ? pool[Math.floor(jitter(`${new Date().toDateString()}${slot}${new Date().getHours() >> 1}`, 3) * pool.length)] : recipeOfTheDay();
+  return { r, say: h >= 22 || h < 5 ? 'night' : slot };
+}
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -27,6 +39,7 @@ export function render(s) {
   const plan = s.plan[today()] || {};
   const planned = ['breakfast', 'lunch', 'dinner'].map((slot) => (plan[slot] && BY_ID[plan[slot]] ? [slot, BY_ID[plan[slot]]] : null)).filter(Boolean);
   const open = s.shop.filter((x) => !x.done).length;
+  const bs = botSuggestion(s);
   const fridgeSub = s.have.length ? t('home.fridge.have', { n: s.have.length }) : t('home.fridge.empty');
 
   return `<header class="home-head">
@@ -35,6 +48,12 @@ export function render(s) {
       <button class="pill-btn" data-act="lang-sheet" aria-label="${t('settings.language')}">${icons.globe}<span>${LANGS.find((l) => l.id === lang).short}</span></button></span>
     </header>
     <a class="searchbar" href="#/recipes" data-act="focus-search">${icons.search}<span>${t('home.search', { n: RECIPES.length })}</span></a>
+
+    <section class="bot-card" aria-label="${t('bot.name')}">
+      ${mascot('happy', 58, 'mc-md')}
+      <div class="bot-say"><a class="say-bubble" href="#/r/${bs.r.id}">${esc(t(`bot.say.${bs.say}`, { title: rtext(bs.r).t }))}</a>
+        <div class="chips"><a class="chip small" href="#/fridge">${t('bot.chip.fridge')}</a><button class="chip small" data-act="bot-week">${t('bot.chip.week')}</button><a class="chip small" href="#/assistant">${t('bot.chip.ask')}</a></div></div>
+    </section>
 
     <a class="fridge-hero" href="#/fridge">
       <span class="fh-e" aria-hidden="true">🧺</span>
@@ -78,6 +97,7 @@ export function onClick(act, el) {
     case 'open-collection': recipes.setCollection(el.dataset.id); location.hash = '#/recipes'; return true;
     case 'open-cat': recipes.setCategory(el.dataset.id); location.hash = '#/recipes'; return true;
     case 'focus-search': recipes.wantFocus(); return false;
+    case 'bot-week': fillWeek(); toast(t('plan.filled')); location.hash = '#/plan'; return true;
     case 'surprise-recipe': {
       const owned = new Set(s.owned);
       const pool = RECIPES.filter((r) => r.c !== 'other' && passesDiet(r, s.diet) && !missingGear(r, owned).length && !s.cooked[r.id]);
