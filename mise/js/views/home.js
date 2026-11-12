@@ -50,7 +50,7 @@ export function render(s) {
     <a class="searchbar" href="#/recipes" data-act="focus-search">${icons.search}<span>${t('home.search', { n: RECIPES.length })}</span></a>
 
     <section class="bot-card" aria-label="${t('bot.name')}">
-      ${mascot('happy', 58, 'mc-md')}
+      ${mascot('wave', 76, 'mc-md')}
       <div class="bot-say"><a class="say-bubble" href="#/r/${bs.r.id}">${esc(t(`bot.say.${bs.say}`, { title: rtext(bs.r).t }))}</a>
         <div class="chips"><a class="chip small" href="#/fridge">${t('bot.chip.fridge')}</a><button class="chip small" data-act="bot-week">${t('bot.chip.week')}</button><a class="chip small" href="#/assistant">${t('bot.chip.ask')}</a></div></div>
     </section>

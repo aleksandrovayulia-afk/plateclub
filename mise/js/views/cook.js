@@ -1,3 +1,4 @@
+
 // Режим готовки: один шаг на экране, таймеры в фоне, озвучка, экран не гаснет
 import { BY_ID, rtext, toFahrenheit } from '../engine.js';
 import { ING } from '../data/ingredients.js';
@@ -9,7 +10,7 @@ import * as music from '../music.js';
 import * as musicui from '../musicui.js';
 import { buzz } from '../haptics.js';
 import { esc, icons, openSheet, toast } from '../ui.js';
-import { mascot } from '../mascot.js';
+import { mascot, face } from '../mascot.js';
 import { SUBS } from '../data/subs.js';
 
 let cur = null; // { id, i, done }
@@ -88,7 +89,7 @@ export function render(s, id) {
 
   if (cur.done) {
     return `<div class="cook finish">
-      <div class="finish-e">${r.e}</div>
+      ${mascot('happy', 130)}
       <h1>${t('cook.done.title')}</h1>
       <p class="sub">${t('cook.done.text', { title: esc(tx.t) })}</p>
       <div class="rate big" role="radiogroup" aria-label="${t('recipe.rate')}">${[1, 2, 3, 4, 5].map((v) => `<button class="star${v <= (s.ratings[id] || 0) ? ' on' : ''}" data-act="rate" data-id="${id}" data-v="${v}" role="radio" aria-label="${v}">${icons.star}</button>`).join('')}</div>
@@ -108,10 +109,10 @@ export function render(s, id) {
       <div class="cook-prog" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${cur.i + 1}"><i style="width:${((cur.i + 1) / total) * 100}%"></i></div>
       <button class="icon-btn${music.isOn() ? ' on' : ''}" data-act="cook-music" aria-pressed="${music.isOn()}" aria-label="${t('cook.music')}">${icons.music}</button>
       <button class="icon-btn${s.voice ? ' on' : ''}" data-act="cook-voice" aria-pressed="${s.voice}" aria-label="${t('cook.voice')}">${icons.volume}</button>
-      <button class="icon-btn bot-btn" data-act="cook-ask" aria-label="${t('cook.ask')}">${mascot('idle', 30)}</button>
+      <button class="icon-btn" data-act="cook-ask" aria-label="${t('cook.ask')}">${face('idle', 32)}</button>
       <button class="icon-btn" data-act="cook-ings" aria-label="${t('recipe.ings')}">${icons.cart}</button>
     </div>
-    <p class="cook-count">${t('cook.stepOf', { n: cur.i + 1, total })} · ${esc(tx.t)}</p>
+    <p class="cook-count"><span>${t('cook.stepOf', { n: cur.i + 1, total })} · ${esc(tx.t)}</span>${mascot(tm && tm.running ? 'cook' : cur.i === 0 ? 'teach' : 'idle', 62)}</p>
     <div class="cook-step"><p>${esc(stepText(r, s))}</p></div>
     ${last ? '' : `<p class="cook-next-hint"><b>${t('cook.upnext')}</b> ${esc(tx.steps[cur.i + 1].text)}</p>`}
     ${tm ? `<div class="timer">

@@ -5,7 +5,7 @@ import { LANGS, t, setLang, currentLang } from './i18n.js';
 import * as timers from './timers.js';
 import * as music from './music.js';
 import * as musicui from './musicui.js';
-import { mascot } from './mascot.js';
+import { mascot, face, tap } from './mascot.js';
 import { buzz } from './haptics.js';
 import { $, icons, closeSheet, openSheet, toast, esc } from './ui.js';
 import * as home from './views/home.js';
@@ -48,7 +48,7 @@ const TABS = () => [
   ['home', '#/', icons.home, t('nav.home')],
   ['recipes', '#/recipes', icons.book, t('nav.recipes')],
   ['fridge', '#/fridge', icons.fridge, t('nav.fridge')],
-  ['assistant', '#/assistant', mascot('idle', 30, 'mc-tab'), t('nav.assistant')],
+  ['assistant', '#/assistant', face('idle', 28, 'mc-tab'), t('nav.assistant')],
   ['more', '#/more', icons.menu, t('nav.more')],
 ];
 
@@ -91,7 +91,7 @@ function draw(routeChanged) {
 
   const s = store.get();
   applyPrefs(s);
-  view.innerHTML = VIEWS[r.name].render(s, r.id);
+  view.innerHTML = coachHtml(r.name) + VIEWS[r.name].render(s, r.id);
   view.dataset.route = r.name;
   const mod = VIEWS[r.name];
   if (mod.bind) mod.bind(view);
@@ -122,21 +122,55 @@ function langSheet() {
   openSheet(`<h2>${t('settings.language')}</h2><div class="lang-list">${LANGS.map((l) => `<button class="lang-i${currentLang() === l.id ? ' on' : ''}" data-act="set-lang" data-v="${l.id}"><b>${l.name}</b><span>${t(`settings.lang.${l.id}`)}</span>${currentLang() === l.id ? icons.check : ''}</button>`).join('')}</div>`);
 }
 
-function onboarding() {
-  if (store.get().onboarded) return;
-  openSheet(`<h2>${t('onb.title')}</h2>
-    <div class="lang-row">${LANGS.map((l) => `<button class="lang-pill${currentLang() === l.id ? ' on' : ''}" data-act="set-lang" data-v="${l.id}" data-onb="1">${l.name}</button>`).join('')}</div>
-    <p class="muted">${t('onb.text')}</p>
-    <h3 class="sub-h">${t('onb.diet')}</h3>
-    <div class="chips">${['vegetarian', 'vegan', 'glutenFree', 'dairyFree', 'eggFree', 'nutFree'].map((k) => `<button class="chip small${store.get().diet[k] ? ' on' : ''}" data-act="onb-diet" data-k="${k}" aria-pressed="${!!store.get().diet[k]}">${t(`diet.${k}`)}</button>`).join('')}</div>
-    <h3 class="sub-h">${t('onb.kitchen')}</h3>
-    <div class="presets">${Object.keys(PRESETS).map((id) => `<button class="preset" data-act="onb-preset" data-p="${id}"><b>${t(`preset.${id}`)}</b><span>${t(`preset.${id}.d`)}</span></button>`).join('')}</div>`, { onClose: () => store.set({ onboarded: true }, { silent: true }) });
+let obStep = 0;
+function onboarding(step = obStep) {
+  const st = store.get();
+  if (st.onboarded) return;
+  obStep = step;
+  const dots = `<div class="ob-steps" aria-hidden="true">${[0, 1, 2].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
+  const hero = `<div class="ob-hero">${mascot(['wave', 'teach', 'show'][step], 118)}</div>`;
+  const body = [
+    `<h2 class="ob-t">${t('onb.hi')}</h2><p class="muted ob-p">${t('onb.hi.text')}</p>
+     <div class="lang-row">${LANGS.map((l) => `<button class="lang-pill${currentLang() === l.id ? ' on' : ''}" data-act="set-lang" data-v="${l.id}" data-onb="1">${l.name}</button>`).join('')}</div>
+     <button class="btn primary full" data-act="onb-go" data-s="1">${t('onb.next')}</button>`,
+    `<h2 class="ob-t">${t('onb.kitchen.h')}</h2><p class="muted ob-p">${t('onb.kitchen.text')}</p>
+     <div class="presets">${Object.keys(PRESETS).map((id) => `<button class="preset" data-act="onb-preset" data-p="${id}"><b>${t(`preset.${id}`)}</b><span>${t(`preset.${id}.d`)}</span></button>`).join('')}</div>`,
+    `<h2 class="ob-t">${t('onb.diet')}</h2><p class="muted ob-p">${t('onb.diet.text')}</p>
+     <div class="chips" style="justify-content:center">${['vegetarian', 'vegan', 'glutenFree', 'dairyFree', 'eggFree', 'nutFree'].map((k) => `<button class="chip small${st.diet[k] ? ' on' : ''}" data-act="onb-diet" data-k="${k}" aria-pressed="${!!st.diet[k]}">${t(`diet.${k}`)}</button>`).join('')}</div>
+     <button class="btn primary full" style="margin-top:18px" data-act="onb-done">${t('onb.start')}</button>`,
+  ][step];
+  openSheet(`${hero}${dots}${body}`, { onClose: () => store.set({ onboarded: true }, { silent: true }) });
+}
+
+const COACH_ROUTES = new Set(['fridge', 'recipes', 'plan', 'shop', 'tools', 'kitchen', 'saved', 'recipe']);
+/** Короткая подсказка от Лимми над экраном; после закрытия больше не показывается */
+function coachHtml(name) {
+  const st = store.get();
+  if (!COACH_ROUTES.has(name) || !st.onboarded || (st.coach || {})[name]) return '';
+  return `<aside class="coach" role="note">${mascot('teach', 56)}<p>${t(`coach.${name}`)}</p><button class="coach-x" data-act="coach-x" data-r="${name}" aria-label="${t('common.close')}">${icons.close}</button></aside>`;
+}
+
+/** Реплика над персонажем, на которого нажали */
+function quip(el, move) {
+  let q = document.getElementById('bot-quip');
+  if (!q) { q = document.createElement('div'); q.id = 'bot-quip'; q.setAttribute('role', 'status'); document.body.append(q); }
+  q.textContent = t(`bot.tap.${move}`);
+  const r = el.getBoundingClientRect();
+  q.style.left = '0px'; q.style.top = '0px';
+  const w = q.offsetWidth; const h = q.offsetHeight;
+  q.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+  q.style.top = `${r.top - h - 8 < 8 ? r.bottom + 8 : r.top - h - 8}px`;
+  q.classList.add('show');
+  clearTimeout(quip.t);
+  quip.t = setTimeout(() => q.classList.remove('show'), 2600);
 }
 
 /* ───────── События ───────── */
 const BACK_FALLBACK = { recipe: '#/recipes', plan: '#/more', shop: '#/more', tools: '#/more', kitchen: '#/more', settings: '#/more', saved: '#/more' };
 
 document.addEventListener('click', (e) => {
+  const mc = e.target.closest('.mc');
+  if (mc && !mc.classList.contains('mc-face') && !mc.closest('button, a, .av')) { quip(mc, tap(mc)); return; }
   if (store.get().music && !music.isOn()) musicui.setOn(true);
   if (e.target.closest('button, a, .chip, .tab')) buzz('tap');
   const el = e.target.closest('[data-act]');
@@ -149,15 +183,18 @@ document.addEventListener('click', (e) => {
     case 'lang-sheet': langSheet(); return;
     case 'set-lang': {
       changeLang(el.dataset.v);
-      if (el.dataset.onb) onboarding(); else closeSheet();
+      if (el.dataset.onb) onboarding(0); else closeSheet();
       return;
     }
     case 'onb-diet': {
       const k = el.dataset.k; const d = { ...store.get().diet, [k]: !store.get().diet[k] };
       if (k === 'vegan' && d.vegan) d.vegetarian = true;
-      store.set({ diet: d }, { silent: true }); onboarding(); return;
+      store.set({ diet: d }, { silent: true }); onboarding(2); return;
     }
-    case 'onb-preset': store.set({ owned: PRESETS[el.dataset.p].eq, onboarded: true }); closeSheet(); return;
+    case 'onb-go': onboarding(Number(el.dataset.s)); return;
+    case 'onb-preset': store.set({ owned: PRESETS[el.dataset.p].eq }, { silent: true }); onboarding(2); return;
+    case 'onb-done': store.set({ onboarded: true }); closeSheet(); return;
+    case 'coach-x': store.set({ coach: { ...(store.get().coach || {}), [el.dataset.r]: 1 } }); return;
     default:
   }
   for (const h of HANDLERS) if (h.onClick && h.onClick(act, el)) return;

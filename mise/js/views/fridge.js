@@ -4,6 +4,7 @@ import { extractIngredients, suggestIngredients, fridgeSearch, rtext, gearName }
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
+import { mascot } from '../mascot.js';
 import { esc, $, recipeRow, timeLabel, levelLabel, toast, icons, photo } from '../ui.js';
 
 const MOODS = ['any', 'salty', 'sweet', 'sport', 'new'];
@@ -20,14 +21,14 @@ function results(s) {
   const res = fridgeSearch({ have, pantry: s.pantry, owned: s.owned, mood: s.mood, diet: s.diet, maxMin: s.quick ? 30 : 0, cooked: s.cooked, liked: s.ratings, seed: s.seed });
 
   if (!have.length && s.mood === 'any') {
-    return `<div class="empty"><div class="empty-e">🧺</div><h2>${t('fridge.empty.title')}</h2><p>${t('fridge.empty.text')}</p><button class="btn primary" data-act="surprise">${t('fridge.surprise')}</button></div>`;
+    return `<div class="empty">${mascot('show', 96)}<h2>${t('fridge.empty.title')}</h2><p>${t('fridge.empty.text')}</p><button class="btn primary" data-act="surprise">${t('fridge.surprise')}</button></div>`;
   }
   let pool = have.length ? [...res.ready, ...res.almost] : [...res.other, ...res.ready, ...res.almost];
   if (have.length && pool.length < 3) pool = [...pool, ...res.other.slice(0, 3 - pool.length)];
 
   if (!pool.length) {
     const n = res.locked.length;
-    return `<div class="empty"><div class="empty-e">🫙</div><h2>${t('fridge.none.title')}</h2><p>${n ? t('fridge.none.locked', { n }) : t('fridge.none.text')}</p>${n ? `<a class="btn" href="#/kitchen">${t('kitchen.title')}</a>` : ''}</div>${lockedBlock(res.locked)}`;
+    return `<div class="empty">${mascot('sad', 96)}<h2>${t('fridge.none.title')}</h2><p>${n ? t('fridge.none.locked', { n }) : t('fridge.none.text')}</p>${n ? `<a class="btn" href="#/kitchen">${t('kitchen.title')}</a>` : ''}</div>${lockedBlock(res.locked)}`;
   }
 
   const idx = heroIdx % pool.length;

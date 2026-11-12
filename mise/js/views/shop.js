@@ -4,6 +4,7 @@ import { extractIngredients, BY_ID, rtext } from '../engine.js';
 import { fmtQty, parseQty } from '../qty.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
+import { mascot } from '../mascot.js';
 import { esc, $, icons, toast } from '../ui.js';
 
 /** Складывает количества с одинаковыми единицами: «200 g + 300 g» → «500 g» */
@@ -39,7 +40,7 @@ export function render(s) {
   }).join('')}</ul>`).join('');
   return `<header class="top"><button class="back-link" data-act="back">${icons.back}${t('more.title')}</button><h1>${t('nav.shop')}</h1><p class="sub">${s.shop.length ? t('shop.left', { n: open }) : t('shop.sub')}</p></header>
     <form class="composer" id="shop-form" autocomplete="off"><input id="shop-input" type="text" enterkeyhint="done" placeholder="${t('shop.placeholder')}" aria-label="${t('shop.placeholder')}"><button class="btn primary" type="submit">${t('fridge.add')}</button></form>
-    ${s.shop.length ? body : `<div class="empty small"><div class="empty-e">🛒</div><h2>${t('shop.empty')}</h2><p>${t('shop.empty.text')}</p></div>`}
+    ${s.shop.length ? body : `<div class="empty small">${mascot('idle', 84)}<h2>${t('shop.empty')}</h2><p>${t('shop.empty.text')}</p></div>`}
     ${s.shop.length ? `<div class="plan-actions"><button class="btn" data-act="shop-copy">${icons.copy} ${t('shop.copy')}</button><button class="btn" data-act="shop-to-fridge">${icons.fridge} ${t('shop.bought')}</button></div>
     <div class="row-links"><button class="link" data-act="shop-clear-done">${t('shop.clearDone')}</button><button class="link danger" data-act="shop-clear">${t('shop.clear')}</button></div>` : ''}`;
 }

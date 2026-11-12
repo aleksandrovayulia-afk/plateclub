@@ -4,7 +4,7 @@ import { answer, suggestions, isMoreText } from '../assistant-core.js';
 import { t } from '../i18n.js';
 import * as store from '../store.js';
 import { esc, md, $, recipeRow, icons } from '../ui.js';
-import { mascot, setMood, flash } from '../mascot.js';
+import { mascot, face, setMood, flash } from '../mascot.js';
 import { ING } from '../data/ingredients.js';
 import * as timers from '../timers.js';
 import { fillWeek } from './plan.js';
@@ -25,15 +25,15 @@ function partHtml(p) {
   if (p.type === 'chips') return `<div class="qchips">${p.items.map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
   return '';
 }
-const msgHtml = (m) => (m.r === 'u' ? `<div class="msg u"><div class="bubble u">${esc(m.text)}</div></div>` : `<div class="msg a"><span class="av">${mascot('idle', 34)}</span><div class="msg-c">${m.parts.map(partHtml).join('')}</div></div>`);
-const typing = () => `<div class="msg a typing"><span class="av">${mascot('think', 34)}</span><div class="msg-c"><div class="bubble a"><i></i><i></i><i></i></div></div></div>`;
+const msgHtml = (m) => (m.r === 'u' ? `<div class="msg u"><div class="bubble u">${esc(m.text)}</div></div>` : `<div class="msg a"><span class="av">${face('idle', 34)}</span><div class="msg-c">${m.parts.map(partHtml).join('')}</div></div>`);
+const typing = () => `<div class="msg a typing"><span class="av">${face('think', 34)}</span><div class="msg-c"><div class="bubble a"><i></i><i></i><i></i></div></div></div>`;
 
 // Сохраняем разговор без языка: рецепты и подсказки перерисовываются на текущем языке
 const greeting = () => ({ r: 'a', parts: answer('hello', { have: [], pantry: [], owned: [], diet: {}, cooked: {} }, 1).filter((p) => p.type !== 'chips') });
 
 export function render(s) {
   const chat = s.chat.length ? s.chat : [greeting()];
-  return `<header class="bot-head">${mascot('idle', 76, 'mc-lg')}<div><h1>${t('bot.name')}</h1><p class="sub" id="bot-status"><i class="live"></i>${t('bot.status')}</p></div></header>
+  return `<header class="bot-head">${mascot('wave', 86, 'mc-lg')}<div><h1>${t('bot.name')}</h1><p class="sub" id="bot-status"><i class="live"></i>${t('bot.status')}</p></div></header>
     <div class="chat" id="chat" aria-live="polite">${chat.map(msgHtml).join('')}</div>
     <div class="composer-fixed">
       <div class="hscroll tight" id="suggest">${suggestions().map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>

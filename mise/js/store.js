@@ -16,6 +16,7 @@ const DEFAULTS = () => ({
   voice: false,
   haptics: true,
   music: false,
+  coach: {},
   musicVol: 0.5,
   musicStyle: 'jazz',
   musicCook: false,

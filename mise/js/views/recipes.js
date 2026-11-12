@@ -4,6 +4,7 @@ import { EQUIP } from '../data/equipment.js';
 import { RECIPES, COLLECTION_BY_ID, searchRecipes, missingGear, passesDiet, analyze, jitter } from '../engine.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
+import { mascot } from '../mascot.js';
 import { esc, $, recipeCard, openSheet, closeSheet, icons } from '../ui.js';
 
 const fresh = () => ({ q: '', cat: 'all', col: null, sort: 'rec', cuisine: null, maxMin: 0, level: 0, mine: false, fav: false, limit: 36 });
@@ -43,7 +44,7 @@ const activeFilters = () => [st.maxMin, st.level, st.cuisine, st.mine, st.fav, s
 
 function grid(s) {
   const list = filtered(s);
-  if (!list.length) return `<div class="empty small"><div class="empty-e">🔍</div><h2>${t('rec.nothing')}</h2><p>${t('rec.nothing.text')}</p><button class="btn" data-act="rec-reset">${t('rec.reset')}</button></div>`;
+  if (!list.length) return `<div class="empty small">${mascot('think', 84)}<h2>${t('rec.nothing')}</h2><p>${t('rec.nothing.text')}</p><button class="btn" data-act="rec-reset">${t('rec.reset')}</button></div>`;
   const owned = new Set(s.owned);
   const ctx = s.have.length ? { have: new Set(s.have), pantry: new Set(s.pantry), owned } : null;
   const shown = list.slice(0, st.limit);
