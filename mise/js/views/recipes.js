@@ -74,7 +74,7 @@ export function render(s) {
 export function bind(root) {
   const input = $('#recipe-search', root);
   let tmr;
-  input.addEventListener('input', () => { st.q = input.value; st.limit = 36; clearTimeout(tmr); tmr = setTimeout(() => { $('#grid').innerHTML = grid(store.get()); }, 140); });
+  input.addEventListener('input', () => { st.q = input.value; st.limit = 36; clearTimeout(tmr); tmr = setTimeout(() => { const g = $('#grid'); if (g) g.innerHTML = grid(store.get()); }, 140); });
   input.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const q = input.value.trim();

@@ -12,5 +12,6 @@ import other from './other.js';
 import combo1 from './combo1.js';
 import combo2 from './combo2.js';
 import combo3 from './combo3.js';
+import combo4 from './combo4.js';
 
-export default [...soups, ...cakes, ...pasta, ...meat, ...eggs, ...salads, ...sweet1, ...sweet2, ...drinks, ...sport, ...other, ...combo1, ...combo2, ...combo3];
+export default [...soups, ...cakes, ...pasta, ...meat, ...eggs, ...salads, ...sweet1, ...sweet2, ...drinks, ...sport, ...other, ...combo1, ...combo2, ...combo3, ...combo4];

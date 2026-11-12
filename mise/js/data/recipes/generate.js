@@ -41,7 +41,7 @@ function agreeEs(tpl, slots) {
     .replace(RE_ADJ, (w) => w.slice(0, -1) + o);
 }
 
-const slotId = (s, slots) => s.replace(/\{(\d)\}/g, (_, i) => slots[Number(i)]);
+const slotId = (s, slots) => (s.charCodeAt(0) === 123 ? slots[s.charCodeAt(1) - 48] : s);
 
 const RANK = { base: 0, add: 1, slot: 2 };
 /** Один продукт — одна строка: слот важнее добавки, добавка важнее основы, две строки основы складываются */
@@ -110,19 +110,23 @@ export function expand(fam) {
       }
     }
 
-    // название и описание собираем сразу, шаги и советы только при первом обращении: так 10 000+ рецептов не тормозят запуск
+    // тексты собираются лениво и по языкам: на старте они не нужны, а 20 000 рецептов × 3 языка заметно замедлили бы запуск
     const text = {};
     for (const l of LANGS) {
-      const tpl = v.t?.[l] ?? fam.t[l];
-      const F = (x) => post(cap(fill(l === 'es' ? agreeEs(x, slots) : x, slots, l, where, cook)), l);
-      const o = { t: F(tpl), d: F(v.d?.[l] ?? fam.d[l]) };
-      let steps; let tips; let sm;
-      Object.defineProperties(o, {
-        s: { enumerable: true, get() { return steps || (steps = (v.s2?.[l] ?? fam.s[l]).map(F)); } },
-        k: { enumerable: true, get() { return tips || (tips = [...(fam.k[l] || []).map(F), ...(v.x?.[l] ? [F(v.x[l])] : [])]); } },
-        sm: { enumerable: true, get() { return sm || (sm = this.s.map(detectMin)); } },
-      });
-      text[l] = o;
+      let o;
+      const build = () => {
+        const tpl = v.t?.[l] ?? fam.t[l];
+        const F = (x) => post(cap(fill(l === 'es' ? agreeEs(x, slots) : x, slots, l, where, cook)), l);
+        const r = { t: F(tpl), d: F(v.d?.[l] ?? fam.d[l]) };
+        let steps; let tips; let sm;
+        Object.defineProperties(r, {
+          s: { enumerable: true, get() { return steps || (steps = (v.s2?.[l] ?? fam.s[l]).map(F)); } },
+          k: { enumerable: true, get() { return tips || (tips = [...(fam.k[l] || []).map(F), ...(v.x?.[l] ? [F(v.x[l])] : [])]); } },
+          sm: { enumerable: true, get() { return sm || (sm = this.s.map(detectMin)); } },
+        });
+        return r;
+      };
+      Object.defineProperty(text, l, { enumerable: true, get() { return o || (o = build()); } });
     }
     out.push({
       id,

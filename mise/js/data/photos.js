@@ -9,8 +9,17 @@ const BY_EMOJI = {
 };
 const BY_CAT = { cakes: 'cake', sweet: 'sweet', savory: 'bowl', sport: 'bowl', shakes: 'shake', other: 'bowl' };
 const WORDS = [
+  [/сэндвич|бутерброд|sandwich|bocadillo/i, 'sandwich'], [/гратен|gratin|gratén/i, 'potato'], [/маффин|muffin|magdalena/i, 'muffin'], [/\bтарт\b|\btart\b|tarta de (fresa|manzana|pera)/i, 'pie'],
+  [/ризотто|risotto/i, 'risotto'], [/лазань|lasagn/i, 'lasagna'], [/фрикадельк|тефтел|meatball|albóndiga|albondiga/i, 'meatballs'], [/жарен\S* рис|fried rice|arroz frito/i, 'friedrice'],
+  [/борщ|borsch/i, 'borscht'], [/тыкв\S* суп|суп\S* из тыкв|крем-суп из тыкв|pumpkin soup|crema de calabaza/i, 'pumpkinsoup'], [/грибн\S* суп|суп\S* из шампиньон|mushroom soup|crema de champi/i, 'mushroomsoup'],
+  [/рагу|\bstew\b|guiso|тушен/i, 'stew'], [/цезарь|caesar|césar/i, 'caesar'], [/греческ\S* салат|greek salad|ensalada griega/i, 'greek'], [/круассан|croissant/i, 'croissant'], [/вафл|waffle|gofre/i, 'waffles'],
+  [/французск\S* тост|french toast|torrija/i, 'frenchtoast'], [/тост\b|тосты|toast\b|tostada/i, 'toast'], [/чизкейк|cheesecake|tarta de queso/i, 'cheesecake'], [/брауни|brownie/i, 'brownie'], [/пончик|donut|doughnut|rosquilla/i, 'donut'],
+  [/тирамису|tiramis/i, 'tiramisu'], [/панна кот|panna cotta/i, 'pannacotta'], [/яблочн\S* пирог|шарлотк|apple pie|charlotte|tarta de manzana/i, 'applepie'], [/морковн\S* торт|carrot cake|tarta de zanahoria/i, 'carrotcake'],
+  [/шоколадн\S* торт|chocolate cake|tarta de chocolate/i, 'chococake'], [/милкшейк|milkshake|batido de leche/i, 'milkshake'], [/лимонад|lemonade|limonada/i, 'lemonade'], [/хумус|hummus/i, 'hummus'], [/фалафел|falafel/i, 'falafel'],
+  [/кесадиль|quesadilla/i, 'quesadilla'], [/буррито|burrito|\bролл\b|\bwrap\b/i, 'burrito'], [/шашлы|kebab|skewer|brocheta/i, 'kebab'], [/суши|роллы|sushi/i, 'sushi'], [/креветк|shrimp|prawn|gambas/i, 'shrimp'],
+  [/^\s*(свинин|pork|cerdo)/i, 'roastpork'], [/на одном противне|sheet-pan|bandeja de|овощи на гриле|grilled veg/i, 'grilledveg'], [/десерт в стакане|dessert cups|vasitos|парфе|parfait/i, 'parfait'], [/смузи-боул|smoothie bowl/i, 'smoothiebowl'],
   [/боул|bowl|\bbol\b|протеинов|protein plate|plato proteico/i, 'bowl'], [/ролл\b|wrap\b/i, 'tacos'], [/запеканк|\bbake\b|gratinad/i, 'veg'], [/слойк|puff pastry|hojaldre/i, 'pie'], [/крамбл|crumble/i, 'pie'],
-  [/шашлыч|skewer|brocheta/i, 'meat'], [/патти|patties|tortitas de (carne|pollo|pavo)|котлет/i, 'meat'], [/начинк|stuffed|con relleno/i, 'veg'], [/противн|sheet-pan|bandeja de/i, 'veg'], [/лимонад|lemonade|limonada/i, 'shake'], [/каша из|porridge|gachas/i, 'porridge'], [/оладь|fritter|buñuelo/i, 'pancakes'], [/десерт в стакане|dessert cups|vasitos/i, 'sweet'],
+  [/патти|patties|tortitas de (carne|pollo|pavo)|котлет/i, 'meat'], [/начинк|stuffed|con relleno/i, 'veg'], [/каша из|porridge|gachas/i, 'porridge'], [/оладь|fritter|buñuelo/i, 'pancakes'], 
   [/суп|борщ|щи\b|солянк|уха\b|рассольник|бульон|soup|broth|chowder|gazpacho|sopa|caldo|crema de|puré de verduras/i, 'soup'],
   [/тирамису|tiramis|панна|panna|мусс|mousse|пудинг|pudding|flan|крем-брюле|brûlée|желе|jelly|halva|халв/i, 'sweet'],
   [/торт|cake|tarta|pastel/i, 'cake'], [/чизкейк|cheesecake|tarta de queso/i, 'cake'], [/мороженое|ice cream|helado|сорбет|sorbet/i, 'icecream'],
@@ -26,7 +35,7 @@ export function photoKey(r, title = '') {
   return BY_EMOJI[r.e] || BY_CAT[r.c] || 'bowl';
 }
 // сколько фото лежит для вида блюда: key.jpg, key-2.jpg, key-3.jpg
-const VARIANTS = {"bowl": 3, "bread": 3, "burger": 3, "cake": 3, "chicken": 3, "coffee": 3, "cookies": 3, "curry": 3, "dumplings": 2, "eggs": 3, "fish": 3, "icecream": 2, "meat": 3, "muffin": 3, "pancakes": 3, "pasta": 3, "pie": 3, "pizza": 3, "porridge": 3, "potato": 3, "rice": 2, "salad": 3, "sandwich": 3, "shake": 3, "soup": 2, "sweet": 3, "veg": 3};
+const VARIANTS = {"applepie": 3, "borscht": 3, "bowl": 3, "bread": 3, "brownie": 3, "burger": 3, "burrito": 3, "caesar": 3, "cake": 3, "carrotcake": 3, "cheesecake": 3, "chicken": 3, "chococake": 3, "coffee": 3, "cookies": 3, "croissant": 3, "curry": 3, "donut": 3, "dumplings": 2, "eggs": 3, "falafel": 3, "fish": 3, "frenchtoast": 3, "friedrice": 3, "greek": 3, "grilledveg": 3, "hummus": 2, "icecream": 2, "kebab": 3, "lasagna": 3, "lemonade": 3, "meat": 3, "meatballs": 2, "milkshake": 3, "muffin": 3, "mushroomsoup": 3, "pancakes": 3, "pannacotta": 3, "parfait": 3, "pasta": 3, "pie": 3, "pizza": 3, "porridge": 3, "potato": 3, "pumpkinsoup": 3, "quesadilla": 3, "rice": 2, "risotto": 3, "roastpork": 3, "salad": 3, "sandwich": 3, "shake": 3, "shrimp": 3, "smoothiebowl": 2, "soup": 2, "stew": 3, "sundae": 3, "sushi": 3, "sweet": 3, "tiramisu": 3, "toast": 3, "veg": 3, "waffles": 3};
 export const photoUrl = (key, v = 1) => {
   const name = v > 1 ? `${key}-${v}` : key;
   return (typeof window !== 'undefined' && window.__PHOTOS && window.__PHOTOS[name]) || `img/food/${name}.jpg`;

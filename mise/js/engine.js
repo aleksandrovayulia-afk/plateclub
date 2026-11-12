@@ -261,11 +261,11 @@ export function warmIndex() {
   const idle = (f, ms) => (typeof window !== 'undefined' && window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: ms + 2000 }) : setTimeout(f, ms));
   let i = 0;
   const next = () => {
-    const end = Math.min(i + 1500, RECIPES.length);
+    const end = Math.min(i + 300, RECIPES.length);
     for (; i < end; i++) indexOf(RECIPES[i]);
-    if (i < RECIPES.length) idle(next, 50);
+    if (i < RECIPES.length) idle(next, 40);
   };
-  idle(next, 800);
+  idle(next, 1500);
 }
 
 const prefixMatch = (a, b) => (a.c && b.c ? (a.k.length >= 4 && (b.k.startsWith(a.k) || (a.k.startsWith(b.k) && b.k.length >= 4))) : (!a.c && !b.c ? [...a.k].some((x) => x.length >= 4 && [...b.k].some((y) => y.startsWith(x) || x.startsWith(y))) : false));
