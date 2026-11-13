@@ -28,6 +28,11 @@ export function render(s) {
     <label class="switch"><input type="checkbox" data-act="opt-voice" ${s.voice ? 'checked' : ''}><span class="knob"></span><span>${t('settings.voice')}</span></label>
     <label class="switch"><input type="checkbox" data-act="opt-haptics" ${s.haptics ? 'checked' : ''}><span class="knob"></span><span>${t('settings.haptics')}</span></label>
     <p class="muted small">${t('settings.haptics.note')}</p>
+    <h2 class="sec">${t('settings.online')}</h2>
+    <label class="switch"><input type="checkbox" data-act="opt-online" ${s.onlineSearch ? 'checked' : ''}><span class="knob"></span><span>${t('settings.online.on')}</span></label>
+    <p class="muted small">${t('settings.online.note')}</p>
+    <label class="field"><span>${t('settings.endpoint')}</span><input type="url" inputmode="url" data-act="opt-endpoint" value="${(s.searchEndpoint || '').replace(/"/g, '&quot;')}" placeholder="https://"></label>
+    <p class="muted small">${t('settings.endpoint.note')}</p>
     <h2 class="sec">${t('settings.music')}</h2>
     <button class="btn full" data-act="music-sheet">${icons.music} ${t('music.title')}</button>
     <p class="muted small">${t('settings.music.note')}</p>
@@ -74,6 +79,8 @@ export function onClick(act, el) {
 export function onChange(act, el) {
   if (act === 'opt-wake') { store.set({ wake: el.checked }); return true; }
   if (act === 'opt-haptics') { store.set({ haptics: el.checked }); if (el.checked) buzz('done'); return true; }
+  if (act === 'opt-online') { store.set({ onlineSearch: el.checked }); return true; }
+  if (act === 'opt-endpoint') { const v = el.value.trim(); store.set({ searchEndpoint: /^https:\/\//.test(v) ? v : '' }, { silent: true }); if (v && !/^https:\/\//.test(v)) el.value = ''; return true; }
   if (act === 'opt-voice') { store.set({ voice: el.checked }); return true; }
   return false;
 }

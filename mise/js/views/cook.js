@@ -323,4 +323,6 @@ export function onKey(e) {
 }
 
 export const active = () => !!cur;
+/** Для помощника: что сейчас готовится и на каком шаге */
+export const context = () => (cur && !cur.done ? { id: cur.id, i: cur.i, servings: cur.servings } : (lastProgress() ? { id: lastProgress().id, i: lastProgress().i, servings: lastProgress().servings } : null));
 export { closeSheet };
