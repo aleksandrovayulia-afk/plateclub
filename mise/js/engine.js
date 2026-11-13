@@ -1,5 +1,6 @@
 // Мозг приложения: поиск продуктов и рецептов, подбор по холодильнику, фильтры.
 // Чистые функции без DOM — их можно запускать и в браузере, и в Node (см. test/).
+import { buildGen } from './data/builder.js';
 import { ING, ALT } from './data/ingredients.js';
 import { EQUIP } from './data/equipment.js';
 import { RAW_RECIPES } from './data/recipes/index.js';
@@ -122,7 +123,15 @@ function prepare(r) {
 }
 
 export const RECIPES = RAW_RECIPES.map(prepare);
-export const BY_ID = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
+const BASE_BY_ID = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
+// Блюда из конструктора создаются по адресу «gen~способ~продукты» и в общий список не входят
+export const BY_ID = new Proxy(BASE_BY_ID, {
+  get(t, k) {
+    if (typeof k === 'string' && k.startsWith('gen~') && !(k in t)) { const raw = buildGen(k); if (raw) t[k] = prepare(raw); }
+    return t[k];
+  },
+  has(t, k) { return k in t || (typeof k === 'string' && k.startsWith('gen~') && !!BY_ID[k]); },
+});
 
 /** Тексты рецепта на нужном языке: {t, d, s:[{text,min}], k:[]} */
 export function rtext(r, lang = currentLang()) {

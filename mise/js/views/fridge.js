@@ -8,7 +8,8 @@ import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import * as pantry from '../pantry.js';
 import { mascot, setMood } from '../mascot.js';
-import { esc, $, recipeRow, timeLabel, levelLabel, toast, icons, photo } from '../ui.js';
+import { openSheet, closeSheet, esc, $, recipeRow, timeLabel, levelLabel, toast, icons, photo } from '../ui.js';
+import { TECHS, TECH_EMOJI, genId } from '../data/builder.js';
 
 const MOODS = ['any', 'salty', 'sweet', 'sport', 'new'];
 const TABS = ['common', ...FRIDGE_CATS];
@@ -74,7 +75,7 @@ function mineBlock(s) {
 
 /* ───────── каталог продуктов ───────── */
 
-const chip = (id, on) => `<button type="button" class="chip${on ? ' on' : ''}" data-act="toggle-ing" data-id="${id}" aria-pressed="${on}"><span class="chip-e">${ING[id].e}</span>${esc(iname(id))}</button>`;
+const chip = (id, on) => `<button type="button" class="chip pcard${on ? ' on' : ''}" data-act="toggle-ing" data-id="${id}" aria-pressed="${on}"><span class="pc-e" aria-hidden="true">${ING[id].e}</span><span class="pc-n">${esc(iname(id))}</span><i class="pc-ok" aria-hidden="true">${icons.check}</i></button>`;
 
 function catalog(s) {
   const ids = filterText.trim() ? findIds(filterText.trim(), 80) : cat === 'common' ? COMMON : idsOfCat(cat, lang(), COMMON);
@@ -86,7 +87,7 @@ function catalog(s) {
     <div class="search small"><span aria-hidden="true">${icons.search}</span><input id="fridge-filter" type="search" value="${esc(filterText)}" placeholder="${t('fridge.filter')}" aria-label="${t('fridge.filter')}" autocomplete="off"></div>
     <div class="fade-x"><div class="groups" role="tablist">${tabs}</div></div>
     <div class="bulk-row">${bulk}</div>
-    <div class="chips" id="fridge-chips">${ids.length ? ids.map((id) => chip(id, s.have.includes(id))).join('') : `<p class="muted small">${t('fridge.found.none')}</p>`}</div>
+    <div class="pgrid" id="fridge-chips">${ids.length ? ids.map((id) => chip(id, s.have.includes(id))).join('') : `<p class="muted small">${t('fridge.found.none')}</p>`}</div>
   </section>`;
 }
 
@@ -174,6 +175,7 @@ export function render(s) {
     <p class="muted small fi-hint">${t('fridge.hint')}</p>
     <div id="suggest" class="suggest" hidden></div>
     ${mineBlock(s)}
+    ${s.have.some((x) => !x.startsWith('c_')) ? `<button class="build-cta" data-act="build-open"><span aria-hidden="true">👨‍🍳</span><span><b>${t('build.cta')}</b><small>${t('build.cta.sub')}</small></span>${icons.chev}</button>` : ''}
     ${catalog(s)}
     <p class="muted small pantry-note">${t('fridge.pantry', { list: esc(pantryNames) || '—' })} <a href="#/kitchen">${t('fridge.change')}</a></p>
     <div class="seg" role="radiogroup" aria-label="${t('fridge.mood')}">${MOODS.map((v) => `<button role="radio" aria-checked="${s.mood === v}" class="${s.mood === v ? 'on' : ''}" data-act="mood" data-v="${v}">${t(`mood.${v}`)}</button>`).join('')}</div>
@@ -219,6 +221,16 @@ export function bind(root) {
   setMood(root, store.get().have.length ? 'idle' : 'curious');
 }
 
+let buildSel = [];
+function buildSheet() {
+  const s = store.get();
+  const ids = s.have.filter((x) => !x.startsWith('c_'));
+  openSheet(`<h2>${t('build.title')}</h2><p class="muted small">${t('build.pick')}</p>
+    <div class="pgrid build-grid">${ids.map((id) => `<button type="button" class="chip pcard${buildSel.includes(id) ? ' on' : ''}" data-act="build-pick" data-id="${id}" aria-pressed="${buildSel.includes(id)}"><span class="pc-e" aria-hidden="true">${ING[id].e}</span><span class="pc-n">${esc(iname(id))}</span><i class="pc-ok" aria-hidden="true">${icons.check}</i></button>`).join('')}</div>
+    <h3 class="sub-h">${t('build.tech')}</h3>
+    <div class="tech-grid">${TECHS.map((k) => `<button class="tech" data-act="build-go" data-tech="${k}" ${buildSel.length ? '' : 'disabled'}><span aria-hidden="true">${TECH_EMOJI[k]}</span>${t(`build.t.${k}`)}</button>`).join('')}</div>
+    <p class="muted small">${t('build.note')}</p>`, { tall: true });
+}
 const catIds = () => (cat === 'common' ? COMMON : idsOfCat(cat, lang(), COMMON));
 
 export function onClick(act, el) {
@@ -233,6 +245,9 @@ export function onClick(act, el) {
     case 'remove-ing': heroIdx = 0; pantry.removeItem(el.dataset.id); return true;
     case 'clear-have': heroIdx = 0; store.set({ have: [], items: {}, custom: [] }); return true;
     case 'cat': cat = el.dataset.c; filterText = ''; store.set({}); return true;
+    case 'build-open': buildSel = s.have.filter((x) => !x.startsWith('c_')).slice(0, 3); buildSheet(); return true;
+    case 'build-pick': { const id = el.dataset.id; buildSel = buildSel.includes(id) ? buildSel.filter((x) => x !== id) : buildSel.length < 4 ? [...buildSel, id] : buildSel; buildSheet(); return true; }
+    case 'build-go': if (!buildSel.length) return true; closeSheet(); location.hash = `#/r/${genId(el.dataset.tech, buildSel)}`; return true;
     case 'sel-all': heroIdx = 0; pantry.addKnown(catIds().map((id) => ({ id }))); return true;
     case 'sel-none': { heroIdx = 0; const drop = new Set(catIds()); const items = { ...s.items }; for (const id of drop) delete items[id]; store.set({ have: s.have.filter((x) => !drop.has(x)), items }); return true; }
     case 'add-popular': heroIdx = 0; pantry.addKnown(COMMON.slice(0, 12).map((id) => ({ id }))); return true;

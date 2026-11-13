@@ -421,3 +421,15 @@ small.src { display: block; margin-top: 4px; color: var(--muted); font-size: .72
 @media (max-width: 360px) { .tab { font-size: .6rem; letter-spacing: -.01em; } .tab > span:last-child { max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; } }
 .resume { margin: 0 0 12px; } .resume-pct { width: 36px; height: 36px; border-radius: 50%; flex: none; background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); position: relative; } .resume-pct::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--soft); } .resume > span:nth-child(2) { flex: 1; min-width: 0; } .resume svg { width: 18px; height: 18px; color: var(--muted); }
 .quick { margin-top: 2px; } .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* продукты: крупные карточки */
+.pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.chip.pcard { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 104px; padding: 12px 6px 10px; border-radius: 20px; background: var(--surface); border: 1.5px solid var(--line); color: var(--ink); text-align: center; transition: transform .15s, border-color .15s, background .15s; }
+.chip.pcard:active { transform: scale(.96); }
+.pc-e { font-size: 2.5rem; line-height: 1; } .pc-n { font-size: .86rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; max-width: 100%; }
+.pc-ok { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; opacity: 0; transform: scale(.5); transition: opacity .15s, transform .15s; } .pc-ok svg { width: 13px; height: 13px; }
+.chip.pcard.on { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-color: var(--accent); color: var(--ink); } .chip.pcard.on .pc-ok { opacity: 1; transform: none; }
+@media (min-width: 560px) { .pgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } } @media (min-width: 900px) { .pgrid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.build-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0; padding: 14px 16px; border-radius: 20px; background: var(--ink); color: var(--bg); text-align: left; } .build-cta > span:first-child { font-size: 1.8rem; } .build-cta > span:nth-child(2) { flex: 1; min-width: 0; } .build-cta b { display: block; } .build-cta small { opacity: .75; } .build-cta svg { width: 18px; height: 18px; }
+.tech-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 12px; } .tech { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 16px; border-radius: 16px; background: var(--accent); color: #fff; font-weight: 600; } .tech span { font-size: 1.4rem; } .tech[disabled] { opacity: .4; }
+.build-grid { margin: 10px 0; }

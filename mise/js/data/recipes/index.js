@@ -33,5 +33,5 @@ export const CUISINES = {
   th: { ru: 'Тайская', en: 'Thai', es: 'Tailandesa' },
   cn: { ru: 'Китайская', en: 'Chinese', es: 'China' },
   kr: { ru: 'Корейская', en: 'Korean', es: 'Coreana' },
-  int: { ru: 'Интернациональная', en: 'International', es: 'Internacional' },
+  int: { ru: 'Мировая', en: 'International', es: 'Internacional' },
 };
