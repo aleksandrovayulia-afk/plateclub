@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=540,initial-scale=1">
+<title>Mise motion</title>
+<style>
+:root{--ac:#e8553a;--ink:#1d1613;--bg:#fbf4ea}
+*{box-sizing:border-box;margin:0}
+html,body{width:540px;height:960px;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink)}
+.bg{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#fff 0,#fbf4ea 55%,#f6e6d2 100%);transition:background .6s}
+.blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.5;animation:fl 8s ease-in-out infinite}
+@keyframes fl{50%{transform:translate(20px,-30px) scale(1.1)}}
+#moti{position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;transition:transform .9s cubic-bezier(.34,1.56,.64,1);z-index:5;filter:drop-shadow(0 18px 22px rgba(120,60,30,.18))}
+#moti svg{width:100%;height:100%}
+.cap{position:absolute;left:24px;right:24px;top:70px;text-align:center;font-weight:800;font-size:40px;line-height:1.12;letter-spacing:-.03em;z-index:9}
+.cap span{display:inline-block;opacity:0;transform:translateY(26px) scale(.8);animation:pop .5s cubic-bezier(.34,1.56,.64,1) forwards}
+.cap em{font-style:normal;color:var(--ac)}
+@keyframes pop{to{opacity:1;transform:none}}
+.sc{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .35s}.sc.on{opacity:1}
+.q{position:absolute;font-weight:900;font-size:64px;color:var(--ac);opacity:0;animation:rise 2.4s ease-out infinite}
+@keyframes rise{0%{opacity:0;transform:translateY(40px) rotate(-10deg)}20%{opacity:1}100%{opacity:0;transform:translateY(-120px) rotate(14deg)}}
+.pc{position:absolute;width:150px;height:140px;border-radius:26px;background:#fff;border:2px solid #efe3d6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:20px;box-shadow:0 10px 24px rgba(120,60,30,.1);opacity:0;transform:scale(.3) translateY(60px);transition:all .6s cubic-bezier(.34,1.56,.64,1)}
+.pc b{font-size:60px;line-height:1}.pc.in{opacity:1;transform:none}
+.pc.sel{border-color:var(--ac);background:#fdebe5}.pc.sel::after{content:"✓";position:absolute;top:8px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:18px}
+.fridge{position:absolute;right:28px;top:200px;width:170px;height:290px;border-radius:26px;background:#fff;border:3px solid #e6d8c8;box-shadow:0 18px 30px rgba(120,60,30,.12);transform-origin:left center;transition:transform .9s cubic-bezier(.34,1.3,.64,1)}
+.fridge .door{position:absolute;inset:6px;border-radius:20px;background:linear-gradient(160deg,#fff,#f2e8dc);transform-origin:left center;transition:transform .9s cubic-bezier(.34,1.3,.64,1)}
+.fridge.open .door{transform:perspective(600px) rotateY(-70deg)}
+.fridge .light{position:absolute;inset:8px;border-radius:18px;background:linear-gradient(#fff7c9,#fff);opacity:0;transition:opacity .6s}.fridge.open .light{opacity:1}
+.fridge::after{content:"";position:absolute;left:14px;top:60px;width:8px;height:60px;border-radius:4px;background:#d9c8b6}
+.chipbar{position:absolute;left:0;right:0;display:flex;gap:12px;font-size:46px;white-space:nowrap}
+.card{position:absolute;width:300px;height:340px;border-radius:30px;background:#fff;overflow:hidden;box-shadow:0 20px 40px rgba(120,60,30,.2);opacity:0;transform:translateY(80px) rotate(0) scale(.7);transition:all .8s cubic-bezier(.34,1.4,.64,1)}
+.card img{width:100%;height:230px;object-fit:cover;display:block}.card div{padding:12px 16px;font-weight:800;font-size:24px;line-height:1.1}.card small{display:block;margin-top:6px;color:#2f8a4f;font-size:17px;font-weight:700}
+.card.in{opacity:1}
+.btn{position:absolute;left:50%;top:560px;transform:translateX(-50%) scale(.6);opacity:0;padding:20px 34px;border-radius:40px;background:#1d1613;color:#fff;font-weight:800;font-size:30px;transition:all .6s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+.btn.in{opacity:1;transform:translateX(-50%) scale(1)}.btn.tap{transform:translateX(-50%) scale(.92)}
+.ring{position:absolute;left:50%;top:250px;width:300px;height:300px;margin-left:-150px}
+.ring text{font:800 64px Inter,system-ui,sans-serif;fill:var(--ink)}
+.step{position:absolute;left:30px;right:30px;top:580px;padding:18px 20px;border-radius:24px;background:#fff;box-shadow:0 12px 30px rgba(120,60,30,.12);font-size:24px;font-weight:700;line-height:1.2}.step small{display:block;color:#8a7a6e;font-weight:600;font-size:16px;margin-bottom:4px}
+.end{position:absolute;inset:0;background:linear-gradient(160deg,#ee6347,#c63e27);color:#fff;text-align:center;opacity:0;transition:opacity .6s}
+.end.on{opacity:1}.end h1{position:absolute;left:0;right:0;top:560px;font-size:96px;letter-spacing:-.04em}.end p{position:absolute;left:0;right:0;font-weight:700;font-size:28px;line-height:1.25}
+.conf{position:absolute;width:12px;height:18px;border-radius:3px;z-index:8}
+</style>
+<div class="bg"><i class="blob" style="left:-60px;top:100px;width:260px;height:260px;background:#ffd2c2"></i><i class="blob" style="right:-80px;top:560px;width:300px;height:300px;background:#ffe9a8;animation-delay:-3s"></i></div>
+<div class="cap" id="cap"></div>
+<div id="moti"></div>
+<div class="sc" id="s2"></div><div class="sc" id="s3"></div><div class="sc" id="s5"></div><div class="sc" id="s6"></div><div class="sc" id="s7"></div>
+<div class="end" id="end"></div>
+<script type="module">
+import { mascot, setMood } from '../js/mascot.js';
+const $ = (id) => document.getElementById(id);
+const DUR = await fetch('voice/timing.json').then((r) => r.json()).catch(() => null);
+const D = DUR || [3.4, 3.2, 4.2, 4.0, 4.4, 5.0, 4.2, 4.0];
+const CAPS = [
+  'Привет! Я шеф <em>Моти</em>', 'Не знаешь, что <em>приготовить</em>?', 'Выбери, что есть в <em>холодильнике</em>', 'Яблоко, яйца и <em>всё остальное</em>',
+  'Я подберу <em>блюдо</em> из твоих продуктов', 'Хочешь <em>удивиться</em>? Нажми «Удиви меня»', 'Готовь по шагам: <em>таймер</em> в один тап', 'Mise. <em>Готовь</em> без лишних слов',
+];
+const moti = $('moti'); moti.innerHTML = mascot('idle', 300);
+const pos = (x, y, s = 1) => { moti.style.transform = `translate(${x}px,${y}px) scale(${s})`; };
+const cap = (i) => { const c = $('cap'); c.innerHTML = CAPS[i].replace(/(<em>.*?<\/em>)|([^\s<]+)/g, (m, e, w) => `<span style="animation-delay:${0}s">${m}</span>`); [...c.children].forEach((s, k) => (s.style.animationDelay = `${k * 0.09}s`)); };
+const show = (id) => document.querySelectorAll('.sc').forEach((e) => e.classList.toggle('on', e.id === id));
+const wait = (s) => new Promise((r) => setTimeout(r, s * 1000));
+const PRODUCTS = [['🍎', 'яблоко', 1], ['🥚', 'яйца', 1], ['🥛', 'молоко', 0], ['🧅', 'лук', 0], ['🥔', 'картофель', 0], ['🍗', 'курица', 0]];
+
+async function s1() { moti.style.transition = 'none'; pos(0, 150, 0.2); await wait(0.05); moti.style.transition = ''; pos(0, 150, 1.25); setMood(document, 'greet'); }
+async function s2() { show('s2'); pos(-120, 260, 0.9); setMood(document, 'think'); const el = $('s2'); el.innerHTML = [[330, 380], [400, 300], [300, 260], [380, 450]].map(([x, y], i) => `<i class="q" style="left:${x}px;top:${y}px;animation-delay:${i * 0.5}s">?</i>`).join(''); }
+async function s3() {
+  show('s3'); pos(-150, 330, 0.75); setMood(document, 'assist');
+  const el = $('s3'); el.innerHTML = `<div class="fridge" id="fr"><div class="light"></div><div class="door"></div></div>` + PRODUCTS.map(([e, n], i) => `<div class="pc" id="pc${i}" style="left:${(i % 2) * 165 + 40}px;top:${210 + Math.floor(i / 2) * 150}px"><b>${e}</b>${n}</div>`).join('');
+  await wait(0.5); $('fr').classList.add('open');
+  PRODUCTS.forEach((_, i) => setTimeout(() => $(`pc${i}`).classList.add('in'), 600 + i * 260));
+}
+async function s4() { setMood(document, 'curious'); pos(-150, 330, 0.8); await wait(0.4); [0, 1].forEach((i, k) => setTimeout(() => $(`pc${i}`).classList.add('sel'), k * 700)); const bar = document.createElement('div'); bar.className = 'chipbar'; bar.style.top = '740px'; bar.innerHTML = '🧅🥔🍗🍅🧀🥦🍚🥕🍋🧄🍄🐟'.match(/./gu).map((e) => `<span>${e}</span>`).join(''); $('s3').appendChild(bar); bar.animate([{ transform: 'translateX(560px)' }, { transform: 'translateX(-620px)' }], { duration: 3600, easing: 'linear', fill: 'forwards' }); }
+async function s5() {
+  show('s5'); setMood(document, 'result'); pos(-170, 350, 0.65);
+  const items = [['pancakes', 'Яблочные блины', '100% совпадает', -12, 70, 220], ['shakshuka', 'Яйца в томатном соусе', '92% совпадает', 8, 180, 330], ['eggs', 'Омлет с молоком', '100% совпадает', -3, 90, 470]];
+  $('s5').innerHTML = items.map(([k, t, m, r, x, y], i) => `<div class="card" id="cd${i}" style="left:${x + 60}px;top:${y - 10}px;--r:${r}deg;width:260px;height:300px"><img src="../img/food/${k}.jpg" alt=""><div>${t}<small>${m}</small></div></div>`).join('');
+  items.forEach((it, i) => setTimeout(() => { const c = $(`cd${i}`); c.classList.add('in'); c.style.transform = `translateY(0) rotate(${it[3]}deg)`; c.style.zIndex = i + 1; }, 300 + i * 500));
+}
+async function s6() {
+  show('s6'); setMood(document, 'curious'); pos(-150, 330, 0.7);
+  $('s6').innerHTML = `<div class="btn" id="sb">🎲 Удиви меня</div><div class="card" id="rv" style="left:120px;top:250px;width:300px;height:360px"><img src="../img/food/stirnoodles.jpg" alt="" style="height:250px"><div>Лапша вок с овощами<small>Сюрприз дня</small></div></div>`;
+  await wait(0.3); $('sb').classList.add('in'); await wait(1.4); $('sb').classList.add('tap'); await wait(0.25); $('sb').classList.remove('tap');
+  await wait(0.3); $('sb').style.opacity = 0; setMood(document, 'success'); pos(-130, 340, 0.75);
+  const r = $('rv'); r.classList.add('in'); r.style.transform = 'translateY(0) rotate(-4deg)'; boom();
+}
+function boom() { const cols = ['#e8553a', '#ffd13d', '#7bc47a', '#7cc4f0', '#ff8f7e']; for (let i = 0; i < 46; i++) { const c = document.createElement('i'); c.className = 'conf'; c.style.cssText += `left:270px;top:430px;background:${cols[i % 5]}`; $('s6').appendChild(c); const a = Math.random() * Math.PI * 2; const d = 160 + Math.random() * 260; c.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 }, { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d - 60}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }], { duration: 1500 + Math.random() * 700, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }); } }
+async function s7() {
+  show('s7'); setMood(document, 'watch'); pos(0, 350, 0.75);
+  $('s7').innerHTML = `<svg class="ring" viewBox="0 0 300 300"><circle cx="150" cy="150" r="125" fill="none" stroke="#efe3d6" stroke-width="22"/><circle id="arc" cx="150" cy="150" r="125" fill="none" stroke="#e8553a" stroke-width="22" stroke-linecap="round" stroke-dasharray="785" stroke-dashoffset="0" transform="rotate(-90 150 150)"/><text id="tm" x="150" y="172" text-anchor="middle">05:00</text></svg><div class="step"><small>Шаг 3 из 5</small>Тушите на слабом огне 5 минут</div>`;
+  const arc = $('arc'); arc.animate([{ strokeDashoffset: 785 }, { strokeDashoffset: 0 }], { duration: 3800, fill: 'forwards' }); arc.style.strokeDashoffset = 0;
+  const t0 = performance.now(); (function tick() { const k = Math.min(1, (performance.now() - t0) / 3800); const left = Math.round(300 * (1 - k)); $('tm') && ($('tm').textContent = `0${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`); if (k < 1) requestAnimationFrame(tick); })();
+}
+async function s8() {
+  show(''); const e = $('end'); e.innerHTML = `<p style="top:130px;font-size:34px;font-weight:800">Mise</p><h1>Mise</h1><p style="top:690px">20 000+ рецептов · 564 фото<br>русский · English · Español</p><p style="top:790px;font-size:22px;opacity:.9">Скажи, что в холодильнике. Моти подскажет.</p>`; e.classList.add('on'); $('cap').style.color = '#fff'; $('cap').style.top = '810px'; $('cap').style.display = 'none'; moti.style.zIndex = 10; pos(0, -70, 1.1); setMood(document, 'greet');
+}
+const scenes = [s1, s2, s3, s4, s5, s6, s7, s8];
+window.runMotion = async () => { window.__t0 = performance.now(); for (let i = 0; i < scenes.length; i++) { cap(i); scenes[i](); await wait(D[i]); } window.__done = true; };
+window.__ready = true;
+</script>
