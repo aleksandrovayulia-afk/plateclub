@@ -25,7 +25,9 @@ const SVG = (state, w, h, vb, cls, id, lite) => `<svg class="moti ${lite ? 'moti
       <g class="m-sprout"><path d="M60 27 C60 21 62 17 66 14" fill="none" stroke="#5aa860" stroke-width="2.600" stroke-linecap="round"/><path d="M66 14 C72 9 81 11 83 15 C78 20 70 19 66 14Z" fill="#7bc47a"/></g>
       <path class="m-bodyshape" d="M22 80 C22 46 38 24 60 24 C82 24 98 46 98 80 C98 96 82 105 60 105 C38 105 22 96 22 80Z" fill="url(#mg${id})"/>
       <ellipse class="m-shine" cx="44" cy="42" rx="9" ry="4.600" fill="#fff" opacity=".65" transform="rotate(-28 44 42)"/>
-      <g class="m-hat"><path d="M38 30 H82 V37 H38Z" fill="#fff"/><path d="M36 30 C28 30 28 16 38 15 C40 8 52 7 56 11 C60 5 72 6 74 12 C84 11 90 24 82 30Z" fill="#fff"/><path d="M38 37 H82" stroke="#e7d9cc" stroke-width="1.500"/></g>
+      <g class="m-apron"><path d="M34 95 C44 92 76 92 86 95 L89 101 C80 106 40 106 31 101Z" fill="#fff" opacity=".96"/><path d="M34 95 C44 92 76 92 86 95" fill="none" stroke="#e7d9cc" stroke-width="1.400"/><rect x="52" y="97" width="16" height="6" rx="2.500" fill="#e8553a" opacity=".85"/></g>
+      <path class="m-scarf" d="M46 90 Q60 96 74 90 L70 97 Q60 101 50 97Z" fill="#e8553a"/>
+      <g class="m-hat"><path d="M37 29 H83 V38 H37Z" fill="#fff" stroke="#e7d9cc" stroke-width="1.200"/><path d="M36 30 C24 31 22 14 35 12 C36 3 50 0 56 6 C61 -1 76 1 78 9 C91 8 96 25 84 30Z" fill="#fff" stroke="#efe3d8" stroke-width="1.200"/><path d="M48 14 V28 M60 9 V28 M72 14 V28" stroke="#efe3d8" stroke-width="1.200" stroke-linecap="round"/></g>
       <g class="m-face">
         <g class="m-cheeks"><ellipse cx="35" cy="76" rx="6.500" ry="4.200" fill="#ff8f7e"/><ellipse cx="85" cy="76" rx="6.500" ry="4.200" fill="#ff8f7e"/></g>
         <g class="m-brows"><path class="m-brow-l" d="M38 54 Q46 50 54 54" fill="none" stroke="#3a2a22" stroke-width="2.600" stroke-linecap="round"/><path class="m-brow-r" d="M66 54 Q74 50 82 54" fill="none" stroke="#3a2a22" stroke-width="2.600" stroke-linecap="round"/></g>
@@ -40,9 +42,9 @@ const SVG = (state, w, h, vb, cls, id, lite) => `<svg class="moti ${lite ? 'moti
 </svg>`;
 
 /** Весь Моти; size — высота в пикселях */
-export const mascot = (state = 'idle', size = 64, cls = '') => SVG(norm(state), size, size, '0 0 120 116', cls, ++uid, false);
+export const mascot = (state = 'idle', size = 64, cls = '') => SVG(norm(state), size, size, '0 -6 120 122', cls, ++uid, false);
 /** Только лицо: для маленьких иконок. Без физики, моргает средствами CSS */
-export const face = (state = 'idle', size = 32, cls = '') => SVG(norm(state), size, size, '18 14 84 78', `moti-face ${cls}`, ++uid, true);
+export const face = (state = 'idle', size = 32, cls = '') => SVG(norm(state), size, size, '14 -4 92 96', `moti-face ${cls}`, ++uid, true);
 
 /* ───────── физика ───────── */
 
@@ -114,7 +116,7 @@ class Moti {
     this.armBase = { l: p.armL ?? -30, r: p.armR ?? 30 };
     s.armL.target = this.armBase.l; s.armR.target = this.armBase.r;
     s.gx.target = p.gx || 0; s.gy.target = p.gy || 0; s.happy.target = p.happy || 0; s.blush.target = p.blush ?? 0.25;
-    s.brow.target = p.brow || 0; s.hat.target = p.hat || 0; s.lens.target = p.lens || 0; s.drop.target = p.drop || 0; s.spark.target = p.spark || 0; s.eyeScale.target = p.eyeScale || 1;
+    s.brow.target = p.brow || 0; s.hat.target = 1; s.lens.target = p.lens || 0; s.drop.target = p.drop || 0; s.spark.target = p.spark || 0; s.eyeScale.target = p.eyeScale || 1;
     this.setMouth(p.mouth || 'smile-s');
     if (state === 'greet') { this.crouch(() => { this.hop(150); this.later(180, () => this.wave(2)); }); }
     if (state === 'result') { this.crouch(() => this.hop(110)); }

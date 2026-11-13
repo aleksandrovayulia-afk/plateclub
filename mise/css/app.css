@@ -285,7 +285,7 @@ body.has-timers #view { padding-top: 10px; }
 /* Моти: мягкий помощник. Движение считает js/mascot.js (пружины), CSS нужен только для размеров и статичных иконок */
 .moti { display: block; flex: none; overflow: visible; cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
 .moti .m-shadow { fill: #000; opacity: .14; } .moti .m-cheeks { opacity: .25; }
-.moti .m-hat, .moti .m-lens, .moti .m-drop, .moti .m-spark, .moti .m-brows, .moti .m-eye-happy { opacity: 0; }
+.moti .m-lens, .moti .m-drop, .moti .m-spark, .moti .m-brows, .moti .m-eye-happy { opacity: 0; }
 .moti-face { cursor: inherit; } .moti-lite .m-eye-open { transform-box: fill-box; transform-origin: center; animation: m-blink 5s infinite; }
 @keyframes m-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
 @media (prefers-reduced-motion: reduce) { .moti-lite .m-eye-open { animation: none; } }

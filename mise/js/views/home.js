@@ -13,7 +13,7 @@ import * as recipes from './recipes.js';
 const counts = {};
 const cnt = (id) => (counts[id] ??= collectionCount(id));
 
-/** Лимми предлагает блюдо под время суток: завтрак утром, обед днём, ужин вечером */
+/** Моти предлагает блюдо под время суток: завтрак утром, обед днём, ужин вечером */
 function botSuggestion(s) {
   const h = new Date().getHours();
   const slot = h < 11 ? 'breakfast' : h < 16 ? 'lunch' : 'dinner';

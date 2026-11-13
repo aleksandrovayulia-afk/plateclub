@@ -144,7 +144,7 @@ function onboarding(step = obStep) {
 }
 
 const COACH_ROUTES = new Set(['fridge', 'recipes', 'plan', 'shop', 'tools', 'kitchen', 'saved', 'recipe']);
-/** Короткая подсказка от Лимми над экраном; после закрытия больше не показывается */
+/** Короткая подсказка от Моти над экраном; после закрытия больше не показывается */
 function coachHtml(name) {
   const st = store.get();
   if (!COACH_ROUTES.has(name) || !st.onboarded || (st.coach || {})[name]) return '';
