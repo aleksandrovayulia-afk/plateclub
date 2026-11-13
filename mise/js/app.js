@@ -246,3 +246,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 }
 
 window.__mise = { store, RECIPES, VIEWS };
+
+// Фото, которое не загрузилось, скрываем: под ним остаётся цветная плитка с эмодзи
+document.addEventListener('error', (e) => { const el = e.target; if (el && el.tagName === 'IMG' && el.classList.contains('ph')) el.classList.add('broken'); }, true);

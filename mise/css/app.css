@@ -415,3 +415,7 @@ small.src { display: block; margin-top: 4px; color: var(--muted); font-size: .72
 .web-note { margin: 4px 0 0; text-align: center; }
 .hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; } .hist li { display: flex; align-items: center; border-bottom: 1px solid var(--line); } .hist-i { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 12px 0; color: var(--ink); font: inherit; display: flex; flex-direction: column; gap: 2px; min-height: 48px; } .hist-i b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .hist-i small { color: var(--muted); }
 .field { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; } .field input { min-height: 48px; padding: 0 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+.f-input { width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; margin-bottom: 8px; }
+.ph.broken { visibility: hidden; }
+.cta .btn { min-width: 0; white-space: normal; line-height: 1.15; text-align: center; padding-inline: 12px; }
+@media (max-width: 360px) { .tab { font-size: .6rem; letter-spacing: -.01em; } .tab > span:last-child { max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; } }

@@ -403,4 +403,12 @@ export default {
   "settings.endpoint": "Your own search address (optional)",
   "settings.endpoint.note": "A service that accepts POST {q, lang} and returns {results:[{title,url,snippet}]}. Keep any keys on the service side; the app holds none.",
   "common.delete": "Delete",
+  "rec.servings": "Servings",
+  "rec.fridge": "By fridge",
+  "rec.fridge.ready": "Can cook now",
+  "rec.fridge.almost": "Missing up to two items",
+  "rec.fridge.empty": "Add products to the fridge and a filter by what you have will appear here.",
+  "rec.ing": "Contains ingredient",
+  "rec.ing.ph": "For example, chicken",
+  "rec.few": "Few ingredients (6 at most)",
 };

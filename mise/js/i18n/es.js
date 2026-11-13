@@ -403,4 +403,12 @@ export default {
   "settings.endpoint": "Tu propia dirección de búsqueda (opcional)",
   "settings.endpoint.note": "Un servicio que acepte POST {q, lang} y devuelva {results:[{title,url,snippet}]}. Guarda las claves en el servicio; la app no tiene ninguna.",
   "common.delete": "Eliminar",
+  "rec.servings": "Raciones",
+  "rec.fridge": "Según la nevera",
+  "rec.fridge.ready": "Puedo cocinar ya",
+  "rec.fridge.almost": "Faltan hasta dos productos",
+  "rec.fridge.empty": "Añade productos a la nevera y aquí aparecerá un filtro según lo que tienes.",
+  "rec.ing": "Contiene ingrediente",
+  "rec.ing.ph": "Por ejemplo, pollo",
+  "rec.few": "Pocos ingredientes (máximo 6)",
 };

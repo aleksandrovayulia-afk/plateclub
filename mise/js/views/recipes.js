@@ -1,13 +1,13 @@
 // Каталог: поиск, категории, подборки, фильтры и сортировка
 import { CATEGORIES, CUISINES } from '../data/recipes/index.js';
 import { EQUIP } from '../data/equipment.js';
-import { RECIPES, COLLECTION_BY_ID, searchRecipes, missingGear, passesDiet, analyze, jitter } from '../engine.js';
+import { RECIPES, COLLECTION_BY_ID, extractIngredients, searchRecipes, missingGear, passesDiet, analyze, jitter } from '../engine.js';
 import { t, currentLang } from '../i18n.js';
 import * as store from '../store.js';
 import { mascot } from '../mascot.js';
 import { esc, $, recipeCard, openSheet, closeSheet, icons } from '../ui.js';
 
-const fresh = () => ({ q: '', cat: 'all', col: null, sort: 'rec', cuisine: null, maxMin: 0, level: 0, mine: false, fav: false, limit: 36 });
+const fresh = () => ({ q: '', cat: 'all', col: null, sort: 'rec', cuisine: null, maxMin: 0, level: 0, srv: 0, few: false, ready: 0, ing: '', mine: false, fav: false, limit: 36 });
 let st = fresh();
 let focusNext = false;
 
@@ -26,6 +26,13 @@ function filtered(s) {
   if (st.maxMin) list = list.filter((r) => r.min <= st.maxMin);
   if (st.level) list = list.filter((r) => r.lv === st.level);
   if (st.cuisine) list = list.filter((r) => r.cu === st.cuisine);
+  if (st.srv) list = list.filter((r) => (st.srv === 1 ? r.srv <= 2 : st.srv === 2 ? r.srv >= 3 && r.srv <= 4 : r.srv >= 5));
+  if (st.few) list = list.filter((r) => r.ing.filter((x) => !x.opt).length <= 6);
+  if (st.ing.trim()) { const ids = extractIngredients(st.ing).ids; if (ids.length) list = list.filter((r) => ids.every((id) => r.ing.some((x) => x.id === id))); }
+  if (st.ready && s.have.length) {
+    const ctx = { have: new Set(s.have), pantry: new Set(s.pantry), owned };
+    list = list.filter((r) => { const a = analyze(r, ctx); return a.used > 0 && a.missing.length <= (st.ready === 1 ? 0 : 2); });
+  }
   if (st.mine) list = list.filter((r) => !missingGear(r, owned).length);
   if (st.fav) list = list.filter((r) => s.favs.includes(r.id));
   if (st.q.trim()) return searchRecipes(st.q, list);
@@ -40,7 +47,7 @@ function filtered(s) {
   return [...list].sort(by);
 }
 
-const activeFilters = () => [st.maxMin, st.level, st.cuisine, st.mine, st.fav, st.sort !== 'rec'].filter(Boolean).length;
+const activeFilters = () => [st.maxMin, st.level, st.srv, st.few, st.ready, st.ing.trim(), st.cuisine, st.mine, st.fav, st.sort !== 'rec'].filter(Boolean).length;
 
 function grid(s) {
   const list = filtered(s);
@@ -95,6 +102,10 @@ function filtersSheet(s) {
     <h3 class="sub-h">${t('rec.time')}</h3>${seg('time', st.maxMin, [[0, t('rec.any')], [15, '≤ 15'], [30, '≤ 30'], [60, '≤ 60']])}
     <h3 class="sub-h">${t('rec.level')}</h3>${seg('level', st.level, [[0, t('rec.any')], [1, t('level.1')], [2, t('level.2')], [3, t('level.3')]])}
     <h3 class="sub-h">${t('rec.cuisine')}</h3><div class="chips"><button class="chip small${!st.cuisine ? ' on' : ''}" data-act="f-cuisine" data-v="">${t('rec.any')}</button>${cuisines.map((c) => `<button class="chip small${st.cuisine === c ? ' on' : ''}" data-act="f-cuisine" data-v="${c}">${esc(CUISINES[c][lang])}</button>`).join('')}</div>
+    <h3 class="sub-h">${t('rec.servings')}</h3>${seg('srv', st.srv, [[0, t('rec.any')], [1, '1–2'], [2, '3–4'], [3, '5+']])}
+    <h3 class="sub-h">${t('rec.fridge')}</h3>${s.have.length ? seg('ready', st.ready, [[0, t('rec.any')], [1, t('rec.fridge.ready')], [2, t('rec.fridge.almost')]]) : `<p class="muted small">${t('rec.fridge.empty')}</p>`}
+    <h3 class="sub-h">${t('rec.ing')}</h3><input class="f-input" data-act="f-ing" type="search" value="${esc(st.ing)}" placeholder="${t('rec.ing.ph')}" aria-label="${t('rec.ing')}">
+    <label class="switch"><input type="checkbox" data-act="f-few" ${st.few ? 'checked' : ''}><span class="knob"></span><span>${t('rec.few')}</span></label>
     <label class="switch"><input type="checkbox" data-act="f-mine" ${st.mine ? 'checked' : ''}><span class="knob"></span><span>${t('rec.mine')}</span></label>
     <label class="switch"><input type="checkbox" data-act="f-fav" ${st.fav ? 'checked' : ''}><span class="knob"></span><span>${t('rec.fav')}</span></label>
     <div class="row"><button class="btn" data-act="rec-reset">${t('rec.reset')}</button><button class="btn primary" data-act="close-sheet">${t('rec.show', { n: filtered(s).length })}</button></div>`, { tall: true });
@@ -114,6 +125,8 @@ export function onClick(act, el) {
     case 'f-sort': st.sort = el.dataset.v; filtersSheet(s); refresh(); return true;
     case 'f-time': st.maxMin = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
     case 'f-level': st.level = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
+    case 'f-srv': st.srv = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
+    case 'f-ready': st.ready = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
     case 'f-cuisine': st.cuisine = el.dataset.v || null; filtersSheet(s); refresh(); return true;
     default: return false;
   }
@@ -121,6 +134,8 @@ export function onClick(act, el) {
 
 export function onChange(act, el) {
   if (act === 'f-mine') { st.mine = el.checked; refresh(); return true; }
+  if (act === 'f-few') { st.few = el.checked; refresh(); return true; }
+  if (act === 'f-ing') { st.ing = el.value; refresh(); return true; }
   if (act === 'f-fav') { st.fav = el.checked; refresh(); return true; }
   return false;
 }
