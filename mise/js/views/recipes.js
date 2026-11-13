@@ -7,7 +7,7 @@ import * as store from '../store.js';
 import { mascot } from '../mascot.js';
 import { esc, $, recipeCard, openSheet, closeSheet, icons } from '../ui.js';
 
-const fresh = () => ({ q: '', cat: 'all', col: null, sort: 'rec', cuisine: null, maxMin: 0, level: 0, srv: 0, few: false, ready: 0, ing: '', mine: false, fav: false, limit: 36 });
+const fresh = () => ({ q: '', cat: 'all', col: null, sort: 'rec', cuisine: null, maxMin: 0, level: 0, srv: 0, few: false, noOven: false, ready: 0, ing: '', mine: false, fav: false, limit: 36 });
 let st = fresh();
 let focusNext = false;
 
@@ -27,6 +27,7 @@ function filtered(s) {
   if (st.level) list = list.filter((r) => r.lv === st.level);
   if (st.cuisine) list = list.filter((r) => r.cu === st.cuisine);
   if (st.srv) list = list.filter((r) => (st.srv === 1 ? r.srv <= 2 : st.srv === 2 ? r.srv >= 3 && r.srv <= 4 : r.srv >= 5));
+  if (st.noOven) list = list.filter((r) => !r.eq.includes('oven'));
   if (st.few) list = list.filter((r) => r.ing.filter((x) => !x.opt).length <= 6);
   if (st.ing.trim()) { const ids = extractIngredients(st.ing).ids; if (ids.length) list = list.filter((r) => ids.every((id) => r.ing.some((x) => x.id === id))); }
   if (st.ready && s.have.length) {
@@ -47,7 +48,7 @@ function filtered(s) {
   return [...list].sort(by);
 }
 
-const activeFilters = () => [st.maxMin, st.level, st.srv, st.few, st.ready, st.ing.trim(), st.cuisine, st.mine, st.fav, st.sort !== 'rec'].filter(Boolean).length;
+const activeFilters = () => [st.maxMin, st.level, st.srv, st.few, st.noOven, st.ready, st.ing.trim(), st.cuisine, st.mine, st.fav, st.sort !== 'rec'].filter(Boolean).length;
 
 function grid(s) {
   const list = filtered(s);
@@ -75,6 +76,7 @@ export function render(s) {
       <button class="icon-btn filter-btn${af ? ' on' : ''}" data-act="rec-filters" aria-label="${t('rec.filters')}">${icons.filter}${af ? `<i class="dot">${af}</i>` : ''}</button></div>
     ${recents}
     ${st.col ? `<div class="active-col"><span>${COLLECTION_BY_ID[st.col].e} ${t(`col.${st.col}`)}</span><button data-act="col-clear" aria-label="${t('common.close')}">${icons.close}</button></div>` : ''}
+    <div class="hscroll tight quick" role="group" aria-label="${t('rec.quick')}">${[['q-15', 'rec.q.15', st.maxMin === 15], ['q-nooven', 'rec.q.nooven', st.noOven], ['q-ready', 'rec.q.ready', st.ready === 1], ['q-few', 'rec.q.few', st.few]].map(([a, k, on]) => `<button class="chip small${on ? ' on' : ''}" data-act="${a}" aria-pressed="${!!on}">${t(k)}</button>`).join('')}</div>
     <div class="hscroll" role="tablist">${cats.map((c) => `<button role="tab" class="gtab${c.id === st.cat ? ' on' : ''}" data-act="cat" data-c="${c.id}" aria-selected="${c.id === st.cat}">${c.e ? `${c.e} ` : ''}${esc(c.n[lang])}</button>`).join('')}</div>
     <section id="grid">${grid(s)}</section>`;
 }
@@ -125,6 +127,10 @@ export function onClick(act, el) {
     case 'f-sort': st.sort = el.dataset.v; filtersSheet(s); refresh(); return true;
     case 'f-time': st.maxMin = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
     case 'f-level': st.level = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
+    case 'q-15': st.maxMin = st.maxMin === 15 ? 0 : 15; refresh(); return true;
+    case 'q-nooven': st.noOven = !st.noOven; refresh(); return true;
+    case 'q-few': st.few = !st.few; refresh(); return true;
+    case 'q-ready': if (!s.have.length) { location.hash = '#/fridge'; return true; } st.ready = st.ready === 1 ? 0 : 1; refresh(); return true;
     case 'f-srv': st.srv = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
     case 'f-ready': st.ready = Number(el.dataset.v); filtersSheet(s); refresh(); return true;
     case 'f-cuisine': st.cuisine = el.dataset.v || null; filtersSheet(s); refresh(); return true;

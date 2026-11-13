@@ -411,4 +411,10 @@ export default {
   "rec.ing": "Contains ingredient",
   "rec.ing.ph": "For example, chicken",
   "rec.few": "Few ingredients (6 at most)",
+  "cook.resume.at": "Continue cooking · step {n} of {total}",
+  "rec.quick": "Quick filters",
+  "rec.q.15": "Up to 15 min",
+  "rec.q.nooven": "No oven",
+  "rec.q.ready": "From my fridge",
+  "rec.q.few": "Few ingredients",
 };

@@ -4,6 +4,7 @@ import { mascot } from '../mascot.js';
 import { fillWeek } from './plan.js';
 import { CATEGORIES } from '../data/recipes/index.js';
 import { t, currentLang, LANGS } from '../i18n.js';
+import { lastProgress } from './cook.js';
 import * as store from '../store.js';
 import * as music from '../music.js';
 import { photoTag, COLLECTION_PHOTO, CATEGORY_PHOTO } from '../data/photos.js';
@@ -30,6 +31,14 @@ const greeting = () => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+function resumeCard() {
+  const p = lastProgress();
+  const r = p && BY_ID[p.id];
+  if (!r) return '';
+  const total = rtext(r).steps.length;
+  return `<a class="resume" href="#/cook/${r.id}"><span class="resume-pct" style="--p:${Math.round(((p.i + 1) / total) * 100)}"></span><span><b>${esc(rtext(r).t)}</b><small>${t('cook.resume.at', { n: p.i + 1, total })}</small></span>${icons.chev}</a>`;
+}
+
 export function render(s) {
   const lang = currentLang();
   const date = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
@@ -47,6 +56,7 @@ export function render(s) {
       <span class="head-btns"><button class="pill-btn${music.isOn() ? ' on' : ''}" data-act="music-toggle" aria-pressed="${music.isOn()}" aria-label="${t('music.title')}">${icons.music}</button>
       <button class="pill-btn" data-act="lang-sheet" aria-label="${t('settings.language')}">${icons.globe}<span>${LANGS.find((l) => l.id === lang).short}</span></button></span>
     </header>
+    ${resumeCard()}
     <a class="searchbar" href="#/recipes" data-act="focus-search">${icons.search}<span>${t('home.search', { n: RECIPES.length })}</span></a>
 
     <section class="bot-card" aria-label="${t('bot.name')}">

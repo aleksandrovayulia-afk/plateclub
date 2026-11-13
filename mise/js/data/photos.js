@@ -9,6 +9,7 @@ const BY_EMOJI = {
 };
 const BY_CAT = { cakes: 'cake', sweet: 'sweet', savory: 'bowl', sport: 'bowl', shakes: 'shake', other: 'bowl' };
 const WORDS = [
+  [/cx-shakshuka|шакшук|shakshuka/i, 'shakshuka'], [/cx-noodlewok/i, 'stirnoodles'], [/cx-bakedfish/i, 'bakedfish'], [/cx-stuffedpotato/i, 'potato'], [/cx-bruschetta|брускетт|bruschetta/i, 'bruschetta'], [/cx-spread/i, 'hummus'], [/cx-syrniki|сырник/i, 'syrniki'], [/cx-oatcookie/i, 'cookies'], [/cx-icedtea/i, 'icedtea'], [/cx-bar-/i, 'granolabar'],
   [/сэндвич|бутерброд|sandwich|bocadillo/i, 'sandwich'], [/гратен|gratin|gratén/i, 'potato'], [/маффин|muffin|magdalena/i, 'muffin'], [/\bтарт\b|\btart\b|tarta de (fresa|manzana|pera)/i, 'pie'],
   [/ризотто|risotto/i, 'risotto'], [/лазань|lasagn/i, 'lasagna'], [/фрикадельк|тефтел|meatball|albóndiga|albondiga/i, 'meatballs'], [/жарен\S* рис|fried rice|arroz frito/i, 'friedrice'],
   [/борщ|borsch/i, 'borscht'], [/тыкв\S* суп|суп\S* из тыкв|крем-суп из тыкв|pumpkin soup|crema de calabaza/i, 'pumpkinsoup'], [/грибн\S* суп|суп\S* из шампиньон|mushroom soup|crema de champi/i, 'mushroomsoup'],
@@ -35,7 +36,7 @@ export function photoKey(r, title = '') {
   return BY_EMOJI[r.e] || BY_CAT[r.c] || 'bowl';
 }
 // сколько фото лежит для вида блюда: key.jpg, key-2.jpg, key-3.jpg
-const VARIANTS = {"applepie": 3, "borscht": 3, "bowl": 3, "bread": 3, "brownie": 3, "burger": 3, "burrito": 3, "caesar": 3, "cake": 3, "carrotcake": 3, "cheesecake": 3, "chicken": 3, "chococake": 3, "coffee": 3, "cookies": 3, "croissant": 3, "curry": 3, "donut": 3, "dumplings": 2, "eggs": 3, "falafel": 3, "fish": 3, "frenchtoast": 3, "friedrice": 3, "greek": 3, "grilledveg": 3, "hummus": 2, "icecream": 2, "kebab": 3, "lasagna": 3, "lemonade": 3, "meat": 3, "meatballs": 2, "milkshake": 3, "muffin": 3, "mushroomsoup": 3, "pancakes": 3, "pannacotta": 3, "parfait": 3, "pasta": 3, "pie": 3, "pizza": 3, "porridge": 3, "potato": 3, "pumpkinsoup": 3, "quesadilla": 3, "rice": 2, "risotto": 3, "roastpork": 3, "salad": 3, "sandwich": 3, "shake": 3, "shrimp": 3, "smoothiebowl": 2, "soup": 2, "stew": 3, "sundae": 3, "sushi": 3, "sweet": 3, "tiramisu": 3, "toast": 3, "veg": 3, "waffles": 3};
+const VARIANTS = {"applepie": 3, "borscht": 3, "bowl": 3, "bread": 3, "brownie": 3, "burger": 3, "burrito": 3, "caesar": 3, "cake": 3, "carrotcake": 3, "cheesecake": 3, "chicken": 3, "chococake": 3, "coffee": 3, "cookies": 3, "croissant": 3, "curry": 3, "donut": 3, "dumplings": 2, "eggs": 3, "falafel": 3, "fish": 3, "frenchtoast": 3, "friedrice": 3, "greek": 3, "grilledveg": 3, "hummus": 2, "icecream": 2, "kebab": 3, "lasagna": 3, "lemonade": 3, "meat": 3, "meatballs": 2, "milkshake": 3, "muffin": 3, "mushroomsoup": 3, "pancakes": 3, "pannacotta": 3, "parfait": 3, "pasta": 3, "pie": 3, "pizza": 3, "porridge": 3, "potato": 3, "pumpkinsoup": 3, "quesadilla": 3, "rice": 2, "risotto": 3, "roastpork": 3, "salad": 3, "sandwich": 3, "shake": 3, "shrimp": 3, "smoothiebowl": 2, "soup": 2, "stew": 3, "sundae": 3, "sushi": 3, "sweet": 3, "tiramisu": 3, "toast": 3, "veg": 3, "waffles": 3, "shakshuka": 3, "bruschetta": 1, "bakedfish": 2, "stirnoodles": 3, "syrniki": 1, "icedtea": 1, "granolabar": 3};
 export const photoUrl = (key, v = 1) => {
   const name = v > 1 ? `${key}-${v}` : key;
   return (typeof window !== 'undefined' && window.__PHOTOS && window.__PHOTOS[name]) || `img/food/${name}.jpg`;

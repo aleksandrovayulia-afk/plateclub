@@ -190,3 +190,10 @@
 | img/food/waffles.jpg | https://www.pexels.com/photo/5848187/, https://www.pexels.com/photo/7786846/ |
 | img/food/waffles-2.jpg | https://www.pexels.com/photo/7786846/ |
 | img/food/waffles-3.jpg | https://www.pexels.com/photo/19664626/ |
+| img/food/shakshuka*.jpg | https://www.pexels.com/photo/6275165/, https://www.pexels.com/photo/9928336/, https://www.pexels.com/photo/15578009/ |
+| img/food/bruschetta*.jpg | https://www.pexels.com/photo/7432991/ |
+| img/food/bakedfish*.jpg | https://www.pexels.com/photo/5463886/, https://www.pexels.com/photo/2374946/ |
+| img/food/stirnoodles*.jpg | https://www.pexels.com/photo/2347311/, https://www.pexels.com/photo/28895969/, https://www.pexels.com/photo/29145755/ |
+| img/food/syrniki*.jpg | https://www.pexels.com/photo/9617137/ |
+| img/food/icedtea*.jpg | https://www.pexels.com/photo/1194030/ |
+| img/food/granolabar*.jpg | https://www.pexels.com/photo/3026806/, https://www.pexels.com/photo/14513406/, https://www.pexels.com/photo/6069103/ |

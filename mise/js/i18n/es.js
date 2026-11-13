@@ -411,4 +411,10 @@ export default {
   "rec.ing": "Contiene ingrediente",
   "rec.ing.ph": "Por ejemplo, pollo",
   "rec.few": "Pocos ingredientes (máximo 6)",
+  "cook.resume.at": "Seguir cocinando · paso {n} de {total}",
+  "rec.quick": "Filtros rápidos",
+  "rec.q.15": "Hasta 15 min",
+  "rec.q.nooven": "Sin horno",
+  "rec.q.ready": "Con mi nevera",
+  "rec.q.few": "Pocos ingredientes",
 };
