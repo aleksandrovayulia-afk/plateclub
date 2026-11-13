@@ -43,7 +43,7 @@ for (const [lang, c] of Object.entries({
   setLang(lang);
   ok(textOf(answer(c.thanks, base, 1)).length > 5, `${lang}: спасибо`);
   ok(textOf(answer(c.fact, base, 3)).length > 20, `${lang}: факт`);
-  ok(textOf(answer(c.who, base, 1)).includes('Limmy') || textOf(answer(c.who, base, 1)).includes('Лимми'), `${lang}: кто ты`);
+  ok(textOf(answer(c.who, base, 1)).includes('Moti') || textOf(answer(c.who, base, 1)).includes('Моти'), `${lang}: кто ты`);
   ok(/\*\*/.test(textOf(answer(c.term, base, 1))), `${lang}: термин → ${textOf(answer(c.term, base, 1)).slice(0, 60)}`);
   ok(/12[05]/.test(textOf(answer(c.conv, base, 1))), `${lang}: меры → ${textOf(answer(c.conv, base, 1))}`);
   ok(/(2[05]|3[05])/.test(textOf(answer(c.conv2, base, 1))), `${lang}: меры 2 ложки → ${textOf(answer(c.conv2, base, 1))}`);

@@ -50,7 +50,7 @@ export function render(s) {
     <a class="searchbar" href="#/recipes" data-act="focus-search">${icons.search}<span>${t('home.search', { n: RECIPES.length })}</span></a>
 
     <section class="bot-card" aria-label="${t('bot.name')}">
-      ${mascot('wave', 76, 'mc-md')}
+      ${mascot('greet', 84)}
       <div class="bot-say"><a class="say-bubble" href="#/r/${bs.r.id}">${esc(t(`bot.say.${bs.say}`, { title: rtext(bs.r).t }))}</a>
         <div class="chips"><a class="chip small" href="#/fridge">${t('bot.chip.fridge')}</a><button class="chip small" data-act="bot-week">${t('bot.chip.week')}</button><a class="chip small" href="#/assistant">${t('bot.chip.ask')}</a></div></div>
     </section>
@@ -65,7 +65,7 @@ export function render(s) {
       <button data-act="surprise-recipe">${icons.shuffle}<span>${t('home.surprise')}</span></button>
       <a href="#/plan">${icons.calendar}<span>${t('nav.plan')}</span></a>
       <a href="#/shop">${icons.cart}${open ? `<i class="dot">${open}</i>` : ''}<span>${t('nav.shop')}</span></a>
-      <a href="#/tools">${icons.timer}<span>${t('nav.tools')}</span></a>
+      <a href="#/timers">${icons.timer}<span>${t('nav.timers')}</span></a>
     </div>
 
     <h2 class="sec">${t('home.rotd')}</h2>

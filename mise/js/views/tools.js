@@ -8,12 +8,12 @@ import * as store from '../store.js';
 import * as timers from '../timers.js';
 import { esc, $, icons } from '../ui.js';
 
-let tab = 'timers';
+let tab = 'convert';
 let glossLimit = 40;
 let glossQ = '';
 let subsQ = '';
 
-const TABS = ['timers', 'convert', 'words', 'subs'];
+const TABS = ['convert', 'words', 'subs'];
 const PRESETS = [1, 3, 5, 10, 15, 20, 30, 45, 60];
 
 /* Меры: в миллилитрах и граммах */

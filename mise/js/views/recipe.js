@@ -1,5 +1,6 @@
 // Экран рецепта: ингредиенты по холодильнику, порции, единицы, шаги с таймерами, оценка и заметки
 import { ING } from '../data/ingredients.js';
+import { progressOf } from './cook.js';
 import { SUBS } from '../data/subs.js';
 import { EQUIP } from '../data/equipment.js';
 import { BY_ID, RECIPES, analyze, missingGear, rtext, toFahrenheit, gearName } from '../engine.js';
@@ -67,6 +68,7 @@ export function render(s, id) {
   const cartCount = useFridge ? a.missing.filter((x) => !ctx.pantry.has(x.id)).length : r.ing.filter((x) => !x.opt && !ctx.pantry.has(x.id)).length;
   const planned = Object.entries(s.plan).filter(([, d]) => Object.values(d).includes(id)).length;
   const cooked = s.cooked[id];
+  const saved = progressOf(id);
 
   return `<div class="detail">
     <div class="bar">
@@ -123,7 +125,7 @@ export function render(s, id) {
     ${similar.length ? `<h2 class="sec">${t('recipe.similar')}</h2><div class="list">${similar.map((x) => recipeRow(x)).join('')}</div>` : ''}
     <div class="cta-space"></div>
   </div>
-  <div class="cta"><button class="btn primary big" data-act="cook" data-id="${id}">${icons.play} ${t('recipe.start')}</button></div>`;
+  <div class="cta">${saved ? `<button class="btn big" data-act="cook-fresh" data-id="${id}">${t('cook.restart')}</button>` : ''}<button class="btn primary big" data-act="cook" data-id="${id}">${icons.play} ${saved ? t('cook.resume', { n: saved.i + 1 }) : t('recipe.start')}</button></div>`;
 }
 
 export function bind(root) {

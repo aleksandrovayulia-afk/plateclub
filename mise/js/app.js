@@ -5,7 +5,7 @@ import { LANGS, t, setLang, currentLang } from './i18n.js';
 import * as timers from './timers.js';
 import * as music from './music.js';
 import * as musicui from './musicui.js';
-import { mascot, face, tap } from './mascot.js';
+import { mascot, face, tap, flash } from './mascot.js';
 import { buzz } from './haptics.js';
 import { $, icons, closeSheet, openSheet, toast, esc } from './ui.js';
 import * as home from './views/home.js';
@@ -18,13 +18,14 @@ import * as more from './views/more.js';
 import * as plan from './views/plan.js';
 import * as shop from './views/shop.js';
 import * as tools from './views/tools.js';
+import * as timersView from './views/timers.js';
 import * as kitchen from './views/kitchen.js';
 import * as settings from './views/settings.js';
 import * as saved from './views/saved.js';
 
-const VIEWS = { home, fridge, recipes, recipe, cook, assistant, more, plan, shop, tools, kitchen, settings, saved };
-const HANDLERS = [musicui, home, fridge, recipes, recipe, cook, assistant, plan, shop, tools, kitchen, settings, saved];
-const MORE_ROUTES = new Set(['more', 'plan', 'shop', 'tools', 'kitchen', 'settings', 'saved']);
+const VIEWS = { home, fridge, recipes, recipe, cook, assistant, more, plan, shop, tools, timers: timersView, kitchen, settings, saved };
+const HANDLERS = [musicui, home, fridge, recipes, recipe, cook, assistant, plan, shop, tools, timersView, kitchen, settings, saved];
+const MORE_ROUTES = new Set(['more', 'plan', 'shop', 'tools', 'timers', 'kitchen', 'settings', 'saved']);
 
 const view = $('#view');
 const tabbar = $('#tabbar');
@@ -60,11 +61,11 @@ function paintTabs(active, hidden) {
 
 function paintTimerBar() {
   const live = timers.list().filter((x) => x.running || x.done);
-  const hide = !live.length || current.name === 'cook' || current.name === 'tools';
+  const hide = !live.length || current.name === 'cook' || current.name === 'timers';
   timerbar.hidden = hide;
   document.body.classList.toggle('has-timers', !hide);
   if (hide) return;
-  timerbar.innerHTML = live.slice(0, 3).map((x) => `<a href="#/tools" class="tb${x.done ? ' done' : ''}">${icons.timer}<span>${x.done ? t('cook.timer.ready') : timers.fmt(x.left)}</span><i>${esc(x.label)}</i></a>`).join('');
+  timerbar.innerHTML = live.slice(0, 3).map((x) => `<a href="#/timers" class="tb${x.done ? ' done' : ''}">${icons.timer}<span>${x.done ? t('cook.timer.ready') : timers.fmt(x.left)}</span><i>${esc(x.label)}</i></a>`).join('');
 }
 
 function applyPrefs(s) {
@@ -74,7 +75,7 @@ function applyPrefs(s) {
   root.lang = currentLang();
 }
 
-const TITLES = { home: '', fridge: 'nav.fridge', recipes: 'nav.recipes', assistant: 'nav.assistant', more: 'nav.more', plan: 'nav.plan', shop: 'nav.shop', tools: 'nav.tools', kitchen: 'kitchen.title', settings: 'settings.title', saved: 'nav.saved' };
+const TITLES = { home: '', fridge: 'nav.fridge', recipes: 'nav.recipes', assistant: 'nav.assistant', more: 'nav.more', plan: 'nav.plan', shop: 'nav.shop', tools: 'nav.tools', timers: 'timers.title', kitchen: 'kitchen.title', settings: 'settings.title', saved: 'nav.saved' };
 
 function draw(routeChanged) {
   const r = parse();
@@ -128,7 +129,7 @@ function onboarding(step = obStep) {
   if (st.onboarded) return;
   obStep = step;
   const dots = `<div class="ob-steps" aria-hidden="true">${[0, 1, 2].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
-  const hero = `<div class="ob-hero">${mascot(['wave', 'teach', 'show'][step], 118)}</div>`;
+  const hero = `<div class="ob-hero">${mascot(['greet', 'curious', 'result'][step], 118)}</div>`;
   const body = [
     `<h2 class="ob-t">${t('onb.hi')}</h2><p class="muted ob-p">${t('onb.hi.text')}</p>
      <div class="lang-row">${LANGS.map((l) => `<button class="lang-pill${currentLang() === l.id ? ' on' : ''}" data-act="set-lang" data-v="${l.id}" data-onb="1">${l.name}</button>`).join('')}</div>
@@ -147,7 +148,7 @@ const COACH_ROUTES = new Set(['fridge', 'recipes', 'plan', 'shop', 'tools', 'kit
 function coachHtml(name) {
   const st = store.get();
   if (!COACH_ROUTES.has(name) || !st.onboarded || (st.coach || {})[name]) return '';
-  return `<aside class="coach" role="note">${mascot('teach', 56)}<p>${t(`coach.${name}`)}</p><button class="coach-x" data-act="coach-x" data-r="${name}" aria-label="${t('common.close')}">${icons.close}</button></aside>`;
+  return `<aside class="coach" role="note"><p>${t(`coach.${name}`)}</p><button class="coach-x" data-act="coach-x" data-r="${name}" aria-label="${t('common.close')}">${icons.close}</button></aside>`;
 }
 
 /** Реплика над персонажем, на которого нажали */
@@ -166,12 +167,11 @@ function quip(el, move) {
 }
 
 /* ───────── События ───────── */
-const BACK_FALLBACK = { recipe: '#/recipes', plan: '#/more', shop: '#/more', tools: '#/more', kitchen: '#/more', settings: '#/more', saved: '#/more' };
+const BACK_FALLBACK = { recipe: '#/recipes', plan: '#/more', shop: '#/more', tools: '#/more', timers: '#/more', kitchen: '#/more', settings: '#/more', saved: '#/more' };
 
 document.addEventListener('click', (e) => {
-  const mc = e.target.closest('.mc');
-  if (mc && !mc.classList.contains('mc-face') && !mc.closest('button, a, .av')) { quip(mc, tap(mc)); return; }
-  if (store.get().music && !music.isOn()) musicui.setOn(true);
+  const mc = e.target.closest('.moti');
+  if (mc && !mc.classList.contains('moti-face') && !mc.closest('button, a, .av')) { quip(mc, tap(mc)); return; }
   if (e.target.closest('button, a, .chip, .tab')) buzz('tap');
   const el = e.target.closest('[data-act]');
   if (!el || el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
@@ -179,6 +179,7 @@ document.addEventListener('click', (e) => {
   switch (act) {
     case 'back': if (navCount > 0) history.back(); else location.hash = BACK_FALLBACK[current.name] || '#/'; return;
     case 'close-sheet': closeSheet(); return;
+    case 'cook-fresh': cook.restart(el.dataset.id); location.hash = `#/cook/${el.dataset.id}`; return;
     case 'cook': timers.unlockAudio(); if (store.get().musicCook && !music.isOn()) musicui.setOn(true); location.hash = `#/cook/${el.dataset.id}`; return;
     case 'lang-sheet': langSheet(); return;
     case 'set-lang': {
@@ -222,14 +223,16 @@ window.addEventListener('hashchange', () => { navCount++; draw(true); });
 store.init();
 setLang(store.get().lang);
 musicui.init();
+timers.restore();
 store.subscribe(() => draw(false));
 timers.subscribe(() => {
   paintTimerBar();
-  if (current.name === 'tools') tools.paint();
+  if (current.name === 'timers') timersView.paint();
   if (current.name === 'cook') cook.paint();
 });
 timers.setOnDone((tm) => {
   toast(t('timers.done', { label: tm.label }), 5000);
+  flash(document, 'success', 3500);
   if (current.name === 'recipe') store.set({});
   try { if ('Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification('Mise', { body: t('timers.done', { label: tm.label }) }); } catch { /* */ }
 });

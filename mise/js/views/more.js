@@ -3,7 +3,10 @@ import { t } from '../i18n.js';
 import * as store from '../store.js';
 import { icons } from '../ui.js';
 
+import * as timers from '../timers.js';
+
 export function render(s) {
+  const timersN = timers.running().length;
   const open = s.shop.filter((x) => !x.done).length;
   const planned = Object.values(s.plan).reduce((n, d) => n + Object.keys(d).length, 0);
   const items = [
@@ -12,7 +15,8 @@ export function render(s) {
     ['saved', icons.heart, t('nav.saved'), t('more.saved'), s.favs.length ? String(s.favs.length) : ''],
     ['music', icons.music, t('music.title'), t('more.music'), ''],
     ['kitchen', icons.fridge, t('kitchen.title'), t('more.kitchen'), ''],
-    ['tools', icons.timer, t('nav.tools'), t('more.tools'), ''],
+    ['timers', icons.timer, t('nav.timers'), t('more.timers'), String(timersN || '')],
+    ['tools', icons.measure, t('nav.tools'), t('more.tools'), ''],
     ['settings', icons.gear, t('settings.title'), t('more.settings'), ''],
   ];
   return `<header class="top"><h1>${t('more.title')}</h1><p class="sub">${t('more.sub')}</p></header>

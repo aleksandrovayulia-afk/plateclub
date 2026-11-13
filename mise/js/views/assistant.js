@@ -33,7 +33,7 @@ const greeting = () => ({ r: 'a', parts: answer('hello', { have: [], pantry: [],
 
 export function render(s) {
   const chat = s.chat.length ? s.chat : [greeting()];
-  return `<header class="bot-head">${mascot('wave', 86, 'mc-lg')}<div><h1>${t('bot.name')}</h1><p class="sub" id="bot-status"><i class="live"></i>${t('bot.status')}</p></div></header>
+  return `<header class="bot-head">${mascot('greet', 92)}<div><h1>${t('bot.name')}</h1><p class="sub" id="bot-status"><i class="live"></i>${t('bot.status')}</p></div></header>
     <div class="chat" id="chat" aria-live="polite">${chat.map(msgHtml).join('')}</div>
     <div class="composer-fixed">
       <div class="hscroll tight" id="suggest">${suggestions().map((x) => `<button class="chip small" data-act="ask" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>

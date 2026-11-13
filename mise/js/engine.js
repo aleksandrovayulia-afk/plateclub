@@ -158,6 +158,7 @@ export function analyze(r, ctx) {
   const required = r.ing.filter((x) => !x.opt);
   const miss = required.filter((x) => !has(x.id));
   const got = core.filter((x) => has(x.id));
+  const prio = ctx.prio ? r.ing.filter((x) => ctx.prio.has(x.id)).length : 0;
   const used = r.ing.filter((x) => (ctx.have.has(x.id) || (ALT[x.id] || []).some((a) => ctx.have.has(a))) && !ctx.pantry.has(x.id)).length;
   return {
     recipe: r,
@@ -166,6 +167,7 @@ export function analyze(r, ctx) {
     total: core.length,
     coverage: core.length ? got.length / core.length : 1,
     used,
+    prio,
     gear: missingGear(r, ctx.owned),
   };
 }
@@ -197,7 +199,7 @@ function jitter(id, seed) {
 export function fridgeScore(a, { mood, cooked = {}, seed = 0, blind = false, liked = {} } = {}) {
   const bonus = (liked[a.recipe.id] || 0) * 4;
   if (blind) return jitter(a.recipe.id, seed) * 100 - (cooked[a.recipe.id] ? 40 : 0) + (a.recipe.min <= 30 ? 5 : 0) + bonus;
-  let s = a.coverage * 100 + Math.min(a.used, 5) * 6 - a.missing.length * 7 + bonus;
+  let s = a.coverage * 100 + Math.min(a.used, 5) * 6 - a.missing.length * 7 + bonus + (a.prio || 0) * 14;
   if (a.recipe.min <= 30) s += 3;
   if (mood === 'new') {
     if (cooked[a.recipe.id]) s -= 40;
@@ -211,8 +213,8 @@ export function fridgeScore(a, { mood, cooked = {}, seed = 0, blind = false, lik
  * Подбор по холодильнику.
  * Возвращает { ready, almost, other, locked } — списки анализов, отсортированные по оценке.
  */
-export function fridgeSearch({ have, pantry, owned, mood = 'any', diet = {}, maxMin = 0, cooked = {}, liked = {}, seed = 0, filter = null }) {
-  const ctx = { have: new Set(have), pantry: new Set(pantry), owned: new Set(owned) };
+export function fridgeSearch({ have, pantry, owned, mood = 'any', diet = {}, maxMin = 0, cooked = {}, liked = {}, seed = 0, filter = null, prio = [] }) {
+  const ctx = { have: new Set(have), pantry: new Set(pantry), owned: new Set(owned), prio: new Set(prio) };
   const mf = moodFilter(mood);
   const out = { ready: [], almost: [], other: [], locked: [] };
   for (const r of RECIPES) {

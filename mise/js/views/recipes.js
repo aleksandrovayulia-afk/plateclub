@@ -44,7 +44,7 @@ const activeFilters = () => [st.maxMin, st.level, st.cuisine, st.mine, st.fav, s
 
 function grid(s) {
   const list = filtered(s);
-  if (!list.length) return `<div class="empty small">${mascot('think', 84)}<h2>${t('rec.nothing')}</h2><p>${t('rec.nothing.text')}</p><button class="btn" data-act="rec-reset">${t('rec.reset')}</button></div>`;
+  if (!list.length) return `<div class="empty small"><h2>${t('rec.nothing')}</h2><p>${t('rec.nothing.text')}</p><button class="btn" data-act="rec-reset">${t('rec.reset')}</button></div>`;
   const owned = new Set(s.owned);
   const ctx = s.have.length ? { have: new Set(s.have), pantry: new Set(s.pantry), owned } : null;
   const shown = list.slice(0, st.limit);
